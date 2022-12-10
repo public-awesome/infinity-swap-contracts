@@ -1,5 +1,6 @@
 use crate::error::ContractError;
 use crate::msg::{InstantiateMsg};
+use crate::state::POOL_COUNTER;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -17,6 +18,7 @@ pub fn instantiate(
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    POOL_COUNTER.save(deps.storage, &0)?;
 
     Ok(Response::new()
         .add_attribute("action", "instantiate")
