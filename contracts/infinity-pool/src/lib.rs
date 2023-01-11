@@ -2,9 +2,11 @@ pub mod msg;
 pub mod instantiate;
 pub mod execute;
 pub mod state;
-// pub mod query;
-// pub mod sudo;
-// pub use error::ContractError;
+pub mod query;
+
+mod testing;
 mod error;
-// mod helpers;
-// mod testing;
+mod helpers;
+
+pub use error::ContractError;
+
