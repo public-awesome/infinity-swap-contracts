@@ -4,7 +4,8 @@ use crate::state::{POOL_COUNTER, CONFIG, Config};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{DepsMut, Env, MessageInfo};
+use sg_std::{Response};
 use cw2::set_contract_version;
 
 pub const CONTRACT_NAME: &str = "crates.io:infinity-pool";
