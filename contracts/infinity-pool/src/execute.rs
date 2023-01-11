@@ -1,6 +1,7 @@
-use crate::{error::ContractError, state::pools};
+use crate::{error::ContractError};
 use crate::msg::ExecuteMsg;
-use crate::state::{PoolType, POOL_COUNTER, Pool};
+use crate::state::{PoolType, BondingCurve, POOL_COUNTER, Pool};
+use crate::helpers::save_pool;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -19,6 +20,7 @@ pub fn execute(
         ExecuteMsg::CreatePool {
             collection,
             pool_type,
+            bonding_curve,
             delta,
             fee,
             asset_recipient,
@@ -27,10 +29,12 @@ pub fn execute(
             info,
             api.addr_validate(&collection)?,
             pool_type,
+            bonding_curve,
             delta,
             fee,
             api.addr_validate(&asset_recipient)?,
         ),
+        _ => Ok(Response::default()),
     }
 }
 
@@ -39,19 +43,23 @@ pub fn execute_create_pool(
     _info: MessageInfo,
     collection: Addr,
     pool_type: PoolType,
+    bonding_curve: BondingCurve,
     delta: Uint128,
     fee: Uint128,
     asset_recipient: Addr,
 ) -> Result<Response, ContractError> {
     let pool_counter = POOL_COUNTER.load(deps.storage)?;
 
-    pools().save(deps.storage, pool_counter, &Pool {
-        key: pool_counter,
+    save_pool(deps.storage, &Pool {
+        id: pool_counter,
         collection,
         pool_type,
+        bonding_curve,
         delta,
         fee,
         asset_recipient,
+        buy_price_quote: Uint128::zero(),
+        sell_price_quote: Uint128::zero(),
     })?;
 
     POOL_COUNTER.save(deps.storage, &(pool_counter + 1))?;
