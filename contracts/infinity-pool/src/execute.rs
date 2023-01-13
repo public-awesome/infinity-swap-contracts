@@ -99,6 +99,37 @@ pub fn execute(
             pool_id,
             maybe_addr(api, asset_recipient)?,
         ),
+        ExecuteMsg::UpdatePoolConfig {
+            pool_id,
+            asset_recipient,
+            delta,
+            spot_price,
+            fee_bps,
+        } => execute_update_pool_config(
+            deps,
+            info,
+            pool_id,
+            maybe_addr(api, asset_recipient)?,
+            delta,
+            spot_price,
+            fee_bps,
+        ),
+        ExecuteMsg::ToggleActivePool {
+            pool_id,
+        } => execute_toggle_active_pool(
+            deps,
+            info,
+            pool_id,
+        ),
+        ExecuteMsg::RemovePool {
+            pool_id,
+            asset_recipient,
+        } => execute_remove_pool(
+            deps,
+            info,
+            pool_id,
+            maybe_addr(api, asset_recipient)?,
+        ),
         _ => Ok(Response::default()),
     }
 }
@@ -295,4 +326,105 @@ pub fn execute_withdraw_all_nfts(
         pool.nft_token_ids.into_iter().take(withdrawal_batch_size as usize).collect();
 
     execute_withdraw_nfts(deps, info, pool_id, nft_token_ids, asset_recipient)
+}
+
+pub fn execute_update_pool_config(
+    deps: DepsMut,
+    info: MessageInfo,
+    pool_id: u64,
+    asset_recipient: Option<Addr>,
+    delta: Option<Uint128>,
+    spot_price: Option<Uint128>,
+    fee_bps: Option<u16>,
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
+    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    only_owner(&info, &pool)?;
+
+    let response = Response::new();
+
+    if let Some(_asset_recipient) = asset_recipient {
+        pool.asset_recipient = Some(_asset_recipient);
+    }
+    if let Some(_delta) = delta {
+        pool.delta = _delta;
+    }
+    if let Some(_spot_price) = spot_price {
+        pool.spot_price = _spot_price;
+    }
+    if let Some(_fee_bps) = fee_bps {
+        pool.fee_bps = _fee_bps;
+    }
+    save_pool(deps.storage, &pool)?;
+
+    let mut event = Event::new("update_pool_config");
+    let pool_attributes = get_pool_attributes(&pool);
+    for attribute in pool_attributes {
+        event = event.add_attribute(attribute.key, attribute.value);
+    }
+
+    Ok(response.add_event(event))
+}
+
+pub fn execute_toggle_active_pool(
+    deps: DepsMut,
+    info: MessageInfo,
+    pool_id: u64,
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
+    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    only_owner(&info, &pool)?;
+
+    let response = Response::new();
+
+    pool.is_active = !pool.is_active;
+    save_pool(deps.storage, &pool)?;
+
+    let event = Event::new("toggle_pool")
+        .add_attribute("pool_id", pool_id.to_string())
+        .add_attribute("is_active", pool.is_active.to_string());
+
+    Ok(response.add_event(event))
+}
+
+pub fn execute_remove_pool(
+    deps: DepsMut,
+    info: MessageInfo,
+    pool_id: u64,
+    asset_recipient: Option<Addr>
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
+    let pool = POOLS.load(deps.storage, pool_id)?;
+    only_owner(&info, &pool)?;
+
+    if !pool.nft_token_ids.is_empty() {
+        let all_nft_token_ids = pool.nft_token_ids.iter()
+            .map(|id| id.to_string()).collect::<Vec<String>>().join(",");
+        return Err(ContractError::UnableToRemovePool(
+            format!("pool {} still has NFTs: {}", pool_id, all_nft_token_ids),
+        ));
+    }
+
+    let mut response = Response::new();
+
+    if pool.total_tokens > Uint128::zero() {
+        let config = CONFIG.load(deps.storage)?;
+        let recipient = asset_recipient.unwrap_or(info.sender);
+        transfer_token(
+            coin(pool.total_tokens.u128(), &config.denom),
+            recipient.to_string(),
+            "pool_removed_by_owner",
+            &mut response,
+        )?;
+    }
+
+    POOLS.remove(deps.storage, pool_id);
+
+    let event = Event::new("remove_pool")
+        .add_attribute("pool_id", pool_id.to_string());
+
+    Ok(response.add_event(event))
 }

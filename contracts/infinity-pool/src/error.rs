@@ -21,4 +21,7 @@ pub enum ContractError {
         expected: Uint128,
         received: Uint128,
     },
+
+    #[error("Unable to remove pool: {0}")]
+    UnableToRemovePool(String),
 }
