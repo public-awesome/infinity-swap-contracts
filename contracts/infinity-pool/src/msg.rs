@@ -10,24 +10,57 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    /// Create a pool for trading a specific collection
     CreatePool {
         collection: String,
+        asset_recipient: Option<String>,
         pool_type: PoolType,
         bonding_curve: BondingCurve,
         delta: Uint128,
-        fee: Uint128,
-        asset_recipient: String,
+        spot_price: Uint128,
+        fee_bps: u16,
     },
-    UpdatePoolConfig {},
-    RemovePool {},
-    DepositTokens {},
-    DepositNfts {},
-    WithdrawTokens {},
-    WithdrawNfts {},
+    DepositTokens {
+        pool_id: u64,
+    },
+    DepositNfts {
+        pool_id: u64,
+        collection: String,
+        nft_token_ids: Vec<String>,
+    },
+    WithdrawTokens {
+        pool_id: u64,
+        amount: Uint128,
+        asset_recipient: Option<String>,
+    },
+    WithdrawAllTokens {
+        pool_id: u64,
+        asset_recipient: Option<String>,
+    },
+    WithdrawNfts {
+        pool_id: u64,
+        nft_token_ids: Vec<String>,
+        asset_recipient: Option<String>,
+    },
+    WithdrawAllNfts {
+        pool_id: u64,
+        asset_recipient: Option<String>,
+    },
+    UpdatePoolConfig {
+        pool_id: u64,
+        asset_recipient: Option<String>,
+        delta: Option<Uint128>,
+        spot_price: Option<Uint128>,
+        fee_bps: Option<u16>,
+    },
+    ToggleActive {
+        pool_id: u64,
+    },
+    RemovePool {
+        pool_id: u64,
+        asset_recipient: Option<String>,
+    },
     SwapTokenForAnyNfts {},
     SwapTokenForSpecificNfts {},
-    SwapNftsForTokens {},
 }
 
 #[cw_serde]
