@@ -1,7 +1,5 @@
 use crate::msg::{QueryMsg};
-use cosmwasm_std::{entry_point, to_binary, Addr, Binary, Deps, Env, Order, StdResult};
-use cw_storage_plus::{Bound, PrefixBound};
-use cw_utils::maybe_addr;
+use cosmwasm_std::{entry_point, to_binary, Binary, Deps, Env, StdResult};
 
 // Query limits
 const DEFAULT_QUERY_LIMIT: u32 = 10;
