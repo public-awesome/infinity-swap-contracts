@@ -52,7 +52,7 @@ pub enum ExecuteMsg {
         spot_price: Option<Uint128>,
         fee_bps: Option<u16>,
     },
-    ToggleActive {
+    ToggleActivePool {
         pool_id: u64,
     },
     RemovePool {
