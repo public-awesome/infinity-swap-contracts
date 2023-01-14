@@ -1,6 +1,6 @@
 use crate::{error::ContractError};
 use crate::msg::ExecuteMsg;
-use crate::state::{PoolType, BondingCurve, CONFIG, Pool, POOLS, Config};
+use crate::state::{PoolType, BondingCurve, CONFIG, Pool, pools, Config};
 use crate::helpers::{
     save_pool, get_next_pool_counter, get_pool_attributes, transfer_nft, only_owner, transfer_token, remove_pool,
 };
@@ -196,7 +196,7 @@ pub fn execute_deposit_tokens(
     let config = CONFIG.load(deps.storage)?;
     let received_amount = must_pay(&info, &config.denom)?;
     
-    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
 
     let response = Response::new();
@@ -222,7 +222,7 @@ pub fn execute_deposit_nfts(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
     if pool.collection != collection {
         return Err(ContractError::InvalidPool(
@@ -258,7 +258,7 @@ pub fn execute_withdraw_tokens(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
 
     let mut response = Response::new();
@@ -291,7 +291,7 @@ pub fn execute_withdraw_all_tokens(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let pool = POOLS.load(deps.storage, pool_id)?;
+    let pool = pools().load(deps.storage, pool_id)?;
     execute_withdraw_tokens(deps, info, pool_id, pool.total_tokens, asset_recipient)
 }
 
@@ -304,7 +304,7 @@ pub fn execute_withdraw_nfts(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
 
     let mut response = Response::new();
@@ -335,7 +335,7 @@ pub fn execute_withdraw_all_nfts(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let pool = POOLS.load(deps.storage, pool_id)?;
+    let pool = pools().load(deps.storage, pool_id)?;
 
     let withdrawal_batch_size: u8 = 10;
     let nft_token_ids = 
@@ -355,7 +355,7 @@ pub fn execute_update_pool_config(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
 
     let response = Response::new();
@@ -391,7 +391,7 @@ pub fn execute_set_active_pool(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
 
     let response = Response::new();
@@ -414,7 +414,7 @@ pub fn execute_remove_pool(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let mut pool = POOLS.load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
 
     if !pool.nft_token_ids.is_empty() {

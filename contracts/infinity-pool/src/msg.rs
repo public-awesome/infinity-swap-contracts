@@ -79,26 +79,31 @@ pub struct QueryOptions<T> {
 
 #[cw_serde]
 pub enum QueryMsg {
+    Config { },
     Pool {
         pool_id: u64,
     },
     Pools {
-        descending: Option<bool>,
-        start_after: Option<u64>,
-        limit: Option<u32>,
+        query_options: QueryOptions<u64>
     },
     PoolsByOwner {
         owner: String,
         query_options: QueryOptions<u64>
     },
     PoolsByBuyPrice {
-        descending: Option<bool>,
-        start_after: Option<u64>,
-        limit: Option<u32>,
+        collection: String,
+        query_options: QueryOptions<u64>
     },
     PoolsBySellPrice {
-        descending: Option<bool>,
-        start_after: Option<u64>,
-        limit: Option<u32>,
+        collection: String,
+        query_options: QueryOptions<u64>
     },
+}
+
+#[cw_serde]
+pub struct ConfigResponse {
+    pub cw721_address: String,
+    pub operators: Vec<String>,
+    pub label: String,
+    pub unstake_period: u64,
 }

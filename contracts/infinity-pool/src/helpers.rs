@@ -1,10 +1,10 @@
 use crate::state::{Pool};
 use crate::ContractError;
-use crate::state::{POOL_COUNTER, POOLS, PoolType, PoolQuote, buy_pool_quotes, sell_pool_quotes};
+use crate::state::{POOL_COUNTER, pools, PoolType, PoolQuote, buy_pool_quotes, sell_pool_quotes};
 use sg_std::Response;
 use cosmwasm_std::{
     Storage, Attribute, Addr, StdResult, Event, WasmMsg, SubMsg, MessageInfo, Coin, BankMsg,
-    to_binary,
+    Order, to_binary,
 };
 use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
 
@@ -58,7 +58,7 @@ pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), Co
 pub fn save_pool(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractError> {
     pool.validate()?;
     update_pool_quotes(store, pool)?;
-    POOLS.save(store, pool.id, pool)?;
+    pools().save(store, pool.id, pool)?;
 
     Ok(())
 }
@@ -66,7 +66,7 @@ pub fn save_pool(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractErr
 pub fn remove_pool(store: &mut dyn Storage, pool: &mut Pool) -> Result<(), ContractError> {
     pool.set_active(false)?;
     update_pool_quotes(store, pool)?;
-    POOLS.remove(store, pool.id);
+    pools().remove(store, pool.id);
 
     Ok(())
 }
@@ -165,4 +165,11 @@ pub fn only_owner(
         return Err(ContractError::Unauthorized(String::from("sender is not the owner of the pool")));
     }
     Ok(())
+}
+
+pub fn option_bool_to_order(descending: Option<bool>) -> Order {
+    match descending {
+       Some(_descending) => if _descending { Order::Descending } else { Order::Ascending },
+       _ => Order::Ascending
+   }
 }
