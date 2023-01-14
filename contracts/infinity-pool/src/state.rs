@@ -3,7 +3,7 @@ use crate::ContractError;
 use std::collections::BTreeSet;
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex, Item, Map};
+use cw_storage_plus::{Index, IndexList, IndexedMap, MultiIndex, Item};
 use std::fmt;
 
 pub const POOL_COUNTER: Item<u64> = Item::new("pool-counter");

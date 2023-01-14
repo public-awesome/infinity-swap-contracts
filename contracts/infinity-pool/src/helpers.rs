@@ -66,7 +66,7 @@ pub fn save_pool(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractErr
 pub fn remove_pool(store: &mut dyn Storage, pool: &mut Pool) -> Result<(), ContractError> {
     pool.set_active(false)?;
     update_pool_quotes(store, pool)?;
-    pools().remove(store, pool.id);
+    pools().remove(store, pool.id)?;
 
     Ok(())
 }

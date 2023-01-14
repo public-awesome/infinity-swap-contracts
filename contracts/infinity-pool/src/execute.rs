@@ -1,6 +1,6 @@
 use crate::{error::ContractError};
 use crate::msg::ExecuteMsg;
-use crate::state::{PoolType, BondingCurve, CONFIG, Pool, pools, Config};
+use crate::state::{PoolType, BondingCurve, CONFIG, Pool, pools};
 use crate::helpers::{
     save_pool, get_next_pool_counter, get_pool_attributes, transfer_nft, only_owner, transfer_token, remove_pool,
 };
@@ -270,7 +270,7 @@ pub fn execute_withdraw_tokens(
         recipient.to_string(),
         "withdrawal_by_owner",
         &mut response,
-    );
+    )?;
     
     pool.withdraw_tokens(amount)?;
     save_pool(deps.storage, &pool)?;
