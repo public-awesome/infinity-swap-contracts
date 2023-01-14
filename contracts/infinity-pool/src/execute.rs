@@ -2,7 +2,7 @@ use crate::{error::ContractError};
 use crate::msg::ExecuteMsg;
 use crate::state::{PoolType, BondingCurve, CONFIG, Pool, POOLS, Config};
 use crate::helpers::{
-    save_pool, get_next_pool_counter, get_pool_attributes, transfer_nft, only_owner, transfer_token,
+    save_pool, get_next_pool_counter, get_pool_attributes, transfer_nft, only_owner, transfer_token, remove_pool,
 };
 
 #[cfg(not(feature = "library"))]
@@ -114,12 +114,14 @@ pub fn execute(
             spot_price,
             fee_bps,
         ),
-        ExecuteMsg::ToggleActivePool {
+        ExecuteMsg::SetActivePool {
             pool_id,
-        } => execute_toggle_active_pool(
+            is_active,
+        } => execute_set_active_pool(
             deps,
             info,
             pool_id,
+            is_active,
         ),
         ExecuteMsg::RemovePool {
             pool_id,
@@ -130,6 +132,20 @@ pub fn execute(
             pool_id,
             maybe_addr(api, asset_recipient)?,
         ),
+        // ExecuteMsg::SwapTokenForAnyNfts {
+        //     collection,
+        //     num_nfts,
+        //     max_expected_token_input,
+        //     asset_recipient,
+        // } => execute_swap_token_for_any_nfts(
+        //     deps,
+        //     info,
+        //     env,
+        //     api.addr_validate(&collection)?,
+        //     num_nfts,
+        //     max_expected_token_input,
+        //     maybe_addr(api, asset_recipient)?,
+        // ),
         _ => Ok(Response::default()),
     }
 }
@@ -367,10 +383,11 @@ pub fn execute_update_pool_config(
     Ok(response.add_event(event))
 }
 
-pub fn execute_toggle_active_pool(
+pub fn execute_set_active_pool(
     deps: DepsMut,
     info: MessageInfo,
     pool_id: u64,
+    is_active: bool,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
@@ -379,7 +396,7 @@ pub fn execute_toggle_active_pool(
 
     let response = Response::new();
 
-    pool.is_active = !pool.is_active;
+    pool.set_active(is_active)?;
     save_pool(deps.storage, &pool)?;
 
     let event = Event::new("toggle_pool")
@@ -397,7 +414,7 @@ pub fn execute_remove_pool(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let pool = POOLS.load(deps.storage, pool_id)?;
+    let mut pool = POOLS.load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
 
     if !pool.nft_token_ids.is_empty() {
@@ -421,10 +438,31 @@ pub fn execute_remove_pool(
         )?;
     }
 
-    POOLS.remove(deps.storage, pool_id);
+    remove_pool(deps.storage, &mut pool)?;
 
     let event = Event::new("remove_pool")
         .add_attribute("pool_id", pool_id.to_string());
 
     Ok(response.add_event(event))
 }
+
+// pub fn execute_swap_token_for_any_nfts(
+//     deps: DepsMut,
+//     info: MessageInfo,
+//     collection: Addr,
+//     num_nfts: u8,
+//     max_expected_token_input: Uint128,
+//     asset_recipient: Option<Addr>,
+// ) -> Result<Response, ContractError> {
+    
+//     let config = CONFIG.load(deps.storage)?;
+//     let received_amount = must_pay(&info, &config.denom)?;
+//     if received_amount < max_expected_token_input {
+//         return Err(ContractError::InsufficientFunds {
+//             expected: max_expected_token_input,
+//             received: received_amount,
+//         });
+//     }
+
+
+// }

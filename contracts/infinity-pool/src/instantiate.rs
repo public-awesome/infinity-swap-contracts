@@ -20,7 +20,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     
-    POOL_COUNTER.save(deps.storage, &0)?;
+    POOL_COUNTER.save(deps.storage, &1)?;
     CONFIG.save(deps.storage, &Config {
         denom: msg.denom.clone(),
         marketplace_addr: deps.api.addr_validate(&msg.marketplace_addr)?,

@@ -134,8 +134,8 @@ impl Pool {
         Ok(())
     }
 
-    pub fn activate(&mut self) -> Result<(), ContractError> {
-        self.is_active = true;
+    pub fn set_active(&mut self, is_active: bool) -> Result<(), ContractError> {
+        self.is_active = is_active;
         Ok(())
     }
 
@@ -180,6 +180,15 @@ impl Pool {
         }
         Ok(())
     }
+
+    pub fn can_buy_nfts(&self) -> bool {
+        self.pool_type == PoolType::Trade || self.pool_type == PoolType::Token
+    }
+
+    pub fn can_sell_nfts(&self) -> bool {
+        self.pool_type == PoolType::Trade || self.pool_type == PoolType::Nft
+    }
+
 }
 
 pub struct BuyPoolQuoteIndices<'a> {

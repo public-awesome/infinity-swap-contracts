@@ -52,17 +52,53 @@ pub enum ExecuteMsg {
         spot_price: Option<Uint128>,
         fee_bps: Option<u16>,
     },
-    ToggleActivePool {
+    SetActivePool {
+        is_active: bool,
         pool_id: u64,
     },
     RemovePool {
         pool_id: u64,
         asset_recipient: Option<String>,
     },
-    SwapTokenForAnyNfts {},
+    SwapTokenForAnyNfts {
+        collection: String,
+        num_nfts: u8,
+        max_expected_token_input: Uint128,
+        asset_recipient: Option<String>,
+    },
     SwapTokenForSpecificNfts {},
+    SwapNftForTokens {},
+}
+
+#[cw_serde]
+pub struct QueryOptions<T> {
+    pub descending: Option<bool>,
+    pub start_after: Option<T>,
+    pub limit: Option<u32>,
 }
 
 #[cw_serde]
 pub enum QueryMsg {
+    Pool {
+        pool_id: u64,
+    },
+    Pools {
+        descending: Option<bool>,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
+    PoolsByOwner {
+        owner: String,
+        query_options: QueryOptions<u64>
+    },
+    PoolsByBuyPrice {
+        descending: Option<bool>,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
+    PoolsBySellPrice {
+        descending: Option<bool>,
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
 }

@@ -14,25 +14,59 @@ pub fn get_next_pool_counter(store: &mut dyn Storage) -> Result<u64, ContractErr
     Ok(pool_counter)
 }
 
+pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractError> {
+    if !pool.is_active {
+        if pool.can_buy_nfts() {
+            buy_pool_quotes().remove(store, pool.id)?;
+        }
+        if pool.can_sell_nfts() {
+            sell_pool_quotes().remove(store, pool.id)?;
+        }
+        return Ok(())
+    }
+
+    match pool.pool_type {
+        PoolType::Token => {
+            if pool.total_tokens < pool.spot_price {
+                buy_pool_quotes().remove(store, pool.id)?;
+            } else {
+                buy_pool_quotes().save(store, pool.id, &PoolQuote {
+                    id: pool.id,
+                    collection: pool.collection.clone(),
+                    quote_price: pool.spot_price,
+                })?;
+            }
+        }
+        PoolType::Nft => {
+            if pool.nft_token_ids.is_empty() {
+                sell_pool_quotes().remove(store, pool.id)?;
+            } else {
+                sell_pool_quotes().save(store, pool.id, &PoolQuote {
+                    id: pool.id,
+                    collection: pool.collection.clone(),
+                    quote_price: pool.spot_price,
+                })?;
+            }
+        }
+        PoolType::Trade => {
+        }
+    }
+
+    Ok(())
+}
+
 pub fn save_pool(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractError> {
     pool.validate()?;
+    update_pool_quotes(store, pool)?;
     POOLS.save(store, pool.id, pool)?;
 
-    // match pool.pool_type {
-    //     PoolType::Token => {
-    //         sell_pool_quotes().save(store, pool.id, &PoolQuote {
-    //             id: pool.id,
-    //             collection: pool.collection.clone(),
-    //             quote_price: pool.spot_price,
-    //         })?;
-    //     }
-    //     PoolType::Nft => {
-            
-    //     }
-    //     PoolType::Trade => {
-            
-    //     }
-    // }
+    Ok(())
+}
+
+pub fn remove_pool(store: &mut dyn Storage, pool: &mut Pool) -> Result<(), ContractError> {
+    pool.set_active(false)?;
+    update_pool_quotes(store, pool)?;
+    POOLS.remove(store, pool.id);
 
     Ok(())
 }
