@@ -60,7 +60,27 @@ pub struct Pool {
     pub is_active: bool,
 }
 
-pub const POOLS: Map<u64, Pool> = Map::new("pools");
+pub struct PoolIndices<'a> {
+	pub owner: MultiIndex<'a, Addr, Pool, u64>,
+}
+
+impl<'a> IndexList<Pool> for PoolIndices<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Pool>> + '_> {
+        let v: Vec<&dyn Index<Pool>> = vec![&self.owner];
+        Box::new(v.into_iter())
+    }
+}
+
+pub fn pools<'a>() -> IndexedMap<'a, u64, Pool, PoolIndices<'a>> {
+    let indexes = PoolIndices {
+        owner: MultiIndex::new(
+            |_pk: &[u8], p: &Pool| p.owner.clone(),
+            "pools",
+            "pools__owner",
+        ),
+    };
+    IndexedMap::new("pools", indexes)
+}
 
 #[cw_serde]
 pub struct PoolQuote {
