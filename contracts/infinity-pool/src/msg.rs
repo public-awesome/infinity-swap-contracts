@@ -1,11 +1,17 @@
-use crate::state::{PoolType, BondingCurve};
+use crate::state::{BondingCurve, PoolType};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Uint128};
+use cosmwasm_std::Uint128;
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub denom: String,
     pub marketplace_addr: String,
+}
+
+#[cw_serde]
+pub struct PoolNfts {
+    pub pool_id: u64,
+    pub nft_token_ids: Vec<String>,
 }
 
 #[cw_serde]
@@ -60,13 +66,13 @@ pub enum ExecuteMsg {
         pool_id: u64,
         asset_recipient: Option<String>,
     },
-    SwapTokenForAnyNfts {
+    SwapTokenForSpecificNfts {
         collection: String,
-        num_nfts: u8,
+        specific_nfts: Vec<PoolNfts>,
         max_expected_token_input: Uint128,
         asset_recipient: Option<String>,
     },
-    SwapTokenForSpecificNfts {},
+    SwapTokenForAnyNfts {},
     SwapNftForTokens {},
 }
 
@@ -79,24 +85,24 @@ pub struct QueryOptions<T> {
 
 #[cw_serde]
 pub enum QueryMsg {
-    Config { },
+    Config {},
     Pool {
         pool_id: u64,
     },
     Pools {
-        query_options: QueryOptions<u64>
+        query_options: QueryOptions<u64>,
     },
     PoolsByOwner {
         owner: String,
-        query_options: QueryOptions<u64>
+        query_options: QueryOptions<u64>,
     },
     PoolsByBuyPrice {
         collection: String,
-        query_options: QueryOptions<u64>
+        query_options: QueryOptions<u64>,
     },
     PoolsBySellPrice {
         collection: String,
-        query_options: QueryOptions<u64>
+        query_options: QueryOptions<u64>,
     },
 }
 
