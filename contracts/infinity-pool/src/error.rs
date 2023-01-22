@@ -16,12 +16,15 @@ pub enum ContractError {
     #[error("{0}")]
     PaymentError(#[from] PaymentError),
 
-    #[error("Insufficient funds: expected {expected}, received {received}")]
-    InsufficientFunds {
-        expected: Uint128,
-        received: Uint128,
-    },
+    #[error("Insufficient funds: {0}")]
+    InsufficientFunds(String),
 
     #[error("Unable to remove pool: {0}")]
     UnableToRemovePool(String),
+
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
+    #[error("Internal error: {0}")]
+    InternalError(String),
 }

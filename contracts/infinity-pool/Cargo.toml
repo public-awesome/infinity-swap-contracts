@@ -36,8 +36,10 @@ cw-storage-plus = "0.16.0"
 cw-utils = "0.16.0"
 cw2 = "0.16.0"
 thiserror = { version = "1.0.31" }
+sg1 = "0.21.8"
 sg2 = "0.21.8"
 sg721-base = { version = "0.21.8", features = ["library"] }
+sg721 = { version = "0.21.8", features = ["library"] }
 sg-std = "0.21.8"
 sg-marketplace = { git = "https://github.com/public-awesome/marketplace" }
 

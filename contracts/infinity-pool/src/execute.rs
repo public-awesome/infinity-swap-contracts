@@ -1,15 +1,17 @@
-use crate::{error::ContractError};
-use crate::msg::ExecuteMsg;
-use crate::state::{PoolType, BondingCurve, CONFIG, Pool, pools};
+use crate::error::ContractError;
 use crate::helpers::{
-    save_pool, get_next_pool_counter, get_pool_attributes, transfer_nft, only_owner, transfer_token, remove_pool,
+    get_next_pool_counter, get_pool_attributes, only_owner, remove_pool, save_pool, transfer_nft,
+    transfer_token,
 };
+use crate::msg::{ExecuteMsg, PoolNfts};
+use crate::state::{pools, BondingCurve, Pool, PoolType, CONFIG};
+use crate::swap_processor::SwapProcessor;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Uint128, DepsMut, Env, MessageInfo, Addr, Event, coin};
+use cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo, Uint128};
 use cw_utils::{maybe_addr, must_pay, nonpayable};
-use sg_std::{Response};
+use sg_std::Response;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -40,13 +42,7 @@ pub fn execute(
             delta,
             fee_bps,
         ),
-        ExecuteMsg::DepositTokens {
-            pool_id,
-        } => execute_deposit_tokens(
-            deps,
-            info,
-            pool_id,
-        ),
+        ExecuteMsg::DepositTokens { pool_id } => execute_deposit_tokens(deps, info, pool_id),
         ExecuteMsg::DepositNfts {
             pool_id,
             collection,
@@ -73,12 +69,7 @@ pub fn execute(
         ExecuteMsg::WithdrawAllTokens {
             pool_id,
             asset_recipient,
-        } => execute_withdraw_all_tokens(
-            deps,
-            info,
-            pool_id,
-            maybe_addr(api, asset_recipient)?,
-        ),
+        } => execute_withdraw_all_tokens(deps, info, pool_id, maybe_addr(api, asset_recipient)?),
         ExecuteMsg::WithdrawNfts {
             pool_id,
             nft_token_ids,
@@ -93,12 +84,7 @@ pub fn execute(
         ExecuteMsg::WithdrawAllNfts {
             pool_id,
             asset_recipient,
-        } => execute_withdraw_all_nfts(
-            deps,
-            info,
-            pool_id,
-            maybe_addr(api, asset_recipient)?,
-        ),
+        } => execute_withdraw_all_nfts(deps, info, pool_id, maybe_addr(api, asset_recipient)?),
         ExecuteMsg::UpdatePoolConfig {
             pool_id,
             asset_recipient,
@@ -114,38 +100,26 @@ pub fn execute(
             spot_price,
             fee_bps,
         ),
-        ExecuteMsg::SetActivePool {
-            pool_id,
-            is_active,
-        } => execute_set_active_pool(
-            deps,
-            info,
-            pool_id,
-            is_active,
-        ),
+        ExecuteMsg::SetActivePool { pool_id, is_active } => {
+            execute_set_active_pool(deps, info, pool_id, is_active)
+        }
         ExecuteMsg::RemovePool {
             pool_id,
             asset_recipient,
-        } => execute_remove_pool(
+        } => execute_remove_pool(deps, info, pool_id, maybe_addr(api, asset_recipient)?),
+        ExecuteMsg::SwapTokenForSpecificNfts {
+            collection,
+            specific_nfts,
+            max_expected_token_input,
+            asset_recipient,
+        } => execute_swap_token_for_specific_nfts(
             deps,
             info,
-            pool_id,
+            api.addr_validate(&collection)?,
+            specific_nfts,
+            max_expected_token_input,
             maybe_addr(api, asset_recipient)?,
         ),
-        // ExecuteMsg::SwapTokenForAnyNfts {
-        //     collection,
-        //     num_nfts,
-        //     max_expected_token_input,
-        //     asset_recipient,
-        // } => execute_swap_token_for_any_nfts(
-        //     deps,
-        //     info,
-        //     env,
-        //     api.addr_validate(&collection)?,
-        //     num_nfts,
-        //     max_expected_token_input,
-        //     maybe_addr(api, asset_recipient)?,
-        // ),
         _ => Ok(Response::default()),
     }
 }
@@ -195,12 +169,12 @@ pub fn execute_deposit_tokens(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let received_amount = must_pay(&info, &config.denom)?;
-    
+
     let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
 
     let response = Response::new();
-    
+
     pool.deposit_tokens(received_amount)?;
     save_pool(deps.storage, &pool)?;
 
@@ -225,22 +199,32 @@ pub fn execute_deposit_nfts(
     let mut pool = pools().load(deps.storage, pool_id)?;
     only_owner(&info, &pool)?;
     if pool.collection != collection {
-        return Err(ContractError::InvalidPool(
-            format!("invalid collection ({}) for pool ({})", collection, pool.id)
-        ));
+        return Err(ContractError::InvalidPool(format!(
+            "invalid collection ({}) for pool ({})",
+            collection, pool.id
+        )));
     }
 
     let mut response = Response::new();
 
     for nft_token_id in &nft_token_ids {
-        transfer_nft(&nft_token_id, &env.contract.address, &collection, &mut response)?;
+        transfer_nft(
+            &nft_token_id,
+            &env.contract.address,
+            &collection,
+            &mut response,
+        )?;
     }
-    
+
     pool.deposit_nfts(&nft_token_ids)?;
     save_pool(deps.storage, &pool)?;
 
-    let all_nft_token_ids =
-        pool.nft_token_ids.iter().map(|id| id.to_string()).collect::<Vec<String>>().join(",");
+    let all_nft_token_ids = pool
+        .nft_token_ids
+        .iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<String>>()
+        .join(",");
     let event = Event::new("deposit_nfts")
         .add_attribute("nft_token_ids", pool_id.to_string())
         .add_attribute("nfts_received", nft_token_ids.join(","))
@@ -271,7 +255,7 @@ pub fn execute_withdraw_tokens(
         "withdrawal_by_owner",
         &mut response,
     )?;
-    
+
     pool.withdraw_tokens(amount)?;
     save_pool(deps.storage, &pool)?;
 
@@ -313,12 +297,16 @@ pub fn execute_withdraw_nfts(
     for nft_token_id in &nft_token_ids {
         transfer_nft(&nft_token_id, &recipient, &pool.collection, &mut response)?;
     }
-    
+
     pool.withdraw_nfts(&nft_token_ids)?;
     save_pool(deps.storage, &pool)?;
 
-    let all_nft_token_ids =
-        pool.nft_token_ids.iter().map(|id| id.to_string()).collect::<Vec<String>>().join(",");
+    let all_nft_token_ids = pool
+        .nft_token_ids
+        .iter()
+        .map(|id| id.to_string())
+        .collect::<Vec<String>>()
+        .join(",");
     let event = Event::new("withdraw_nfts")
         .add_attribute("nft_token_ids", pool_id.to_string())
         .add_attribute("nfts_withdrawn", nft_token_ids.join(","))
@@ -338,8 +326,11 @@ pub fn execute_withdraw_all_nfts(
     let pool = pools().load(deps.storage, pool_id)?;
 
     let withdrawal_batch_size: u8 = 10;
-    let nft_token_ids = 
-        pool.nft_token_ids.into_iter().take(withdrawal_batch_size as usize).collect();
+    let nft_token_ids = pool
+        .nft_token_ids
+        .into_iter()
+        .take(withdrawal_batch_size as usize)
+        .collect();
 
     execute_withdraw_nfts(deps, info, pool_id, nft_token_ids, asset_recipient)
 }
@@ -410,7 +401,7 @@ pub fn execute_remove_pool(
     deps: DepsMut,
     info: MessageInfo,
     pool_id: u64,
-    asset_recipient: Option<Addr>
+    asset_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
@@ -418,11 +409,16 @@ pub fn execute_remove_pool(
     only_owner(&info, &pool)?;
 
     if !pool.nft_token_ids.is_empty() {
-        let all_nft_token_ids = pool.nft_token_ids.iter()
-            .map(|id| id.to_string()).collect::<Vec<String>>().join(",");
-        return Err(ContractError::UnableToRemovePool(
-            format!("pool {} still has NFTs: {}", pool_id, all_nft_token_ids),
-        ));
+        let all_nft_token_ids = pool
+            .nft_token_ids
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+        return Err(ContractError::UnableToRemovePool(format!(
+            "pool {} still has NFTs: {}",
+            pool_id, all_nft_token_ids
+        )));
     }
 
     let mut response = Response::new();
@@ -440,29 +436,39 @@ pub fn execute_remove_pool(
 
     remove_pool(deps.storage, &mut pool)?;
 
-    let event = Event::new("remove_pool")
-        .add_attribute("pool_id", pool_id.to_string());
+    let event = Event::new("remove_pool").add_attribute("pool_id", pool_id.to_string());
 
     Ok(response.add_event(event))
 }
 
-// pub fn execute_swap_token_for_any_nfts(
-//     deps: DepsMut,
-//     info: MessageInfo,
-//     collection: Addr,
-//     num_nfts: u8,
-//     max_expected_token_input: Uint128,
-//     asset_recipient: Option<Addr>,
-// ) -> Result<Response, ContractError> {
-    
-//     let config = CONFIG.load(deps.storage)?;
-//     let received_amount = must_pay(&info, &config.denom)?;
-//     if received_amount < max_expected_token_input {
-//         return Err(ContractError::InsufficientFunds {
-//             expected: max_expected_token_input,
-//             received: received_amount,
-//         });
-//     }
+pub fn execute_swap_token_for_specific_nfts(
+    deps: DepsMut,
+    info: MessageInfo,
+    collection: Addr,
+    specific_nfts: Vec<PoolNfts>,
+    max_expected_token_input: Uint128,
+    asset_recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    let received_amount = must_pay(&info, &config.denom)?;
+    if received_amount < max_expected_token_input {
+        return Err(ContractError::InsufficientFunds(format!(
+            "expected {}, received {}",
+            received_amount, config.denom
+        )));
+    }
 
+    let mut response = Response::new();
+    let seller_recipient = asset_recipient.unwrap_or(info.sender);
 
-// }
+    let mut processor = SwapProcessor::new(
+        config.marketplace_addr.clone(),
+        collection.clone(),
+        collection,
+        seller_recipient,
+        false,
+    );
+    processor.swap_token_for_specific_nfts(deps, specific_nfts, max_expected_token_input)?;
+
+    Ok(response)
+}
