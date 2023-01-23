@@ -67,8 +67,8 @@ fn create_token_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Token,
         bonding_curve: BondingCurve::ConstantProduct,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -85,8 +85,8 @@ fn create_token_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Token,
         bonding_curve: BondingCurve::Linear,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: Some(0u16),
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -101,8 +101,8 @@ fn create_token_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Token,
         bonding_curve: BondingCurve::Linear,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -114,8 +114,8 @@ fn create_token_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Token,
         bonding_curve: BondingCurve::Exponential,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -140,8 +140,8 @@ fn create_nft_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Nft,
         bonding_curve: BondingCurve::ConstantProduct,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -158,8 +158,8 @@ fn create_nft_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Nft,
         bonding_curve: BondingCurve::Linear,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: Some(0u16),
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -174,8 +174,8 @@ fn create_nft_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Nft,
         bonding_curve: BondingCurve::Linear,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -187,8 +187,8 @@ fn create_nft_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Nft,
         bonding_curve: BondingCurve::Exponential,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -213,8 +213,8 @@ fn create_trade_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Trade,
         bonding_curve: BondingCurve::Linear,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: Some(9001u16),
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -229,8 +229,8 @@ fn create_trade_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Trade,
         bonding_curve: BondingCurve::Linear,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -242,8 +242,8 @@ fn create_trade_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Trade,
         bonding_curve: BondingCurve::Exponential,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: Some(2000u16),
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
@@ -255,8 +255,8 @@ fn create_trade_pool() {
         asset_recipient: Some(asset_account.to_string()),
         pool_type: PoolType::Trade,
         bonding_curve: BondingCurve::ConstantProduct,
-        spot_price: Some(Uint128::from(2400u64)),
-        delta: Some(Uint128::from(120u64)),
+        spot_price: Uint128::from(2400u64),
+        delta: Uint128::from(120u64),
         fee_bps: Some(2000u16),
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);

@@ -16,49 +16,46 @@ pub fn get_next_pool_counter(store: &mut dyn Storage) -> Result<u64, ContractErr
 }
 
 pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractError> {
-    if !pool.is_active {
-        if pool.can_buy_nfts() {
+    if pool.can_buy_nfts() {
+        if !pool.is_active {
             buy_pool_quotes().remove(store, pool.id)?;
+        } else {
+            let buy_price_quote = pool.get_buy_quote()?;
+            if pool.total_tokens < buy_price_quote {
+                buy_pool_quotes().remove(store, pool.id)?;
+            } else {
+                buy_pool_quotes().save(
+                    store,
+                    pool.id,
+                    &PoolQuote {
+                        id: pool.id,
+                        collection: pool.collection.clone(),
+                        quote_price: buy_price_quote,
+                    },
+                )?;
+            }
         }
-        if pool.can_sell_nfts() {
-            sell_pool_quotes().remove(store, pool.id)?;
-        }
-        return Ok(());
     }
-
-    // match pool.pool_type {
-    //     PoolType::Token => {
-    //         if pool.total_tokens < pool.spot_price {
-    //             buy_pool_quotes().remove(store, pool.id)?;
-    //         } else {
-    //             buy_pool_quotes().save(
-    //                 store,
-    //                 pool.id,
-    //                 &PoolQuote {
-    //                     id: pool.id,
-    //                     collection: pool.collection.clone(),
-    //                     quote_price: pool.spot_price,
-    //                 },
-    //             )?;
-    //         }
-    //     }
-    //     PoolType::Nft => {
-    //         if pool.nft_token_ids.is_empty() {
-    //             sell_pool_quotes().remove(store, pool.id)?;
-    //         } else {
-    //             sell_pool_quotes().save(
-    //                 store,
-    //                 pool.id,
-    //                 &PoolQuote {
-    //                     id: pool.id,
-    //                     collection: pool.collection.clone(),
-    //                     quote_price: pool.spot_price,
-    //                 },
-    //             )?;
-    //         }
-    //     }
-    //     PoolType::Trade => {}
-    // }
+    if pool.can_sell_nfts() {
+        if !pool.is_active {
+            sell_pool_quotes().remove(store, pool.id)?;
+        } else {
+            let sell_price_quote = pool.get_sell_quote()?;
+            if pool.nft_token_ids.is_empty() {
+                sell_pool_quotes().remove(store, pool.id)?;
+            } else {
+                sell_pool_quotes().save(
+                    store,
+                    pool.id,
+                    &PoolQuote {
+                        id: pool.id,
+                        collection: pool.collection.clone(),
+                        quote_price: sell_price_quote,
+                    },
+                )?;
+            }
+        }
+    }
 
     Ok(())
 }
@@ -110,17 +107,11 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
         },
         Attribute {
             key: "spot_price".to_string(),
-            value: pool
-                .spot_price
-                .clone()
-                .map_or("None".to_string(), |p| p.to_string()),
+            value: pool.spot_price.to_string(),
         },
         Attribute {
             key: "delta".to_string(),
-            value: pool
-                .delta
-                .clone()
-                .map_or("None".to_string(), |d| d.to_string()),
+            value: pool.delta.to_string(),
         },
         Attribute {
             key: "total_tokens".to_string(),

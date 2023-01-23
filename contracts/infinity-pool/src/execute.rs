@@ -144,8 +144,8 @@ pub fn execute_create_pool(
     asset_recipient: Option<Addr>,
     pool_type: PoolType,
     bonding_curve: BondingCurve,
-    spot_price: Option<Uint128>,
-    delta: Option<Uint128>,
+    spot_price: Uint128,
+    delta: Uint128,
     fee_bps: Option<u16>,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
@@ -367,11 +367,11 @@ pub fn execute_update_pool_config(
     if let Some(_asset_recipient) = asset_recipient {
         pool.asset_recipient = Some(_asset_recipient);
     }
-    if let Some(_delta) = delta {
-        pool.delta = Some(_delta);
-    }
     if let Some(_spot_price) = spot_price {
-        pool.spot_price = Some(_spot_price);
+        pool.spot_price = _spot_price;
+    }
+    if let Some(_delta) = delta {
+        pool.delta = _delta;
     }
     if let Some(_fee_bps) = fee_bps {
         pool.fee_bps = Some(_fee_bps);
