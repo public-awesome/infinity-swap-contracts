@@ -1,5 +1,6 @@
-use crate::state::Pool;
-use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, PoolQuote, PoolType, POOL_COUNTER};
+use crate::state::{
+    buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType, POOL_COUNTER,
+};
 use crate::ContractError;
 use cosmwasm_std::{
     to_binary, Addr, Attribute, BankMsg, Coin, Event, MessageInfo, Order, StdResult, Storage,
@@ -25,39 +26,39 @@ pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), Co
         return Ok(());
     }
 
-    match pool.pool_type {
-        PoolType::Token => {
-            if pool.total_tokens < pool.spot_price {
-                buy_pool_quotes().remove(store, pool.id)?;
-            } else {
-                buy_pool_quotes().save(
-                    store,
-                    pool.id,
-                    &PoolQuote {
-                        id: pool.id,
-                        collection: pool.collection.clone(),
-                        quote_price: pool.spot_price,
-                    },
-                )?;
-            }
-        }
-        PoolType::Nft => {
-            if pool.nft_token_ids.is_empty() {
-                sell_pool_quotes().remove(store, pool.id)?;
-            } else {
-                sell_pool_quotes().save(
-                    store,
-                    pool.id,
-                    &PoolQuote {
-                        id: pool.id,
-                        collection: pool.collection.clone(),
-                        quote_price: pool.spot_price,
-                    },
-                )?;
-            }
-        }
-        PoolType::Trade => {}
-    }
+    // match pool.pool_type {
+    //     PoolType::Token => {
+    //         if pool.total_tokens < pool.spot_price {
+    //             buy_pool_quotes().remove(store, pool.id)?;
+    //         } else {
+    //             buy_pool_quotes().save(
+    //                 store,
+    //                 pool.id,
+    //                 &PoolQuote {
+    //                     id: pool.id,
+    //                     collection: pool.collection.clone(),
+    //                     quote_price: pool.spot_price,
+    //                 },
+    //             )?;
+    //         }
+    //     }
+    //     PoolType::Nft => {
+    //         if pool.nft_token_ids.is_empty() {
+    //             sell_pool_quotes().remove(store, pool.id)?;
+    //         } else {
+    //             sell_pool_quotes().save(
+    //                 store,
+    //                 pool.id,
+    //                 &PoolQuote {
+    //                     id: pool.id,
+    //                     collection: pool.collection.clone(),
+    //                     quote_price: pool.spot_price,
+    //                 },
+    //             )?;
+    //         }
+    //     }
+    //     PoolType::Trade => {}
+    // }
 
     Ok(())
 }
@@ -109,11 +110,17 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
         },
         Attribute {
             key: "spot_price".to_string(),
-            value: pool.spot_price.to_string(),
+            value: pool
+                .spot_price
+                .clone()
+                .map_or("None".to_string(), |p| p.to_string()),
         },
         Attribute {
             key: "delta".to_string(),
-            value: pool.delta.to_string(),
+            value: pool
+                .delta
+                .clone()
+                .map_or("None".to_string(), |d| d.to_string()),
         },
         Attribute {
             key: "total_tokens".to_string(),
@@ -121,16 +128,23 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
         },
         Attribute {
             key: "nft_token_ids".to_string(),
-            value: pool
-                .nft_token_ids
-                .iter()
-                .map(|id| id.to_string())
-                .collect::<Vec<String>>()
-                .join(","),
+            value: [
+                "[".to_string(),
+                pool.nft_token_ids
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<String>>()
+                    .join(","),
+                "]".to_string(),
+            ]
+            .join(""),
         },
         Attribute {
             key: "fee_bps".to_string(),
-            value: pool.fee_bps.to_string(),
+            value: pool
+                .fee_bps
+                .clone()
+                .map_or("None".to_string(), |f| f.to_string()),
         },
     ]
 }

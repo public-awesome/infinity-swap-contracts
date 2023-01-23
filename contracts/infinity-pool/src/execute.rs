@@ -5,7 +5,7 @@ use crate::helpers::{
 };
 use crate::msg::{ExecuteMsg, PoolNfts};
 use crate::state::{pools, BondingCurve, Pool, PoolType, CONFIG};
-use crate::swap_processor::SwapProcessor;
+// use crate::swap_processor::SwapProcessor;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -144,9 +144,9 @@ pub fn execute_create_pool(
     asset_recipient: Option<Addr>,
     pool_type: PoolType,
     bonding_curve: BondingCurve,
-    spot_price: Uint128,
-    delta: Uint128,
-    fee_bps: u16,
+    spot_price: Option<Uint128>,
+    delta: Option<Uint128>,
+    fee_bps: Option<u16>,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
@@ -368,13 +368,13 @@ pub fn execute_update_pool_config(
         pool.asset_recipient = Some(_asset_recipient);
     }
     if let Some(_delta) = delta {
-        pool.delta = _delta;
+        pool.delta = Some(_delta);
     }
     if let Some(_spot_price) = spot_price {
-        pool.spot_price = _spot_price;
+        pool.spot_price = Some(_spot_price);
     }
     if let Some(_fee_bps) = fee_bps {
-        pool.fee_bps = _fee_bps;
+        pool.fee_bps = Some(_fee_bps);
     }
     save_pool(deps.storage, &pool)?;
 
@@ -474,12 +474,12 @@ pub fn execute_swap_token_for_specific_nfts(
     let mut response = Response::new();
     let seller_recipient = nft_recipient.unwrap_or(info.sender);
 
-    let mut processor = SwapProcessor::new(
-        config.marketplace_addr.clone(),
-        collection.clone(),
-        seller_recipient,
-    );
-    processor.swap_token_for_specific_nfts(deps, pool_nfts, max_expected_token_input)?;
+    // let mut processor = SwapProcessor::new(
+    //     config.marketplace_addr.clone(),
+    //     collection.clone(),
+    //     seller_recipient,
+    // );
+    // processor.swap_token_for_specific_nfts(deps, pool_nfts, max_expected_token_input)?;
 
     Ok(response)
 }
@@ -497,17 +497,17 @@ pub fn execute_swap_nft_for_tokens(
     let mut response = Response::new();
     let token_recipient = token_recipient.unwrap_or(info.sender);
 
-    let mut processor = SwapProcessor::new(
-        config.marketplace_addr.clone(),
-        collection.clone(),
-        token_recipient,
-    );
-    processor.swap_nft_for_tokens(
-        deps.storage,
-        collection,
-        nft_token_ids,
-        min_expected_token_output,
-    )?;
+    // let mut processor = SwapProcessor::new(
+    //     config.marketplace_addr.clone(),
+    //     collection.clone(),
+    //     token_recipient,
+    // );
+    // processor.swap_nft_for_tokens(
+    //     deps.storage,
+    //     collection,
+    //     nft_token_ids,
+    //     min_expected_token_output,
+    // )?;
 
     Ok(response)
 }

@@ -52,11 +52,11 @@ pub struct Pool {
     pub asset_recipient: Option<Addr>,
     pub pool_type: PoolType,
     pub bonding_curve: BondingCurve,
-    pub spot_price: Uint128,
-    pub delta: Uint128,
+    pub spot_price: Option<Uint128>,
+    pub delta: Option<Uint128>,
     pub total_tokens: Uint128,
     pub nft_token_ids: BTreeSet<String>,
-    pub fee_bps: u16,
+    pub fee_bps: Option<u16>,
     pub is_active: bool,
 }
 

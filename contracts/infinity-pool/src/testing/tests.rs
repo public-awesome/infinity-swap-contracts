@@ -1,6 +1,10 @@
+mod test_helpers;
+
+// #[cfg(test)]
+// mod index_tests;
+
 #[cfg(test)]
-mod unit_tests;
+mod message_tests;
 
 #[cfg(test)]
 mod multitest;
-

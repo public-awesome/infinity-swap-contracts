@@ -26,9 +26,9 @@ impl Pool {
         asset_recipient: Option<Addr>,
         pool_type: PoolType,
         bonding_curve: BondingCurve,
-        spot_price: Uint128,
-        delta: Uint128,
-        fee_bps: u16,
+        spot_price: Option<Uint128>,
+        delta: Option<Uint128>,
+        fee_bps: Option<u16>,
     ) -> Self {
         Self {
             id,
@@ -47,12 +47,6 @@ impl Pool {
     }
 
     pub fn validate(&self) -> Result<(), ContractError> {
-        if self.bonding_curve == BondingCurve::ConstantProduct && self.pool_type != PoolType::Trade
-        {
-            return Err(ContractError::InvalidPool(
-                "constant product bonding curve must be used with trade pool".to_string(),
-            ));
-        }
         match &self.pool_type {
             PoolType::Token => {
                 if self.nft_token_ids.len() > 0 {
@@ -60,9 +54,15 @@ impl Pool {
                         "nft_token_ids must be empty for token pool".to_string(),
                     ));
                 }
-                if self.fee_bps > 0 {
+                if let Some(_) = self.fee_bps {
                     return Err(ContractError::InvalidPool(
                         "fee_bps must be 0 for token pool".to_string(),
+                    ));
+                }
+                if self.bonding_curve == BondingCurve::ConstantProduct {
+                    return Err(ContractError::InvalidPool(
+                        "constant product bonding curve cannot be used with token pools"
+                            .to_string(),
                     ));
                 }
             }
@@ -72,27 +72,36 @@ impl Pool {
                         "total_tokens must be zero for nft pool".to_string(),
                     ));
                 }
-                if self.fee_bps > 0 {
+                if let Some(_) = self.fee_bps {
                     return Err(ContractError::InvalidPool(
                         "fee_bps must be 0 for nft pool".to_string(),
                     ));
                 }
+                if self.bonding_curve == BondingCurve::ConstantProduct {
+                    return Err(ContractError::InvalidPool(
+                        "constant product bonding curve cannot be used with nft pools".to_string(),
+                    ));
+                }
             }
             PoolType::Trade => {
-                if self.total_tokens == Uint128::zero() {
-                    return Err(ContractError::InvalidPool(
-                        "total_tokens must be greater than zero for trade pool".to_string(),
-                    ));
+                if let Some(_fee) = self.fee_bps {
+                    if _fee > 9000 {
+                        return Err(ContractError::InvalidPool(
+                            "fee_bps is greater than 9000".to_string(),
+                        ));
+                    }
                 }
-                if self.nft_token_ids.len() == 0 {
-                    return Err(ContractError::InvalidPool(
-                        "nft_token_ids must be non-empty for trade pool".to_string(),
-                    ));
-                }
-                if self.fee_bps > 10000 {
-                    return Err(ContractError::InvalidPool(
-                        "fee_bps is greater than 10000".to_string(),
-                    ));
+                if self.is_active {
+                    if self.total_tokens == Uint128::zero() {
+                        return Err(ContractError::InvalidPool(
+                            "total_tokens must be greater than zero for trade pool".to_string(),
+                        ));
+                    }
+                    if self.nft_token_ids.len() == 0 {
+                        return Err(ContractError::InvalidPool(
+                            "nft_token_ids must be non-empty for trade pool".to_string(),
+                        ));
+                    }
                 }
             }
         }
@@ -167,41 +176,41 @@ impl Pool {
         self.pool_type == PoolType::Trade || self.pool_type == PoolType::Nft
     }
 
-    pub fn buy_nft_from_pool(&mut self, nft_token_id: String) -> Result<(), ContractError> {
-        if !self.can_sell_nfts() {
-            return Err(ContractError::InvalidPool(
-                "cannot buy nft from pool".to_string(),
-            ));
-        }
-        if !self.nft_token_ids.remove(&nft_token_id) {
-            return Err(ContractError::InvalidPool(
-                "nft_token_id not found in pool".to_string(),
-            ));
-        }
-        self.spot_price = match self.bonding_curve {
-            BondingCurve::Linear => self.spot_price + self.delta,
-            BondingCurve::Exponential => self.spot_price * self.delta,
-            BondingCurve::ConstantProduct => {
-                self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
-            }
-        };
+    // pub fn buy_nft_from_pool(&mut self, nft_token_id: String) -> Result<(), ContractError> {
+    //     if !self.can_sell_nfts() {
+    //         return Err(ContractError::InvalidPool(
+    //             "cannot buy nft from pool".to_string(),
+    //         ));
+    //     }
+    //     if !self.nft_token_ids.remove(&nft_token_id) {
+    //         return Err(ContractError::InvalidPool(
+    //             "nft_token_id not found in pool".to_string(),
+    //         ));
+    //     }
+    //     self.spot_price = match self.bonding_curve {
+    //         BondingCurve::Linear => self.spot_price + self.delta,
+    //         BondingCurve::Exponential => self.spot_price * self.delta,
+    //         BondingCurve::ConstantProduct => {
+    //             self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
+    //         }
+    //     };
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    pub fn sell_nft_to_pool(&mut self) -> Result<(), ContractError> {
-        if !self.can_buy_nfts() {
-            return Err(ContractError::InvalidPool(
-                "cannot buy nft from pool".to_string(),
-            ));
-        }
-        self.spot_price = match self.bonding_curve {
-            BondingCurve::Linear => self.spot_price - self.delta,
-            BondingCurve::Exponential => self.spot_price * self.delta,
-            BondingCurve::ConstantProduct => {
-                self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
-            }
-        };
-        Ok(())
-    }
+    // pub fn sell_nft_to_pool(&mut self) -> Result<(), ContractError> {
+    //     if !self.can_buy_nfts() {
+    //         return Err(ContractError::InvalidPool(
+    //             "cannot buy nft from pool".to_string(),
+    //         ));
+    //     }
+    //     self.spot_price = match self.bonding_curve {
+    //         BondingCurve::Linear => self.spot_price - self.delta,
+    //         BondingCurve::Exponential => self.spot_price * self.delta,
+    //         BondingCurve::ConstantProduct => {
+    //             self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
+    //         }
+    //     };
+    //     Ok(())
+    // }
 }
