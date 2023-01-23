@@ -21,8 +21,8 @@ pub enum ExecuteMsg {
         asset_recipient: Option<String>,
         pool_type: PoolType,
         bonding_curve: BondingCurve,
-        delta: Option<Uint128>,
-        spot_price: Option<Uint128>,
+        spot_price: Uint128,
+        delta: Uint128,
         fee_bps: Option<u16>,
     },
     DepositTokens {
