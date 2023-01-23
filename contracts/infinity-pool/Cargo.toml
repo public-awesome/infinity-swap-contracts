@@ -29,13 +29,14 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 """
 
 [dependencies]
-cosmwasm-std = "1.1.5"
-cosmwasm-schema = { version = "1.1.5" }
+cosmwasm-std = "1.1.9"
+cosmwasm-schema = { version = "1.1.9" }
 cosmwasm-storage = { version = "1.0.0" }
 cw-storage-plus = "0.16.0"
 cw-utils = "0.16.0"
 cw2 = "0.16.0"
 thiserror = { version = "1.0.31" }
+anyhow = "1.0.51"
 sg1 = "0.21.8"
 sg2 = "0.21.8"
 sg721-base = { version = "0.21.8", features = ["library"] }
