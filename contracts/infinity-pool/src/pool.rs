@@ -1,7 +1,22 @@
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
+use core::cmp::Ordering;
 use cosmwasm_std::{Addr, Uint128};
 use std::collections::BTreeSet;
+
+impl Ord for Pool {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.spot_price.cmp(&other.spot_price)
+    }
+}
+
+impl PartialOrd for Pool {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Eq for Pool {}
 
 impl Pool {
     pub fn new(

@@ -1,12 +1,12 @@
-use crate::state::{Pool};
+use crate::state::Pool;
+use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, PoolQuote, PoolType, POOL_COUNTER};
 use crate::ContractError;
-use crate::state::{POOL_COUNTER, pools, PoolType, PoolQuote, buy_pool_quotes, sell_pool_quotes};
-use sg_std::Response;
 use cosmwasm_std::{
-    Storage, Attribute, Addr, StdResult, Event, WasmMsg, SubMsg, MessageInfo, Coin, BankMsg,
-    Order, to_binary,
+    to_binary, Addr, Attribute, BankMsg, Coin, Event, MessageInfo, Order, StdResult, Storage,
+    SubMsg, WasmMsg,
 };
 use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
+use sg_std::Response;
 
 pub fn get_next_pool_counter(store: &mut dyn Storage) -> Result<u64, ContractError> {
     let pool_counter = POOL_COUNTER.load(store)?;
@@ -22,7 +22,7 @@ pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), Co
         if pool.can_sell_nfts() {
             sell_pool_quotes().remove(store, pool.id)?;
         }
-        return Ok(())
+        return Ok(());
     }
 
     match pool.pool_type {
@@ -30,26 +30,33 @@ pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), Co
             if pool.total_tokens < pool.spot_price {
                 buy_pool_quotes().remove(store, pool.id)?;
             } else {
-                buy_pool_quotes().save(store, pool.id, &PoolQuote {
-                    id: pool.id,
-                    collection: pool.collection.clone(),
-                    quote_price: pool.spot_price,
-                })?;
+                buy_pool_quotes().save(
+                    store,
+                    pool.id,
+                    &PoolQuote {
+                        id: pool.id,
+                        collection: pool.collection.clone(),
+                        quote_price: pool.spot_price,
+                    },
+                )?;
             }
         }
         PoolType::Nft => {
             if pool.nft_token_ids.is_empty() {
                 sell_pool_quotes().remove(store, pool.id)?;
             } else {
-                sell_pool_quotes().save(store, pool.id, &PoolQuote {
-                    id: pool.id,
-                    collection: pool.collection.clone(),
-                    quote_price: pool.spot_price,
-                })?;
+                sell_pool_quotes().save(
+                    store,
+                    pool.id,
+                    &PoolQuote {
+                        id: pool.id,
+                        collection: pool.collection.clone(),
+                        quote_price: pool.spot_price,
+                    },
+                )?;
             }
         }
-        PoolType::Trade => {
-        }
+        PoolType::Trade => {}
     }
 
     Ok(())
@@ -87,7 +94,10 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
         },
         Attribute {
             key: "asset_recipient".to_string(),
-            value: pool.asset_recipient.clone().map_or("None".to_string(), |addr| addr.to_string()),
+            value: pool
+                .asset_recipient
+                .clone()
+                .map_or("None".to_string(), |addr| addr.to_string()),
         },
         Attribute {
             key: "pool_type".to_string(),
@@ -111,7 +121,12 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
         },
         Attribute {
             key: "nft_token_ids".to_string(),
-            value: pool.nft_token_ids.iter().map(|id| id.to_string()).collect::<Vec<String>>().join(","),
+            value: pool
+                .nft_token_ids
+                .iter()
+                .map(|id| id.to_string())
+                .collect::<Vec<String>>()
+                .join(","),
         },
         Attribute {
             key: "fee_bps".to_string(),
@@ -120,7 +135,12 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
     ]
 }
 
-pub fn transfer_nft(token_id: &String, recipient: &Addr, collection: &Addr, response: &mut Response,) -> StdResult<()> {
+pub fn transfer_nft(
+    token_id: &String,
+    recipient: &Addr,
+    collection: &Addr,
+    response: &mut Response,
+) -> StdResult<()> {
     let sg721_transfer_msg = Sg721ExecuteMsg::TransferNft {
         token_id: token_id.to_string(),
         recipient: recipient.to_string(),
@@ -132,20 +152,18 @@ pub fn transfer_nft(token_id: &String, recipient: &Addr, collection: &Addr, resp
         funds: vec![],
     });
     response.messages.push(exec_sg721_transfer);
-
-    let event = Event::new("transfer-nft")
-        .add_attribute("collection", collection.to_string())
-        .add_attribute("token_id", token_id.to_string())
-        .add_attribute("recipient", recipient.to_string());
-    response.events.push(event);
-    
     Ok(())
 }
 
-pub fn transfer_token(coin_send: Coin, recipient: String, event_label: &str, response: &mut Response) -> StdResult<()> {
+pub fn transfer_token(
+    coin_send: Coin,
+    recipient: String,
+    event_label: &str,
+    response: &mut Response,
+) -> StdResult<()> {
     let token_transfer_msg = BankMsg::Send {
         to_address: recipient.clone(),
-        amount: vec![coin_send.clone()]
+        amount: vec![coin_send.clone()],
     };
     response.messages.push(SubMsg::new(token_transfer_msg));
 
@@ -157,19 +175,24 @@ pub fn transfer_token(coin_send: Coin, recipient: String, event_label: &str, res
     Ok(())
 }
 
-pub fn only_owner(
-    info: &MessageInfo,
-    pool: &Pool
-) -> Result<(), ContractError> {
+pub fn only_owner(info: &MessageInfo, pool: &Pool) -> Result<(), ContractError> {
     if pool.owner != info.sender {
-        return Err(ContractError::Unauthorized(String::from("sender is not the owner of the pool")));
+        return Err(ContractError::Unauthorized(String::from(
+            "sender is not the owner of the pool",
+        )));
     }
     Ok(())
 }
 
 pub fn option_bool_to_order(descending: Option<bool>) -> Order {
     match descending {
-       Some(_descending) => if _descending { Order::Descending } else { Order::Ascending },
-       _ => Order::Ascending
-   }
+        Some(_descending) => {
+            if _descending {
+                Order::Descending
+            } else {
+                Order::Ascending
+            }
+        }
+        _ => Order::Ascending,
+    }
 }

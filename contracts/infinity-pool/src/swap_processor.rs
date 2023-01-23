@@ -3,11 +3,14 @@ use crate::helpers::{
     get_next_pool_counter, get_pool_attributes, only_owner, remove_pool, save_pool, transfer_nft,
     transfer_token,
 };
-use crate::msg::{ExecuteMsg, PoolNfts};
-use crate::state::{pools, sell_pool_quotes, BondingCurve, Pool, PoolType, CONFIG};
+use crate::msg::{ExecuteMsg, PoolNfts, QueryOptions};
+use crate::query::query_pools_by_buy_price;
+use crate::state::{
+    buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Pool, PoolQuote, PoolType, CONFIG,
+};
 
-use cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo, Storage, Uint128};
-use cosmwasm_std::{entry_point, Decimal, Deps};
+use cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo, StdResult, Storage, Uint128};
+use cosmwasm_std::{entry_point, Decimal, Deps, Order};
 use cw_utils::{maybe_addr, must_pay, nonpayable};
 use sg1::fair_burn;
 use sg721::RoyaltyInfoResponse;
@@ -38,24 +41,19 @@ pub struct PaymentLedger {
     pub sellers: BTreeMap<String, Uint128>,
 }
 
-pub struct SwapProcessor {
+pub struct SwapProcessor<'a> {
     pub payment_ledger: PaymentLedger,
-    pub pool_set: BTreeSet<Pool>,
     pub marketplace_addr: Addr,
     pub collection: Addr,
     pub seller_recipient: Addr,
-    pub robust: bool,
+    pub pool_set: BTreeSet<Pool>,
+    pub pool_quote_iter: Option<Box<dyn Iterator<Item = StdResult<u64>> + 'a>>,
+    pub latest: Option<u64>,
     pub fees: Option<Fees>,
 }
 
-impl SwapProcessor {
-    pub fn new(
-        marketplace_addr: Addr,
-        collection: Addr,
-        finder: Addr,
-        seller_recipient: Addr,
-        robust: bool,
-    ) -> Self {
+impl<'a> SwapProcessor<'a> {
+    pub fn new(marketplace_addr: Addr, collection: Addr, seller_recipient: Addr) -> Self {
         Self {
             payment_ledger: PaymentLedger {
                 total_network_fee: Uint128::zero(),
@@ -63,11 +61,12 @@ impl SwapProcessor {
                 royalties: BTreeMap::new(),
                 sellers: BTreeMap::new(),
             },
-            pool_set: BTreeSet::new(),
             marketplace_addr,
             collection,
             seller_recipient,
-            robust,
+            pool_set: BTreeSet::new(),
+            pool_quote_iter: None,
+            latest: None,
             fees: None,
         }
     }
@@ -142,6 +141,21 @@ impl SwapProcessor {
         }
     }
 
+    pub fn load_next_pool(&mut self, storage: &dyn Storage) -> Result<Option<Pool>, ContractError> {
+        if self.pool_set.is_empty() || Some(self.pool_set.first().unwrap().id) == self.latest {
+            let pool_id = self.pool_quote_iter.as_mut().unwrap().next().unwrap()?;
+
+            let pool = pools()
+                .load(storage, pool_id)
+                .map_err(|_| ContractError::InvalidInput("pool does not exist".to_string()))?;
+
+            self.pool_set.insert(pool);
+            self.latest = Some(pool_id);
+        }
+
+        Ok(self.pool_set.pop_first())
+    }
+
     pub fn process_swap(
         &mut self,
         pool: &mut Pool,
@@ -197,6 +211,51 @@ impl SwapProcessor {
                 remaining_balance -= pool.spot_price;
                 self.process_swap(&mut pool, nft_token_id)?;
             }
+        }
+
+        Ok(())
+    }
+
+    pub fn swap_nft_for_tokens(
+        &mut self,
+        storage: &'a mut dyn Storage,
+        collection: Addr,
+        nft_token_ids: Vec<String>,
+        min_expected_token_output: Uint128,
+    ) -> Result<(), ContractError> {
+        if nft_token_ids.len() == 0 {
+            return Err(ContractError::InvalidInput(
+                "nft_token_ids.len() must be greater than 0".to_string(),
+            ));
+        }
+
+        let mut token_output = Uint128::zero();
+
+        if let None = self.pool_quote_iter {
+            self.pool_quote_iter = Some(
+                buy_pool_quotes()
+                    .idx
+                    .collection_buy_price
+                    .sub_prefix(self.collection.clone())
+                    .keys(storage, None, None, Order::Descending),
+            );
+        }
+
+        for nft_token_id in nft_token_ids {
+            let pool = self.load_next_pool(storage)?;
+            if let None = pool {
+                return Err(ContractError::InvalidInput("no pools found".to_string()));
+            }
+
+            let mut pool = pool.unwrap();
+            token_output += pool.spot_price;
+            self.process_swap(&mut pool, nft_token_id);
+        }
+
+        if token_output < min_expected_token_output {
+            return Err(ContractError::InsufficientFunds(
+                "insufficient funds to buy all NFTs".to_string(),
+            ));
         }
 
         Ok(())

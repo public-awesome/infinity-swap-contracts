@@ -107,18 +107,31 @@ pub fn execute(
             pool_id,
             asset_recipient,
         } => execute_remove_pool(deps, info, pool_id, maybe_addr(api, asset_recipient)?),
+        ExecuteMsg::SwapNftForTokens {
+            collection,
+            nft_token_ids,
+            min_expected_token_output,
+            token_recipient,
+        } => execute_swap_nft_for_tokens(
+            deps,
+            info,
+            api.addr_validate(&collection)?,
+            nft_token_ids,
+            min_expected_token_output,
+            maybe_addr(api, token_recipient)?,
+        ),
         ExecuteMsg::SwapTokenForSpecificNfts {
             collection,
-            specific_nfts,
+            pool_nfts,
             max_expected_token_input,
-            asset_recipient,
+            nft_recipient,
         } => execute_swap_token_for_specific_nfts(
             deps,
             info,
             api.addr_validate(&collection)?,
-            specific_nfts,
+            pool_nfts,
             max_expected_token_input,
-            maybe_addr(api, asset_recipient)?,
+            maybe_addr(api, nft_recipient)?,
         ),
         _ => Ok(Response::default()),
     }
@@ -445,9 +458,9 @@ pub fn execute_swap_token_for_specific_nfts(
     deps: DepsMut,
     info: MessageInfo,
     collection: Addr,
-    specific_nfts: Vec<PoolNfts>,
+    pool_nfts: Vec<PoolNfts>,
     max_expected_token_input: Uint128,
-    asset_recipient: Option<Addr>,
+    nft_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     let received_amount = must_pay(&info, &config.denom)?;
@@ -459,16 +472,42 @@ pub fn execute_swap_token_for_specific_nfts(
     }
 
     let mut response = Response::new();
-    let seller_recipient = asset_recipient.unwrap_or(info.sender);
+    let seller_recipient = nft_recipient.unwrap_or(info.sender);
 
     let mut processor = SwapProcessor::new(
         config.marketplace_addr.clone(),
         collection.clone(),
-        collection,
         seller_recipient,
-        false,
     );
-    processor.swap_token_for_specific_nfts(deps, specific_nfts, max_expected_token_input)?;
+    processor.swap_token_for_specific_nfts(deps, pool_nfts, max_expected_token_input)?;
+
+    Ok(response)
+}
+
+pub fn execute_swap_nft_for_tokens(
+    deps: DepsMut,
+    info: MessageInfo,
+    collection: Addr,
+    nft_token_ids: Vec<String>,
+    min_expected_token_output: Uint128,
+    token_recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+
+    let mut response = Response::new();
+    let token_recipient = token_recipient.unwrap_or(info.sender);
+
+    let mut processor = SwapProcessor::new(
+        config.marketplace_addr.clone(),
+        collection.clone(),
+        token_recipient,
+    );
+    processor.swap_nft_for_tokens(
+        deps.storage,
+        collection,
+        nft_token_ids,
+        min_expected_token_output,
+    )?;
 
     Ok(response)
 }
