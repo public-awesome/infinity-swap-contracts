@@ -66,14 +66,19 @@ pub enum ExecuteMsg {
         pool_id: u64,
         asset_recipient: Option<String>,
     },
+    SwapNftForTokens {
+        collection: String,
+        nft_token_ids: Vec<String>,
+        min_expected_token_output: Uint128,
+        token_recipient: Option<String>,
+    },
     SwapTokenForSpecificNfts {
         collection: String,
-        specific_nfts: Vec<PoolNfts>,
+        pool_nfts: Vec<PoolNfts>,
         max_expected_token_input: Uint128,
-        asset_recipient: Option<String>,
+        nft_recipient: Option<String>,
     },
     SwapTokenForAnyNfts {},
-    SwapNftForTokens {},
 }
 
 #[cw_serde]
