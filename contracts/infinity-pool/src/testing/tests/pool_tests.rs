@@ -6,11 +6,12 @@ use crate::execute::execute;
 use crate::instantiate::instantiate;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
 use crate::state::{BondingCurve, PoolType};
+use crate::testing::helpers::pool_functions::create_pool;
+use crate::testing::helpers::utils::assert_error;
 use crate::testing::setup::setup_accounts::setup_accounts;
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
 use crate::testing::setup::setup_marketplace::setup_marketplace;
 use crate::testing::setup::templates::standard_minter_template;
-use crate::testing::tests::test_helpers::assert_error;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, Addr, Attribute, Uint128};
 use cw_multi_test::Executor;
@@ -51,7 +52,6 @@ fn proper_initialization() {
 
 #[test]
 fn create_token_pool() {
-    let mut app = custom_mock_app();
     let vt = standard_minter_template(1);
     let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
@@ -120,6 +120,59 @@ fn create_token_pool() {
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
     assert!(res.is_ok());
+}
+
+#[test]
+fn deposit_assets_token_pool() {
+    let vt = standard_minter_template(1);
+    let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
+    let collection = vt.collection_response_vec[0].collection.clone().unwrap();
+    let asset_account = Addr::unchecked(ASSET_ACCOUNT);
+
+    let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
+    let infinity_pool =
+        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+
+    let pool_id = create_pool(
+        &mut router,
+        infinity_pool.clone(),
+        creator.clone(),
+        collection,
+        Some(asset_account),
+        PoolType::Token,
+        BondingCurve::Linear,
+        Uint128::from(2400u64),
+        Uint128::from(100u64),
+        None,
+    )
+    .unwrap();
+
+    // Only owner of pool can deposit tokens
+    let deposit_amount = 1000u128;
+    let msg = ExecuteMsg::DepositTokens { pool_id };
+    let res = router.execute_contract(
+        bidder.clone(),
+        infinity_pool.clone(),
+        &msg,
+        &coins(deposit_amount, NATIVE_DENOM),
+    );
+    assert_error(
+        res,
+        ContractError::Unauthorized("sender is not the owner of the pool".to_string()),
+    );
+
+    // Owner can deposit tokens
+    let deposit_amount = 1000u128;
+    let msg = ExecuteMsg::DepositTokens { pool_id };
+    let res = router.execute_contract(
+        creator.clone(),
+        infinity_pool.clone(),
+        &msg,
+        &coins(deposit_amount, NATIVE_DENOM),
+    );
+    assert!(res.is_ok());
+
+    // Cannot deposit NFTs into token pool
 }
 
 #[test]
