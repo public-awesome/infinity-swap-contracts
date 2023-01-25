@@ -9,7 +9,7 @@ use sg_std::NATIVE_DENOM;
 pub const MINT_PRICE: u128 = 100_000_000;
 
 // Mints an NFT for a creator
-pub fn mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) {
+pub fn mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) -> u32 {
     let minter_msg = vending_minter::msg::ExecuteMsg::Mint {};
     let res = router.execute_contract(
         creator.clone(),
@@ -18,6 +18,7 @@ pub fn mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) {
         &coins(MINT_PRICE, NATIVE_DENOM),
     );
     assert!(res.is_ok());
+    res.unwrap().events[1].attributes[4].value.parse().unwrap()
 }
 
 pub fn mint_for(
@@ -37,7 +38,6 @@ pub fn mint_for(
         &mint_for_creator_msg,
         &[],
     );
-    println!("res is {:?}", res);
     assert!(res.is_ok());
 }
 
