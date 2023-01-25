@@ -168,12 +168,11 @@ impl Pool {
             ));
         }
         for nft_token_id in nft_token_ids {
-            if !self.nft_token_ids.contains(nft_token_id) {
+            if !self.nft_token_ids.remove(nft_token_id) {
                 return Err(ContractError::InvalidPool(
                     "nft_token_id not found in pool".to_string(),
                 ));
             }
-            self.nft_token_ids.remove(nft_token_id);
         }
         Ok(())
     }

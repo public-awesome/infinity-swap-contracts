@@ -58,7 +58,7 @@ pub fn deposit_tokens(
         &coins(deposit_amount.u128(), NATIVE_DENOM),
     );
     assert!(res.is_ok());
-    let total_tokens = res.unwrap().events[1].attributes[2]
+    let total_tokens = res.unwrap().events[1].attributes[3]
         .value
         .parse::<u128>()
         .unwrap();
