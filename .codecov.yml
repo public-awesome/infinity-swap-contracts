@@ -1,3 +1,2 @@
 ignore:
-  - "contracts/infinity-pool/multitest.rs"
-  - "contracts/infinity-pool/unit_tests.rs"
+  - "contracts/infinity-pool/src/testing"
