@@ -27,4 +27,10 @@ pub enum ContractError {
 
     #[error("Internal error: {0}")]
     InternalError(String),
+
+    #[error("Deadline passed")]
+    DeadlinePassed,
+
+    #[error("Swap error: {0}")]
+    SwapError(String),
 }

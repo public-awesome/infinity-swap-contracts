@@ -3,11 +3,34 @@ use crate::state::{
 };
 use crate::ContractError;
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, BankMsg, Coin, Event, MessageInfo, Order, StdResult, Storage,
-    SubMsg, WasmMsg,
+    to_binary, Addr, Attribute, BankMsg, BlockInfo, Coin, Deps, Event, MessageInfo, Order,
+    StdResult, Storage, SubMsg, Timestamp, WasmMsg,
 };
+use sg721::RoyaltyInfoResponse;
+use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
+use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::Response;
+
+pub fn load_marketplace_params(
+    deps: Deps,
+    marketplace_addr: &Addr,
+) -> Result<ParamsResponse, ContractError> {
+    let marketplace_params: ParamsResponse = deps
+        .querier
+        .query_wasm_smart(marketplace_addr, &MarketplaceQueryMsg::Params {})?;
+    Ok(marketplace_params)
+}
+
+pub fn load_collection_royalties(
+    deps: Deps,
+    collection_addr: &Addr,
+) -> Result<Option<RoyaltyInfoResponse>, ContractError> {
+    let collection_info: CollectionInfoResponse = deps
+        .querier
+        .query_wasm_smart(collection_addr, &Sg721QueryMsg::CollectionInfo {})?;
+    Ok(collection_info.royalty_info)
+}
 
 pub fn get_next_pool_counter(store: &mut dyn Storage) -> Result<u64, ContractError> {
     let pool_counter = POOL_COUNTER.load(store)?;
@@ -20,19 +43,18 @@ pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), Co
         if !pool.is_active {
             buy_pool_quotes().remove(store, pool.id)?;
         } else {
-            let buy_price_quote = pool.get_buy_quote()?;
-            if pool.total_tokens < buy_price_quote {
-                buy_pool_quotes().remove(store, pool.id)?;
-            } else {
+            if let Some(_buy_price_quote) = pool.get_buy_quote()? {
                 buy_pool_quotes().save(
                     store,
                     pool.id,
                     &PoolQuote {
                         id: pool.id,
                         collection: pool.collection.clone(),
-                        quote_price: buy_price_quote,
+                        quote_price: _buy_price_quote,
                     },
                 )?;
+            } else {
+                buy_pool_quotes().remove(store, pool.id)?;
             }
         }
     }
@@ -40,19 +62,18 @@ pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), Co
         if !pool.is_active {
             sell_pool_quotes().remove(store, pool.id)?;
         } else {
-            let sell_price_quote = pool.get_sell_quote()?;
-            if pool.nft_token_ids.is_empty() {
-                sell_pool_quotes().remove(store, pool.id)?;
-            } else {
+            if let Some(_sell_price_quote) = pool.get_sell_quote()? {
                 sell_pool_quotes().save(
                     store,
                     pool.id,
                     &PoolQuote {
                         id: pool.id,
                         collection: pool.collection.clone(),
-                        quote_price: sell_price_quote,
+                        quote_price: _sell_price_quote,
                     },
                 )?;
+            } else {
+                sell_pool_quotes().remove(store, pool.id)?;
             }
         }
     }
@@ -142,8 +163,8 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
 
 pub fn transfer_nft(
     token_id: &String,
-    recipient: &Addr,
-    collection: &Addr,
+    recipient: &String,
+    collection: &String,
     response: &mut Response,
 ) -> StdResult<()> {
     let sg721_transfer_msg = Sg721ExecuteMsg::TransferNft {
@@ -200,4 +221,11 @@ pub fn option_bool_to_order(descending: Option<bool>) -> Order {
         }
         _ => Order::Ascending,
     }
+}
+
+pub fn check_deadline(block: &BlockInfo, deadline: Timestamp) -> Result<(), ContractError> {
+    if deadline <= block.time {
+        return Err(ContractError::DeadlinePassed);
+    }
+    Ok(())
 }
