@@ -1,3 +1,4 @@
+use crate::msg::SwapNft;
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
 use core::cmp::Ordering;
@@ -119,6 +120,13 @@ impl Pool {
         Ok(())
     }
 
+    pub fn get_recipient(&self) -> &Addr {
+        match &self.asset_recipient {
+            Some(addr) => &addr,
+            None => &self.owner,
+        }
+    }
+
     pub fn set_active(&mut self, is_active: bool) -> Result<(), ContractError> {
         self.is_active = is_active;
         Ok(())
@@ -185,39 +193,44 @@ impl Pool {
         self.pool_type == PoolType::Trade || self.pool_type == PoolType::Nft
     }
 
-    pub fn get_buy_quote(&self) -> Result<Uint128, ContractError> {
-        match self.pool_type {
+    pub fn get_buy_quote(&self) -> Result<Option<Uint128>, ContractError> {
+        let buy_price = match self.pool_type {
             PoolType::Token => Ok(self.spot_price),
             PoolType::Nft => Err(ContractError::InvalidPool(
                 "pool cannot buy nfts".to_string(),
             )),
             PoolType::Trade => match self.bonding_curve {
-                BondingCurve::Linear => return Ok(self.spot_price + self.delta),
-                BondingCurve::Exponential => {
-                    return Ok(self.spot_price * (Uint128::from(10000u128) + self.delta)
-                        / Uint128::from(10000u128))
-                }
+                BondingCurve::Linear => Ok(self.spot_price + self.delta),
+                BondingCurve::Exponential => Ok(self.spot_price
+                    * (Uint128::from(10000u128) + self.delta)
+                    / Uint128::from(10000u128)),
                 BondingCurve::ConstantProduct => {
-                    return Ok(
-                        self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 - 1)
-                    )
+                    Ok(self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 - 1))
                 }
             },
+        }?;
+        if self.total_tokens < buy_price {
+            return Ok(None);
         }
+        return Ok(Some(buy_price));
     }
 
-    pub fn get_sell_quote(&self) -> Result<Uint128, ContractError> {
+    pub fn get_sell_quote(&self) -> Result<Option<Uint128>, ContractError> {
         if !self.can_sell_nfts() {
             return Err(ContractError::InvalidPool(
                 "pool cannot sell nfts".to_string(),
             ));
         }
-        match self.bonding_curve {
-            BondingCurve::Linear | BondingCurve::Exponential => return Ok(self.spot_price),
-            BondingCurve::ConstantProduct => {
-                return Ok(self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 + 1))
-            }
+        if self.nft_token_ids.len() == 0 {
+            return Ok(None);
         }
+        let sell_price = match self.bonding_curve {
+            BondingCurve::Linear | BondingCurve::Exponential => self.spot_price,
+            BondingCurve::ConstantProduct => {
+                self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 + 1)
+            }
+        };
+        return Ok(Some(sell_price));
     }
 
     // pub fn buy_nft_from_pool(&mut self, nft_token_id: String) -> Result<(), ContractError> {
@@ -242,19 +255,29 @@ impl Pool {
     //     Ok(())
     // }
 
-    // pub fn sell_nft_to_pool(&mut self) -> Result<(), ContractError> {
-    //     if !self.can_buy_nfts() {
-    //         return Err(ContractError::InvalidPool(
-    //             "cannot buy nft from pool".to_string(),
-    //         ));
-    //     }
-    //     self.spot_price = match self.bonding_curve {
-    //         BondingCurve::Linear => self.spot_price - self.delta,
-    //         BondingCurve::Exponential => self.spot_price * self.delta,
-    //         BondingCurve::ConstantProduct => {
-    //             self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
-    //         }
-    //     };
-    //     Ok(())
-    // }
+    pub fn sell_nft_to_pool(&mut self, swap_nft: &SwapNft) -> Result<Uint128, ContractError> {
+        if !self.can_buy_nfts() {
+            return Err(ContractError::InvalidPool(
+                "cannot buy nft from pool".to_string(),
+            ));
+        }
+        if !self.is_active {
+            return Err(ContractError::InvalidPool("pool is not active".to_string()));
+        }
+        let buy_quote = self.get_buy_quote()?;
+        let sale_price = buy_quote.ok_or(ContractError::SwapError(
+            "pool cannot offer quote".to_string(),
+        ))?;
+
+        // Update pool params
+        self.spot_price = match self.bonding_curve {
+            BondingCurve::Linear => self.spot_price - self.delta,
+            BondingCurve::Exponential => self.spot_price * self.delta,
+            BondingCurve::ConstantProduct => {
+                self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
+            }
+        };
+
+        Ok(sale_price)
+    }
 }

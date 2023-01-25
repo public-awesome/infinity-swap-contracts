@@ -1,6 +1,6 @@
 use crate::state::{BondingCurve, PoolType};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{Timestamp, Uint128};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -12,6 +12,18 @@ pub struct InstantiateMsg {
 pub struct PoolNfts {
     pub pool_id: u64,
     pub nft_token_ids: Vec<String>,
+}
+
+#[cw_serde]
+pub struct SwapParams {
+    pub deadline: Timestamp,
+    pub robust: bool,
+}
+
+#[cw_serde]
+pub struct SwapNft {
+    pub nft_token_id: String,
+    pub min_expected_token_output: Uint128,
 }
 
 #[cw_serde]
@@ -66,19 +78,25 @@ pub enum ExecuteMsg {
         pool_id: u64,
         asset_recipient: Option<String>,
     },
-    SwapNftForTokens {
-        collection: String,
-        nft_token_ids: Vec<String>,
-        min_expected_token_output: Uint128,
+    DirectSwapNftForTokens {
+        pool_id: u64,
+        swap_nfts: Vec<SwapNft>,
+        swap_params: SwapParams,
         token_recipient: Option<String>,
     },
-    SwapTokenForSpecificNfts {
-        collection: String,
-        pool_nfts: Vec<PoolNfts>,
-        max_expected_token_input: Uint128,
-        nft_recipient: Option<String>,
-    },
-    SwapTokenForAnyNfts {},
+    // SwapNftForTokens {
+    //     collection: String,
+    //     nft_token_ids: Vec<String>,
+    //     min_expected_token_output: Uint128,
+    //     token_recipient: Option<String>,
+    // },
+    // SwapTokenForSpecificNfts {
+    //     collection: String,
+    //     pool_nfts: Vec<PoolNfts>,
+    //     max_expected_token_input: Uint128,
+    //     nft_recipient: Option<String>,
+    // },
+    // SwapTokenForAnyNfts {},
 }
 
 #[cw_serde]
