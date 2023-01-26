@@ -42,7 +42,7 @@ sg2 = "0.21.8"
 sg721-base = { version = "0.21.8", features = ["library"] }
 sg721 = { version = "0.21.8", features = ["library"] }
 sg-std = "0.21.8"
-sg-marketplace = { git = "https://github.com/public-awesome/marketplace" }
+sg-marketplace = { git = "https://github.com/public-awesome/marketplace", features = ["library"] }
 
 
 [dev-dependencies]
