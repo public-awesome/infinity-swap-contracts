@@ -127,6 +127,12 @@ pub enum QueryMsg {
         collection: String,
         query_options: QueryOptions<u64>,
     },
+    SimDirectSwapNftForTokens {
+        pool_id: u64,
+        swap_nfts: Vec<SwapNft>,
+        swap_params: SwapParams,
+        token_recipient: String,
+    },
 }
 
 #[cw_serde]

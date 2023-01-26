@@ -9,6 +9,7 @@ use crate::state::{
     buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Pool, PoolQuote, PoolType, CONFIG,
 };
 
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo, StdResult, Storage, Uint128};
 use cosmwasm_std::{entry_point, Decimal, Deps, Order};
 use cw_utils::{maybe_addr, must_pay, nonpayable};
@@ -19,11 +20,13 @@ use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::{Response, NATIVE_DENOM};
 use std::collections::{BTreeMap, BTreeSet};
 
+#[cw_serde]
 pub struct TokenPayment {
     pub amount: Uint128,
     pub address: String,
 }
 
+#[cw_serde]
 pub struct NftPayment {
     pub nft_token_id: String,
     pub address: String,
@@ -36,6 +39,7 @@ pub struct NftPayment {
 //     pub sellers: BTreeMap<String, Uint128>,
 // }
 
+#[cw_serde]
 pub struct Swap {
     pub pool_id: u64,
     pub pool_type: PoolType,
@@ -156,7 +160,6 @@ impl<'a> SwapProcessor {
         &mut self,
         deps: Deps,
         env: Env,
-        info: MessageInfo,
         pool_id: u64,
         swap_nfts: Vec<SwapNft>,
         swap_params: SwapParams,

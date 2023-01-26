@@ -499,14 +499,7 @@ pub fn execute_direct_swap_nft_for_tokens(
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
     );
-    processor.direct_swap_nft_for_tokens(
-        deps.as_ref(),
-        env,
-        info,
-        pool_id,
-        swap_nfts,
-        swap_params,
-    )?;
+    processor.direct_swap_nft_for_tokens(deps.as_ref(), env, pool_id, swap_nfts, swap_params)?;
 
     processor.commit_swap(&mut response);
 
