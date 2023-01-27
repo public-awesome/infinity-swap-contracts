@@ -1,8 +1,8 @@
 #[cfg(test)]
-mod index_tests;
+mod pool_tests;
 
 #[cfg(test)]
-mod pool_tests;
+mod query_tests;
 
 #[cfg(test)]
 mod multitest;

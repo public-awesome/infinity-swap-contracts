@@ -757,6 +757,7 @@ dependencies = [
  "sg721-base",
  "test-suite",
  "thiserror",
+ "vending-factory",
  "vending-minter",
 ]
 

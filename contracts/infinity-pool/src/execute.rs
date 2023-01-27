@@ -253,9 +253,8 @@ pub fn execute_deposit_nfts(
         .collect::<Vec<String>>()
         .join(",");
     let event = Event::new("deposit_nfts")
-        .add_attribute("nft_token_ids", pool_id.to_string())
         .add_attribute("nfts_received", nft_token_ids.join(","))
-        .add_attribute("total_tokens", all_nft_token_ids);
+        .add_attribute("nft_token_ids", all_nft_token_ids.to_string());
 
     Ok(response.add_event(event))
 }

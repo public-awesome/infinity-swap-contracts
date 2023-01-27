@@ -29,7 +29,7 @@ const TOKEN_ID: u32 = 123;
 #[test]
 fn create_trade_pool() {
     let mut app = custom_mock_app();
-    let vt = standard_minter_template(1);
+    let vt = standard_minter_template(5000);
     let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
@@ -96,7 +96,7 @@ fn create_trade_pool() {
 
 #[test]
 fn deposit_assets_trade_pool() {
-    let vt = standard_minter_template(100);
+    let vt = standard_minter_template(5000);
     let (mut router, minter, creator, user1) = (
         vt.router,
         vt.collection_response_vec[0].minter.as_ref().unwrap(),

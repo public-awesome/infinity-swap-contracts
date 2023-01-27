@@ -1,26 +1,47 @@
 use crate::testing::setup::msg::MarketAccounts;
 use crate::testing::setup::setup_accounts::setup_accounts;
-use cosmwasm_std::Timestamp;
-use sg2::tests::{
-    mock_collection_params_1, mock_collection_params_high_fee, mock_collection_two,
-    mock_curator_payment_address,
+use cosmwasm_std::{coin, Timestamp};
+use sg2::{
+    msg::CollectionParams,
+    tests::{
+        mock_collection_params_1, mock_collection_params_high_fee, mock_collection_two,
+        mock_curator_payment_address,
+    },
 };
 use sg_std::GENESIS_MINT_START_TIME;
 use test_suite::common_setup::{
     contract_boxes::custom_mock_app,
-    msg::{MinterCollectionResponse, VendingTemplateResponse},
+    msg::{MinterCollectionResponse, MinterInstantiateParams, VendingTemplateResponse},
     setup_minter::{
-        common::minter_params::minter_params_token,
-        vending_minter::setup::{configure_minter, vending_minter_code_ids},
+        common::minter_params::{minter_params_all, minter_params_token},
+        vending_minter::{
+            mock_params::mock_create_minter,
+            setup::{configure_minter, vending_minter_code_ids},
+        },
     },
 };
+
+use vending_factory::msg::VendingMinterInitMsgExtension;
+
+fn standard_minter_params_token(
+    num_tokens: u32,
+    collection_params: CollectionParams,
+) -> MinterInstantiateParams {
+    let mut init_msg = mock_create_minter(None, collection_params.clone(), None).init_msg;
+    init_msg.num_tokens = num_tokens;
+    init_msg.per_address_limit = num_tokens / 100;
+    init_msg.mint_price = coin(100000000, "ustars");
+    let mut minter_params = minter_params_token(num_tokens);
+    minter_params.init_msg = Some(init_msg);
+    minter_params
+}
 
 pub fn standard_minter_template(num_tokens: u32) -> VendingTemplateResponse<MarketAccounts> {
     let mut app = custom_mock_app();
     let (owner, bidder, creator) = setup_accounts(&mut app).unwrap();
     let start_time = Timestamp::from_nanos(GENESIS_MINT_START_TIME);
     let collection_params = mock_collection_params_1(Some(start_time));
-    let minter_params = minter_params_token(num_tokens);
+    let minter_params = standard_minter_params_token(num_tokens, collection_params.clone());
     let code_ids = vending_minter_code_ids(&mut app);
     let minter_collection_response: Vec<MinterCollectionResponse> = configure_minter(
         &mut app,

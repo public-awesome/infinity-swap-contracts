@@ -65,3 +65,36 @@ pub fn deposit_tokens(
 
     Ok(total_tokens)
 }
+
+pub fn deposit_nfts(
+    router: &mut StargazeApp,
+    infinity_pool: Addr,
+    creator: Addr,
+    pool_id: u64,
+    collection: Addr,
+    nft_token_ids: Vec<String>,
+) -> Result<String, Error> {
+    let msg = ExecuteMsg::DepositNfts {
+        pool_id,
+        collection: collection.to_string(),
+        nft_token_ids,
+    };
+    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    assert!(res.is_ok());
+    let nft_token_ids = res.unwrap().events[1].attributes[2].value.clone();
+
+    Ok(nft_token_ids)
+}
+
+pub fn activate(
+    router: &mut StargazeApp,
+    infinity_pool: Addr,
+    creator: Addr,
+    pool_id: u64,
+    is_active: bool,
+) -> Result<bool, Error> {
+    let msg = ExecuteMsg::SetActivePool { pool_id, is_active };
+    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    assert!(res.is_ok());
+    Ok(is_active)
+}

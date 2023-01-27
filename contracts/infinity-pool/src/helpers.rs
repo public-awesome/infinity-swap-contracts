@@ -210,7 +210,7 @@ pub fn only_owner(info: &MessageInfo, pool: &Pool) -> Result<(), ContractError> 
     Ok(())
 }
 
-pub fn option_bool_to_order(descending: Option<bool>) -> Order {
+pub fn option_bool_to_order(descending: Option<bool>, default: Order) -> Order {
     match descending {
         Some(_descending) => {
             if _descending {
@@ -219,7 +219,7 @@ pub fn option_bool_to_order(descending: Option<bool>) -> Order {
                 Order::Ascending
             }
         }
-        _ => Order::Ascending,
+        _ => default,
     }
 }
 
