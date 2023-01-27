@@ -50,6 +50,7 @@ cw-multi-test = { version = "0.16.0" }
 sg-multi-test = "0.21.8"
 test-suite = "0.21.8"
 vending-minter = { version = "0.21.8"}
+vending-factory = { version = "0.21.8"}
 
 
 # [dependencies]

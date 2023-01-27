@@ -1,4 +1,6 @@
-use crate::state::{BondingCurve, PoolType};
+use std::collections::BTreeMap;
+
+use crate::state::{BondingCurve, Config, Pool, PoolQuote, PoolType};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Timestamp, Uint128};
 
@@ -109,23 +111,23 @@ pub struct QueryOptions<T> {
 #[cw_serde]
 pub enum QueryMsg {
     Config {},
-    Pool {
-        pool_id: u64,
-    },
     Pools {
         query_options: QueryOptions<u64>,
+    },
+    PoolsById {
+        pool_ids: Vec<u64>,
     },
     PoolsByOwner {
         owner: String,
         query_options: QueryOptions<u64>,
     },
-    PoolsByBuyPrice {
+    PoolQuotesBuy {
         collection: String,
-        query_options: QueryOptions<u64>,
+        query_options: QueryOptions<(Uint128, u64)>,
     },
-    PoolsBySellPrice {
+    PoolQuotesSell {
         collection: String,
-        query_options: QueryOptions<u64>,
+        query_options: QueryOptions<(Uint128, u64)>,
     },
     SimDirectSwapNftForTokens {
         pool_id: u64,
@@ -137,8 +139,20 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct ConfigResponse {
-    pub cw721_address: String,
-    pub operators: Vec<String>,
-    pub label: String,
-    pub unstake_period: u64,
+    pub config: Config,
+}
+
+#[cw_serde]
+pub struct PoolsResponse {
+    pub pools: Vec<Pool>,
+}
+
+#[cw_serde]
+pub struct PoolsByIdResponse {
+    pub pools: Vec<(u64, Option<Pool>)>,
+}
+
+#[cw_serde]
+pub struct PoolQuoteResponse {
+    pub pool_quotes: Vec<PoolQuote>,
 }
