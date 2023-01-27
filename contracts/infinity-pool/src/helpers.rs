@@ -89,6 +89,13 @@ pub fn save_pool(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractErr
     Ok(())
 }
 
+pub fn save_pools(store: &mut dyn Storage, pools: Vec<Pool>) -> Result<(), ContractError> {
+    for pool in pools {
+        save_pool(store, &pool)?;
+    }
+    Ok(())
+}
+
 pub fn remove_pool(store: &mut dyn Storage, pool: &mut Pool) -> Result<(), ContractError> {
     pool.set_active(false)?;
     update_pool_quotes(store, pool)?;
@@ -162,9 +169,9 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
 }
 
 pub fn transfer_nft(
-    token_id: &String,
-    recipient: &String,
-    collection: &String,
+    token_id: &str,
+    recipient: &str,
+    collection: &str,
     response: &mut Response,
 ) -> StdResult<()> {
     let sg721_transfer_msg = Sg721ExecuteMsg::TransferNft {
@@ -181,22 +188,12 @@ pub fn transfer_nft(
     Ok(())
 }
 
-pub fn transfer_token(
-    coin_send: Coin,
-    recipient: String,
-    event_label: &str,
-    response: &mut Response,
-) -> StdResult<()> {
+pub fn transfer_token(coin_send: Coin, recipient: &str, response: &mut Response) -> StdResult<()> {
     let token_transfer_msg = BankMsg::Send {
-        to_address: recipient.clone(),
-        amount: vec![coin_send.clone()],
+        to_address: recipient.to_string(),
+        amount: vec![coin_send],
     };
     response.messages.push(SubMsg::new(token_transfer_msg));
-
-    let event = Event::new(event_label)
-        .add_attribute("coin", coin_send.to_string())
-        .add_attribute("recipient", recipient.to_string());
-    response.events.push(event);
 
     Ok(())
 }

@@ -80,25 +80,36 @@ pub enum ExecuteMsg {
         pool_id: u64,
         asset_recipient: Option<String>,
     },
-    DirectSwapNftForTokens {
+    DirectSwapNftsForTokens {
         pool_id: u64,
         swap_nfts: Vec<SwapNft>,
         swap_params: SwapParams,
         token_recipient: Option<String>,
     },
-    // SwapNftForTokens {
-    //     collection: String,
-    //     nft_token_ids: Vec<String>,
-    //     min_expected_token_output: Uint128,
+    SwapNftsForTokens {
+        collection: String,
+        swap_nfts: Vec<SwapNft>,
+        swap_params: SwapParams,
+        token_recipient: Option<String>,
+    },
+    // DirectSwapTokensforSpecificNfts {
+    //     pool_id: u64,
+    //     swap_nfts: Vec<SwapNft>,
+    //     swap_params: SwapParams,
     //     token_recipient: Option<String>,
     // },
-    // SwapTokenForSpecificNfts {
-    //     collection: String,
-    //     pool_nfts: Vec<PoolNfts>,
-    //     max_expected_token_input: Uint128,
-    //     nft_recipient: Option<String>,
+    // SwapTokensforSpecificNfts {
+    //     pool_id: u64,
+    //     swap_nfts: Vec<SwapNft>,
+    //     swap_params: SwapParams,
+    //     token_recipient: Option<String>,
     // },
-    // SwapTokenForAnyNfts {},
+    // SwapTokensforAnyNfts {
+    //     pool_id: u64,
+    //     swap_nfts: Vec<SwapNft>,
+    //     swap_params: SwapParams,
+    //     token_recipient: Option<String>,
+    // },
 }
 
 #[cw_serde]
@@ -129,8 +140,14 @@ pub enum QueryMsg {
         collection: String,
         query_options: QueryOptions<(Uint128, u64)>,
     },
-    SimDirectSwapNftForTokens {
+    SimDirectSwapNftsForTokens {
         pool_id: u64,
+        swap_nfts: Vec<SwapNft>,
+        swap_params: SwapParams,
+        token_recipient: String,
+    },
+    SimSwapNftsForTokens {
+        collection: String,
         swap_nfts: Vec<SwapNft>,
         swap_params: SwapParams,
         token_recipient: String,

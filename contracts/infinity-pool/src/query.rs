@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::ops::Add;
 
 use crate::helpers::{load_collection_royalties, load_marketplace_params, option_bool_to_order};
 use crate::msg::{
@@ -36,7 +37,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PoolQuotesBuy {
             collection,
             query_options,
-        } => to_binary(&query_pools_by_buy_price(
+        } => to_binary(&query_pool_quotes_by_buy_price(
             deps,
             api.addr_validate(&collection)?,
             query_options,
@@ -44,20 +45,31 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PoolQuotesSell {
             collection,
             query_options,
-        } => to_binary(&query_pools_by_sell_price(
+        } => to_binary(&query_pool_quotes_by_sell_price(
             deps,
             api.addr_validate(&collection)?,
             query_options,
         )?),
-        QueryMsg::SimDirectSwapNftForTokens {
+        QueryMsg::SimDirectSwapNftsForTokens {
             pool_id,
             swap_nfts,
             swap_params,
             token_recipient,
-        } => to_binary(&query_direct_swap_nft_for_tokens(
+        } => to_binary(&sim_direct_swap_nfts_for_tokens(
             deps,
-            env,
             pool_id,
+            swap_nfts,
+            swap_params,
+            api.addr_validate(&token_recipient)?,
+        )?),
+        QueryMsg::SimSwapNftsForTokens {
+            collection,
+            swap_nfts,
+            swap_params,
+            token_recipient,
+        } => to_binary(&sim_swap_nfts_for_tokens(
+            deps,
+            api.addr_validate(&collection)?,
             swap_nfts,
             swap_params,
             api.addr_validate(&token_recipient)?,
@@ -120,7 +132,7 @@ pub fn query_pools_by_owner(
     Ok(PoolsResponse { pools })
 }
 
-pub fn query_pools_by_buy_price(
+pub fn query_pool_quotes_by_buy_price(
     deps: Deps,
     collection: Addr,
     query_options: QueryOptions<(Uint128, u64)>,
@@ -147,7 +159,7 @@ pub fn query_pools_by_buy_price(
     Ok(PoolQuoteResponse { pool_quotes })
 }
 
-pub fn query_pools_by_sell_price(
+pub fn query_pool_quotes_by_sell_price(
     deps: Deps,
     collection: Addr,
     query_options: QueryOptions<(Uint128, u64)>,
@@ -174,9 +186,8 @@ pub fn query_pools_by_sell_price(
     Ok(PoolQuoteResponse { pool_quotes })
 }
 
-pub fn query_direct_swap_nft_for_tokens(
+pub fn sim_direct_swap_nfts_for_tokens(
     deps: Deps,
-    env: Env,
     pool_id: u64,
     swap_nfts: Vec<SwapNft>,
     swap_params: SwapParams,
@@ -188,7 +199,7 @@ pub fn query_direct_swap_nft_for_tokens(
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
         .map_err(|_| StdError::generic_err("Marketplace not found"))?;
 
-    let pool = pools().load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
 
     let collection_royalties = load_collection_royalties(deps, &pool.collection)
         .map_err(|_| StdError::generic_err("Collection not found"))?;
@@ -200,7 +211,35 @@ pub fn query_direct_swap_nft_for_tokens(
         collection_royalties,
     );
     processor
-        .direct_swap_nft_for_tokens(deps, env, pool_id, swap_nfts, swap_params)
+        .direct_swap_nfts_for_tokens(pool, swap_nfts, swap_params)
+        .map_err(|_| StdError::generic_err("direct_swap_nft_for_tokens err"))?;
+
+    Ok(processor.swaps)
+}
+
+pub fn sim_swap_nfts_for_tokens(
+    deps: Deps,
+    collection: Addr,
+    swap_nfts: Vec<SwapNft>,
+    swap_params: SwapParams,
+    asset_recipient: Addr,
+) -> StdResult<Vec<Swap>> {
+    let config = CONFIG.load(deps.storage)?;
+
+    let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
+        .map_err(|_| StdError::generic_err("Marketplace not found"))?;
+
+    let collection_royalties = load_collection_royalties(deps, &collection)
+        .map_err(|_| StdError::generic_err("Collection not found"))?;
+
+    let mut processor = SwapProcessor::new(
+        collection,
+        asset_recipient,
+        marketplace_params.params.trading_fee_percent,
+        collection_royalties,
+    );
+    processor
+        .swap_nfts_for_tokens(deps.storage, swap_nfts, swap_params)
         .map_err(|_| StdError::generic_err("direct_swap_nft_for_tokens err"))?;
 
     Ok(processor.swaps)
