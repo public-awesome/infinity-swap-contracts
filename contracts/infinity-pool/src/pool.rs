@@ -5,20 +5,6 @@ use core::cmp::Ordering;
 use cosmwasm_std::{Addr, Uint128};
 use std::collections::BTreeSet;
 
-impl Ord for Pool {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.spot_price.cmp(&other.spot_price)
-    }
-}
-
-impl PartialOrd for Pool {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Eq for Pool {}
-
 impl Pool {
     pub fn new(
         id: u64,
@@ -120,10 +106,10 @@ impl Pool {
         Ok(())
     }
 
-    pub fn get_recipient(&self) -> &Addr {
+    pub fn get_recipient(&self) -> Addr {
         match &self.asset_recipient {
-            Some(addr) => &addr,
-            None => &self.owner,
+            Some(addr) => addr.clone(),
+            None => self.owner.clone(),
         }
     }
 
@@ -258,18 +244,24 @@ impl Pool {
     pub fn sell_nft_to_pool(&mut self, swap_nft: &SwapNft) -> Result<Uint128, ContractError> {
         if !self.can_buy_nfts() {
             return Err(ContractError::InvalidPool(
-                "cannot buy nft from pool".to_string(),
+                "pool does not buy NFTs".to_string(),
             ));
         }
         if !self.is_active {
             return Err(ContractError::InvalidPool("pool is not active".to_string()));
         }
         let buy_quote = self.get_buy_quote()?;
+
         let sale_price = buy_quote.ok_or(ContractError::SwapError(
             "pool cannot offer quote".to_string(),
         ))?;
 
-        // Update pool params
+        if sale_price < swap_nft.min_expected_token_output {
+            return Err(ContractError::SwapError(
+                "pool sale price is below min expected".to_string(),
+            ));
+        }
+
         self.spot_price = match self.bonding_curve {
             BondingCurve::Linear => self.spot_price - self.delta,
             BondingCurve::Exponential => self.spot_price * self.delta,

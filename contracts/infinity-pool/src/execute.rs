@@ -1,11 +1,12 @@
 use crate::error::ContractError;
 use crate::helpers::{
     check_deadline, get_next_pool_counter, get_pool_attributes, load_collection_royalties,
-    load_marketplace_params, only_owner, remove_pool, save_pool, transfer_nft, transfer_token,
+    load_marketplace_params, only_owner, remove_pool, save_pool, save_pools, transfer_nft,
+    transfer_token,
 };
 use crate::msg::{ExecuteMsg, PoolNfts, SwapNft, SwapParams};
 use crate::state::{pools, BondingCurve, Pool, PoolType, CONFIG};
-use crate::swap_processor::SwapProcessor;
+use crate::swap_processor::{Swap, SwapProcessor};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -107,16 +108,30 @@ pub fn execute(
             pool_id,
             asset_recipient,
         } => execute_remove_pool(deps, info, pool_id, maybe_addr(api, asset_recipient)?),
-        ExecuteMsg::DirectSwapNftForTokens {
+        ExecuteMsg::DirectSwapNftsForTokens {
             pool_id,
             swap_nfts,
             swap_params,
             token_recipient,
-        } => execute_direct_swap_nft_for_tokens(
+        } => execute_direct_swap_nfts_for_tokens(
             deps,
             info,
             env,
             pool_id,
+            swap_nfts,
+            swap_params,
+            maybe_addr(api, token_recipient)?,
+        ),
+        ExecuteMsg::SwapNftsForTokens {
+            collection,
+            swap_nfts,
+            swap_params,
+            token_recipient,
+        } => execute_swap_nfts_for_tokens(
+            deps,
+            info,
+            env,
+            api.addr_validate(&collection)?,
             swap_nfts,
             swap_params,
             maybe_addr(api, token_recipient)?,
@@ -277,8 +292,7 @@ pub fn execute_withdraw_tokens(
     let recipient = asset_recipient.unwrap_or(info.sender);
     transfer_token(
         coin(amount.u128(), &config.denom),
-        recipient.to_string(),
-        "withdrawal_by_owner",
+        &recipient.to_string(),
         &mut response,
     )?;
 
@@ -459,8 +473,7 @@ pub fn execute_remove_pool(
         let recipient = asset_recipient.unwrap_or(info.sender);
         transfer_token(
             coin(pool.total_tokens.u128(), &config.denom),
-            recipient.to_string(),
-            "pool_removed_by_owner",
+            &recipient.to_string(),
             &mut response,
         )?;
     }
@@ -472,7 +485,7 @@ pub fn execute_remove_pool(
     Ok(response.add_event(event))
 }
 
-pub fn execute_direct_swap_nft_for_tokens(
+pub fn execute_direct_swap_nfts_for_tokens(
     deps: DepsMut,
     info: MessageInfo,
     env: Env,
@@ -482,25 +495,63 @@ pub fn execute_direct_swap_nft_for_tokens(
     asset_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
     check_deadline(&env.block, swap_params.deadline)?;
-    let mut response = Response::new();
 
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
     let pool = pools().load(deps.storage, pool_id)?;
-    let seller_recipient = pool.asset_recipient.unwrap_or(info.sender.clone());
-
+    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &pool.collection)?;
 
+    let mut response = Response::new();
     let mut processor = SwapProcessor::new(
         pool.collection.clone(),
         seller_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
     );
-    processor.direct_swap_nft_for_tokens(deps.as_ref(), env, pool_id, swap_nfts, swap_params)?;
+    processor.direct_swap_nfts_for_tokens(pool, swap_nfts, swap_params)?;
+    processor.commit_messages(&mut response)?;
 
-    processor.commit_swap(&mut response);
+    Ok(response)
+}
+
+pub fn execute_swap_nfts_for_tokens(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    collection: Addr,
+    swap_nfts: Vec<SwapNft>,
+    swap_params: SwapParams,
+    asset_recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    check_deadline(&env.block, swap_params.deadline)?;
+
+    let config = CONFIG.load(deps.storage)?;
+    let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
+
+    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
+
+    let pools_to_save: Vec<Pool>;
+    let mut response = Response::new();
+    {
+        let mut processor = SwapProcessor::new(
+            collection,
+            seller_recipient,
+            marketplace_params.params.trading_fee_percent,
+            collection_royalties,
+        );
+        processor.swap_nfts_for_tokens(deps.storage, swap_nfts, swap_params)?;
+        processor.commit_messages(&mut response)?;
+        pools_to_save = processor
+            .pool_set
+            .into_iter()
+            .filter(|p| p.needs_saving == true)
+            .map(|p| p.pool)
+            .collect();
+    }
+    save_pools(deps.storage, pools_to_save)?;
 
     Ok(response)
 }
