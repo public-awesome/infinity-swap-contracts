@@ -266,9 +266,9 @@ pub fn execute_deposit_nfts(
 
     for nft_token_id in &nft_token_ids {
         transfer_nft(
-            &nft_token_id,
-            &env.contract.address.to_string(),
-            &collection.to_string(),
+            nft_token_id,
+            env.contract.address.as_ref(),
+            collection.as_ref(),
             &mut response,
         )?;
     }
@@ -284,7 +284,7 @@ pub fn execute_deposit_nfts(
         .join(",");
     let event = Event::new("deposit_nfts")
         .add_attribute("nfts_received", nft_token_ids.join(","))
-        .add_attribute("nft_token_ids", all_nft_token_ids.to_string());
+        .add_attribute("nft_token_ids", all_nft_token_ids);
 
     Ok(response.add_event(event))
 }
@@ -306,8 +306,8 @@ pub fn execute_withdraw_tokens(
     let config = CONFIG.load(deps.storage)?;
     let recipient = asset_recipient.unwrap_or(info.sender);
     transfer_token(
-        coin(amount.u128(), &config.denom),
-        &recipient.to_string(),
+        coin(amount.u128(), config.denom),
+        recipient.as_ref(),
         &mut response,
     )?;
 
@@ -351,9 +351,9 @@ pub fn execute_withdraw_nfts(
     let recipient = asset_recipient.unwrap_or(info.sender);
     for nft_token_id in &nft_token_ids {
         transfer_nft(
-            &nft_token_id,
-            &recipient.to_string(),
-            &pool.collection.to_string(),
+            nft_token_id,
+            recipient.as_ref(),
+            pool.collection.as_ref(),
             &mut response,
         )?;
     }
@@ -487,8 +487,8 @@ pub fn execute_remove_pool(
         let config = CONFIG.load(deps.storage)?;
         let recipient = asset_recipient.unwrap_or(info.sender);
         transfer_token(
-            coin(pool.total_tokens.u128(), &config.denom),
-            &recipient.to_string(),
+            coin(pool.total_tokens.u128(), config.denom),
+            recipient.as_ref(),
             &mut response,
         )?;
     }
@@ -515,7 +515,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
     let pool = pools().load(deps.storage, pool_id)?;
-    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let seller_recipient = asset_recipient.unwrap_or(info.sender);
     let collection_royalties = load_collection_royalties(deps.as_ref(), &pool.collection)?;
 
     let mut response = Response::new();
@@ -545,7 +545,7 @@ pub fn execute_swap_nfts_for_tokens(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let seller_recipient = asset_recipient.unwrap_or(info.sender);
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
 
     let pools_to_save: Vec<Pool>;
@@ -562,7 +562,7 @@ pub fn execute_swap_nfts_for_tokens(
         pools_to_save = processor
             .pool_set
             .into_iter()
-            .filter(|p| p.needs_saving == true)
+            .filter(|p| p.needs_saving)
             .map(|p| p.pool)
             .collect();
     }
@@ -611,7 +611,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let seller_recipient = asset_recipient.unwrap_or(info.sender);
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
 
     let pools_to_save: Vec<Pool>;
@@ -628,7 +628,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
         pools_to_save = processor
             .pool_set
             .into_iter()
-            .filter(|p| p.needs_saving == true)
+            .filter(|p| p.needs_saving)
             .map(|p| p.pool)
             .collect();
     }
@@ -651,7 +651,7 @@ pub fn execute_swap_tokens_for_any_nfts(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let seller_recipient = asset_recipient.unwrap_or(info.sender);
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
 
     let pools_to_save: Vec<Pool>;
@@ -668,7 +668,7 @@ pub fn execute_swap_tokens_for_any_nfts(
         pools_to_save = processor
             .pool_set
             .into_iter()
-            .filter(|p| p.needs_saving == true)
+            .filter(|p| p.needs_saving)
             .map(|p| p.pool)
             .collect();
     }

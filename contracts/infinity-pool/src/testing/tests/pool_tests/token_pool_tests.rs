@@ -25,8 +25,7 @@ fn create_token_pool() {
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool =
-        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     // Cannot create a ConstantProduct Token Pool because the pool does not hold both assets
     let msg = ExecuteMsg::CreatePool {
@@ -85,7 +84,7 @@ fn create_token_pool() {
         delta: Uint128::from(120u64),
         fee_bps: None,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert!(res.is_ok());
 }
 
@@ -105,8 +104,7 @@ fn deposit_assets_token_pool() {
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool =
-        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     let pool_id = create_pool(
         &mut router,
@@ -126,7 +124,7 @@ fn deposit_assets_token_pool() {
     let deposit_amount = 1000u128;
     let msg = ExecuteMsg::DepositTokens { pool_id };
     let res = router.execute_contract(
-        user1.clone(),
+        user1,
         infinity_pool.clone(),
         &msg,
         &coins(deposit_amount, NATIVE_DENOM),
@@ -166,7 +164,7 @@ fn deposit_assets_token_pool() {
         &creator,
         &collection,
         &infinity_pool,
-        token_id_1.clone(),
+        token_id_1,
     );
     let token_id_2 = mint(&mut router, &creator, minter);
     approve(
@@ -174,14 +172,14 @@ fn deposit_assets_token_pool() {
         &creator,
         &collection,
         &infinity_pool,
-        token_id_2.clone(),
+        token_id_2,
     );
     let msg = ExecuteMsg::DepositNfts {
         pool_id,
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert_error(
         res,
         ContractError::InvalidPool("cannot deposit nfts into token pool".to_string()),
@@ -203,14 +201,13 @@ fn withdraw_assets_token_pool() {
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool =
-        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     let pool_id = create_pool(
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        collection.clone(),
+        collection,
         Some(asset_account.clone()),
         PoolType::Token,
         BondingCurve::Linear,
@@ -236,7 +233,7 @@ fn withdraw_assets_token_pool() {
         amount: Uint128::from(300u64),
         asset_recipient: None,
     };
-    let res = router.execute_contract(user1.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(user1, infinity_pool.clone(), &msg, &[]);
     assert_error(
         res,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string()),
@@ -265,10 +262,7 @@ fn withdraw_assets_token_pool() {
         Uint128::from(total_tokens),
         deposit_amount - withdraw_amount
     );
-    let asset_account_balance = router
-        .wrap()
-        .query_all_balances(asset_account.clone())
-        .unwrap();
+    let asset_account_balance = router.wrap().query_all_balances(asset_account).unwrap();
     assert_eq!(withdraw_amount, asset_account_balance[0].amount);
 
     // Owner of pool can withdraw remaining tokens, tokens are directed toward owner
@@ -314,7 +308,7 @@ fn withdraw_assets_token_pool() {
         pool_id,
         asset_recipient: None,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert_error(
         res,
         ContractError::InvalidPool("cannot withdraw nfts from token pool".to_string()),
@@ -336,14 +330,13 @@ fn update_token_pool() {
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool =
-        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     let pool_id = create_pool(
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        collection.clone(),
+        collection,
         None,
         PoolType::Token,
         BondingCurve::Linear,
@@ -361,7 +354,7 @@ fn update_token_pool() {
         spot_price: Some(Uint128::from(102u64)),
         fee_bps: None,
     };
-    let res = router.execute_contract(user1.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(user1, infinity_pool.clone(), &msg, &[]);
     assert_error(
         res,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string()),
@@ -391,7 +384,7 @@ fn update_token_pool() {
         delta: Some(new_delta),
         fee_bps: None,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert!(res.is_ok());
     let attrs = &res.as_ref().unwrap().events[1].attributes;
     assert_eq!(
@@ -439,14 +432,13 @@ fn remove_token_pool() {
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool =
-        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     let pool_id = create_pool(
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        collection.clone(),
+        collection,
         None,
         PoolType::Token,
         BondingCurve::Linear,
@@ -471,7 +463,7 @@ fn remove_token_pool() {
         pool_id,
         asset_recipient: Some(asset_account.to_string()),
     };
-    let res = router.execute_contract(user1.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(user1, infinity_pool.clone(), &msg, &[]);
     assert_error(
         res,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string()),
@@ -482,12 +474,9 @@ fn remove_token_pool() {
         pool_id,
         asset_recipient: Some(asset_account.to_string()),
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert!(res.is_ok());
-    let asset_account_balance = router
-        .wrap()
-        .query_all_balances(asset_account.clone())
-        .unwrap();
+    let asset_account_balance = router.wrap().query_all_balances(asset_account).unwrap();
     assert_eq!(deposit_amount, asset_account_balance[0].amount);
 }
 
@@ -506,14 +495,13 @@ fn activate_token_pool() {
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool =
-        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     let pool_id = create_pool(
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        collection.clone(),
+        collection,
         None,
         PoolType::Token,
         BondingCurve::Linear,
@@ -538,7 +526,7 @@ fn activate_token_pool() {
         is_active: true,
         pool_id,
     };
-    let res = router.execute_contract(user1.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(user1, infinity_pool.clone(), &msg, &[]);
     assert_error(
         res,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string()),
@@ -549,7 +537,7 @@ fn activate_token_pool() {
         is_active: true,
         pool_id,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     let is_active = &res.as_ref().unwrap().events[1].attributes[2].value;
     assert_eq!(is_active, &"true");
 }

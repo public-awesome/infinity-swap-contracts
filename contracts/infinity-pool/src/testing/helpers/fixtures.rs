@@ -101,7 +101,7 @@ pub fn get_pool_fixtures(
         Pool {
             id: 7,
             collection: collection.clone(),
-            owner: creator.clone(),
+            owner: creator,
             asset_recipient: Some(asset_account.clone()),
             pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::ConstantProduct,
@@ -198,9 +198,9 @@ pub fn get_pool_fixtures(
         },
         Pool {
             id: 14,
-            collection: collection.clone(),
-            owner: user.clone(),
-            asset_recipient: Some(asset_account.clone()),
+            collection,
+            owner: user,
+            asset_recipient: Some(asset_account),
             pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::ConstantProduct,
             spot_price: Uint128::from(1400u64),
@@ -249,7 +249,7 @@ pub fn create_and_activate_pool_fixtures(
     user: Addr,
     asset_account: Addr,
 ) -> Vec<Pool> {
-    let pools = get_pool_fixtures(collection.clone(), creator.clone(), user, asset_account);
+    let pools = get_pool_fixtures(collection.clone(), creator, user, asset_account);
     for pool in pools.iter() {
         create_pool(
             router,
@@ -276,21 +276,9 @@ pub fn create_and_activate_pool_fixtures(
         }
         if pool.can_sell_nfts() {
             let token_id_1 = mint(router, &pool.owner, &minter);
-            approve(
-                router,
-                &pool.owner,
-                &collection,
-                &infinity_pool,
-                token_id_1.clone(),
-            );
+            approve(router, &pool.owner, &collection, &infinity_pool, token_id_1);
             let token_id_2 = mint(router, &pool.owner, &minter);
-            approve(
-                router,
-                &pool.owner,
-                &collection,
-                &infinity_pool,
-                token_id_2.clone(),
-            );
+            approve(router, &pool.owner, &collection, &infinity_pool, token_id_2);
             deposit_nfts(
                 router,
                 infinity_pool.clone(),

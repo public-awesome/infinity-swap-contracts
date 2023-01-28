@@ -37,7 +37,7 @@ impl Pool {
     pub fn validate(&self) -> Result<(), ContractError> {
         match &self.pool_type {
             PoolType::Token => {
-                if self.nft_token_ids.len() > 0 {
+                if !self.nft_token_ids.is_empty() {
                     return Err(ContractError::InvalidPool(
                         "nft_token_ids must be empty for token pool".to_string(),
                     ));
@@ -47,7 +47,7 @@ impl Pool {
                         "spot_price must be non-zero for token pool".to_string(),
                     ));
                 }
-                if let Some(_) = self.fee_bps {
+                if self.fee_bps.is_some() {
                     return Err(ContractError::InvalidPool(
                         "fee_bps must be 0 for token pool".to_string(),
                     ));
@@ -70,7 +70,7 @@ impl Pool {
                         "spot_price must be non-zero for nft pool".to_string(),
                     ));
                 }
-                if let Some(_) = self.fee_bps {
+                if self.fee_bps.is_some() {
                     return Err(ContractError::InvalidPool(
                         "fee_bps must be 0 for nft pool".to_string(),
                     ));
@@ -95,7 +95,7 @@ impl Pool {
                             "total_tokens must be greater than zero for trade pool".to_string(),
                         ));
                     }
-                    if self.nft_token_ids.len() == 0 {
+                    if self.nft_token_ids.is_empty() {
                         return Err(ContractError::InvalidPool(
                             "nft_token_ids must be non-empty for trade pool".to_string(),
                         ));
@@ -199,7 +199,7 @@ impl Pool {
         if self.total_tokens < buy_price {
             return Ok(None);
         }
-        return Ok(Some(buy_price));
+        Ok(Some(buy_price))
     }
 
     pub fn get_sell_quote(&self) -> Result<Option<Uint128>, ContractError> {
@@ -208,7 +208,7 @@ impl Pool {
                 "pool cannot sell nfts".to_string(),
             ));
         }
-        if self.nft_token_ids.len() == 0 {
+        if self.nft_token_ids.is_empty() {
             return Ok(None);
         }
         let sell_price = match self.bonding_curve {
@@ -217,7 +217,7 @@ impl Pool {
                 self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 + 1)
             }
         };
-        return Ok(Some(sell_price));
+        Ok(Some(sell_price))
     }
 
     pub fn buy_nft_from_pool(&mut self, nft_swap: &NftSwap) -> Result<Uint128, ContractError> {
@@ -234,9 +234,8 @@ impl Pool {
         // }
         let sell_quote = self.get_sell_quote()?;
 
-        let sale_price = sell_quote.ok_or(ContractError::SwapError(
-            "pool cannot offer quote".to_string(),
-        ))?;
+        let sale_price = sell_quote
+            .ok_or_else(|| ContractError::SwapError("pool cannot offer quote".to_string()))?;
 
         if sale_price > nft_swap.token_amount {
             return Err(ContractError::SwapError(
@@ -275,9 +274,8 @@ impl Pool {
         }
         let buy_quote = self.get_buy_quote()?;
 
-        let sale_price = buy_quote.ok_or(ContractError::SwapError(
-            "pool cannot offer quote".to_string(),
-        ))?;
+        let sale_price = buy_quote
+            .ok_or_else(|| ContractError::SwapError("pool cannot offer quote".to_string()))?;
 
         if sale_price < nft_swap.token_amount {
             return Err(ContractError::SwapError(
