@@ -25,7 +25,7 @@ fn standard_minter_params_token(
     num_tokens: u32,
     collection_params: CollectionParams,
 ) -> MinterInstantiateParams {
-    let mut init_msg = mock_create_minter(None, collection_params.clone(), None).init_msg;
+    let mut init_msg = mock_create_minter(None, collection_params, None).init_msg;
     init_msg.num_tokens = num_tokens;
     init_msg.per_address_limit = num_tokens / 100;
     init_msg.mint_price = coin(100000000, "ustars");

@@ -27,7 +27,7 @@ pub fn create_pool(
         delta,
         fee_bps,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert!(res.is_ok());
     let pool_id = res.unwrap().events[1].attributes[1]
         .value
@@ -45,8 +45,8 @@ pub fn deposit_tokens(
 ) -> Result<u128, Error> {
     let msg = ExecuteMsg::DepositTokens { pool_id };
     let res = router.execute_contract(
-        creator.clone(),
-        infinity_pool.clone(),
+        creator,
+        infinity_pool,
         &msg,
         &coins(deposit_amount.u128(), NATIVE_DENOM),
     );
@@ -72,7 +72,7 @@ pub fn deposit_nfts(
         collection: collection.to_string(),
         nft_token_ids,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert!(res.is_ok());
     let nft_token_ids = res.unwrap().events[1].attributes[2].value.clone();
 
@@ -87,7 +87,7 @@ pub fn activate(
     is_active: bool,
 ) -> Result<bool, Error> {
     let msg = ExecuteMsg::SetActivePool { pool_id, is_active };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert!(res.is_ok());
     Ok(is_active)
 }

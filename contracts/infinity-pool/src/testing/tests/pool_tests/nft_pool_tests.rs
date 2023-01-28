@@ -25,8 +25,7 @@ fn create_nft_pool() {
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool =
-        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     // Cannot create a ConstantProduct Nft Pool because the pool does not hold both assets
     let msg = ExecuteMsg::CreatePool {
@@ -85,7 +84,7 @@ fn create_nft_pool() {
         delta: Uint128::from(120u64),
         fee_bps: None,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert!(res.is_ok());
 }
 
@@ -105,8 +104,7 @@ fn deposit_assets_nft_pool() {
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool =
-        setup_infinity_pool(&mut router, creator.clone(), marketplace.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     let pool_id = create_pool(
         &mut router,
@@ -124,21 +122,9 @@ fn deposit_assets_nft_pool() {
 
     // Only owner can deposit NFTs into nft pool
     let token_id_1 = mint(&mut router, &user1, minter);
-    approve(
-        &mut router,
-        &user1,
-        &collection,
-        &infinity_pool,
-        token_id_1.clone(),
-    );
+    approve(&mut router, &user1, &collection, &infinity_pool, token_id_1);
     let token_id_2 = mint(&mut router, &user1, minter);
-    approve(
-        &mut router,
-        &user1,
-        &collection,
-        &infinity_pool,
-        token_id_2.clone(),
-    );
+    approve(&mut router, &user1, &collection, &infinity_pool, token_id_2);
     let msg = ExecuteMsg::DepositNfts {
         pool_id,
         collection: collection.to_string(),
@@ -157,7 +143,7 @@ fn deposit_assets_nft_pool() {
         &creator,
         &collection,
         &infinity_pool,
-        token_id_1.clone(),
+        token_id_1,
     );
     let token_id_2 = mint(&mut router, &creator, minter);
     approve(
@@ -165,7 +151,7 @@ fn deposit_assets_nft_pool() {
         &creator,
         &collection,
         &infinity_pool,
-        token_id_2.clone(),
+        token_id_2,
     );
     let msg = ExecuteMsg::DepositNfts {
         pool_id,
@@ -179,8 +165,8 @@ fn deposit_assets_nft_pool() {
     let deposit_amount = 1000u128;
     let msg = ExecuteMsg::DepositTokens { pool_id };
     let res = router.execute_contract(
-        creator.clone(),
-        infinity_pool.clone(),
+        creator,
+        infinity_pool,
         &msg,
         &coins(deposit_amount, NATIVE_DENOM),
     );

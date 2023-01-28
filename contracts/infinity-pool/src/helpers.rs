@@ -40,39 +40,35 @@ pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), Co
     if pool.can_buy_nfts() {
         if !pool.is_active {
             buy_pool_quotes().remove(store, pool.id)?;
+        } else if let Some(_buy_price_quote) = pool.get_buy_quote()? {
+            buy_pool_quotes().save(
+                store,
+                pool.id,
+                &PoolQuote {
+                    id: pool.id,
+                    collection: pool.collection.clone(),
+                    quote_price: _buy_price_quote,
+                },
+            )?;
         } else {
-            if let Some(_buy_price_quote) = pool.get_buy_quote()? {
-                buy_pool_quotes().save(
-                    store,
-                    pool.id,
-                    &PoolQuote {
-                        id: pool.id,
-                        collection: pool.collection.clone(),
-                        quote_price: _buy_price_quote,
-                    },
-                )?;
-            } else {
-                buy_pool_quotes().remove(store, pool.id)?;
-            }
+            buy_pool_quotes().remove(store, pool.id)?;
         }
     }
     if pool.can_sell_nfts() {
         if !pool.is_active {
             sell_pool_quotes().remove(store, pool.id)?;
+        } else if let Some(_sell_price_quote) = pool.get_sell_quote()? {
+            sell_pool_quotes().save(
+                store,
+                pool.id,
+                &PoolQuote {
+                    id: pool.id,
+                    collection: pool.collection.clone(),
+                    quote_price: _sell_price_quote,
+                },
+            )?;
         } else {
-            if let Some(_sell_price_quote) = pool.get_sell_quote()? {
-                sell_pool_quotes().save(
-                    store,
-                    pool.id,
-                    &PoolQuote {
-                        id: pool.id,
-                        collection: pool.collection.clone(),
-                        quote_price: _sell_price_quote,
-                    },
-                )?;
-            } else {
-                sell_pool_quotes().remove(store, pool.id)?;
-            }
+            sell_pool_quotes().remove(store, pool.id)?;
         }
     }
 
@@ -158,10 +154,7 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
         },
         Attribute {
             key: "fee_bps".to_string(),
-            value: pool
-                .fee_bps
-                .clone()
-                .map_or("None".to_string(), |f| f.to_string()),
+            value: pool.fee_bps.map_or("None".to_string(), |f| f.to_string()),
         },
     ]
 }

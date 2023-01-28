@@ -36,7 +36,7 @@ impl PartialOrd for PoolPair {
 
 impl PartialEq for PoolPair {
     fn eq(&self, other: &Self) -> bool {
-        self.pool.spot_price == &other.pool.spot_price
+        self.pool.spot_price == other.pool.spot_price
     }
 }
 
@@ -142,7 +142,7 @@ impl<'a> SwapProcessor<'a> {
     ) -> Result<(), ContractError> {
         let sale_price = pool.sell_nft_to_pool(&nft_swap)?;
         let swap = self.create_swap(
-            &pool,
+            pool,
             sale_price,
             nft_swap.nft_token_id,
             &pool.get_recipient(),
@@ -155,7 +155,7 @@ impl<'a> SwapProcessor<'a> {
     pub fn process_buy(&mut self, pool: &mut Pool, nft_swap: NftSwap) -> Result<(), ContractError> {
         let sale_price = pool.buy_nft_from_pool(&nft_swap)?;
         let swap = self.create_swap(
-            &pool,
+            pool,
             sale_price,
             nft_swap.nft_token_id,
             &self.seller_recipient.clone(),
@@ -166,7 +166,7 @@ impl<'a> SwapProcessor<'a> {
     }
 
     pub fn commit_messages(&self, response: &mut Response) -> Result<(), ContractError> {
-        if self.swaps.len() == 0 {
+        if self.swaps.is_empty() {
             return Err(ContractError::SwapError("no swaps found".to_string()));
         }
 
@@ -190,7 +190,7 @@ impl<'a> SwapProcessor<'a> {
             transfer_nft(
                 &swap.nft_payment.nft_token_id,
                 &swap.nft_payment.address,
-                &self.collection.to_string(),
+                self.collection.as_ref(),
                 response,
             )?;
         }
@@ -275,7 +275,7 @@ impl<'a> SwapProcessor<'a> {
 
         for nft_swap in nfts_to_swap {
             let pool_pair_option = self.load_next_pool(storage)?;
-            if pool_pair_option == None {
+            if pool_pair_option.is_none() {
                 return Ok(());
             }
             let mut pool_pair = pool_pair_option.unwrap();
@@ -309,10 +309,10 @@ impl<'a> SwapProcessor<'a> {
 
         for pool_nfts in nfts_to_swap_for {
             let mut pool_option = pool_map.remove(&pool_nfts.pool_id);
-            if pool_option == None {
+            if pool_option.is_none() {
                 pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
             }
-            if pool_option == None {
+            if pool_option.is_none() {
                 return Err(ContractError::InvalidPool("pool not found".to_string()));
             }
             let mut pool = pool_option.unwrap();
@@ -358,7 +358,7 @@ impl<'a> SwapProcessor<'a> {
 
         for token_amount in min_expected_token_input {
             let pool_pair_option = self.load_next_pool(storage)?;
-            if pool_pair_option == None {
+            if pool_pair_option.is_none() {
                 return Ok(());
             }
             let mut pool_pair = pool_pair_option.unwrap();
