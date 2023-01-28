@@ -9,13 +9,6 @@ pub struct InstantiateMsg {
     pub denom: String,
     pub marketplace_addr: String,
 }
-
-#[cw_serde]
-pub struct PoolNfts {
-    pub pool_id: u64,
-    pub nft_token_ids: Vec<String>,
-}
-
 #[cw_serde]
 pub struct SwapParams {
     pub deadline: Timestamp,
@@ -23,9 +16,15 @@ pub struct SwapParams {
 }
 
 #[cw_serde]
-pub struct SwapNft {
+pub struct NftSwap {
     pub nft_token_id: String,
-    pub min_expected_token_output: Uint128,
+    pub token_amount: Uint128,
+}
+
+#[cw_serde]
+pub struct PoolNftSwap {
+    pub pool_id: u64,
+    pub nft_swaps: Vec<NftSwap>,
 }
 
 #[cw_serde]
@@ -82,22 +81,28 @@ pub enum ExecuteMsg {
     },
     DirectSwapNftsForTokens {
         pool_id: u64,
-        swap_nfts: Vec<SwapNft>,
+        nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
         token_recipient: Option<String>,
     },
     SwapNftsForTokens {
         collection: String,
-        swap_nfts: Vec<SwapNft>,
+        nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
         token_recipient: Option<String>,
     },
-    // DirectSwapTokensforSpecificNfts {
-    //     pool_id: u64,
-    //     swap_nfts: Vec<SwapNft>,
-    //     swap_params: SwapParams,
-    //     token_recipient: Option<String>,
-    // },
+    DirectSwapTokensforSpecificNfts {
+        pool_id: u64,
+        nfts_to_swap_for: Vec<NftSwap>,
+        swap_params: SwapParams,
+        nft_recipient: Option<String>,
+    },
+    SwapTokensforSpecificNfts {
+        collection: String,
+        nfts_to_swap_for: Vec<PoolNftSwap>,
+        swap_params: SwapParams,
+        nft_recipient: Option<String>,
+    },
     // SwapTokensforSpecificNfts {
     //     pool_id: u64,
     //     swap_nfts: Vec<SwapNft>,
@@ -142,13 +147,13 @@ pub enum QueryMsg {
     },
     SimDirectSwapNftsForTokens {
         pool_id: u64,
-        swap_nfts: Vec<SwapNft>,
+        nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
         token_recipient: String,
     },
     SimSwapNftsForTokens {
         collection: String,
-        swap_nfts: Vec<SwapNft>,
+        nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
         token_recipient: String,
     },

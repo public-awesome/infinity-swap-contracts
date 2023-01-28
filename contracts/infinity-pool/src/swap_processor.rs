@@ -3,7 +3,7 @@ use crate::helpers::{
     get_next_pool_counter, get_pool_attributes, only_owner, remove_pool, save_pool, transfer_nft,
     transfer_token,
 };
-use crate::msg::{ExecuteMsg, PoolNfts, QueryOptions, SwapNft, SwapParams};
+use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, QueryOptions, SwapParams};
 use crate::query::{query_pool_quotes_by_buy_price, query_pool_quotes_by_sell_price};
 use crate::state::{
     buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Pool, PoolQuote, PoolType, CONFIG,
@@ -144,29 +144,41 @@ impl<'a> SwapProcessor<'a> {
         }
     }
 
-    pub fn process_swap(
+    pub fn process_sell(
         &mut self,
         pool: &mut Pool,
-        swap_nft: SwapNft,
+        nft_swap: NftSwap,
     ) -> Result<(), ContractError> {
-        let sale_price = pool.sell_nft_to_pool(&swap_nft);
-        match sale_price {
-            Ok(_sale_price) => {
-                let swap = self.create_swap(
-                    &pool,
-                    _sale_price,
-                    swap_nft.nft_token_id,
-                    &pool.get_recipient(),
-                    &pool.get_recipient(),
-                );
-                self.swaps.push(swap);
-                Ok(())
-            }
-            Err(_err) => return Err(_err),
-        }
+        let sale_price = pool.sell_nft_to_pool(&nft_swap)?;
+        let swap = self.create_swap(
+            &pool,
+            sale_price,
+            nft_swap.nft_token_id,
+            &pool.get_recipient(),
+            &self.seller_recipient.clone(),
+        );
+        self.swaps.push(swap);
+        Ok(())
+    }
+
+    pub fn process_buy(&mut self, pool: &mut Pool, nft_swap: NftSwap) -> Result<(), ContractError> {
+        let sale_price = pool.buy_nft_from_pool(&nft_swap)?;
+        let swap = self.create_swap(
+            &pool,
+            sale_price,
+            nft_swap.nft_token_id,
+            &self.seller_recipient.clone(),
+            &pool.get_recipient(),
+        );
+        self.swaps.push(swap);
+        Ok(())
     }
 
     pub fn commit_messages(&self, response: &mut Response) -> Result<(), ContractError> {
+        if self.swaps.len() == 0 {
+            return Err(ContractError::SwapError("no swaps found".to_string()));
+        }
+
         let mut total_network_fee = Uint128::zero();
         let mut token_payments = BTreeMap::new();
 
@@ -229,18 +241,18 @@ impl<'a> SwapProcessor<'a> {
     pub fn direct_swap_nfts_for_tokens(
         &mut self,
         pool: Pool,
-        swap_nfts: Vec<SwapNft>,
+        nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
         let mut pool = pool;
         {
-            for swap_nft in swap_nfts {
-                let result = self.process_swap(&mut pool, swap_nft);
+            for nft_swap in nfts_to_swap {
+                let result = self.process_sell(&mut pool, nft_swap);
                 match result {
                     Ok(_) => {}
                     Err(ContractError::SwapError(_err)) => {
                         if swap_params.robust {
-                            return Ok(());
+                            break;
                         } else {
                             return Err(ContractError::SwapError(_err));
                         }
@@ -259,7 +271,7 @@ impl<'a> SwapProcessor<'a> {
     pub fn swap_nfts_for_tokens(
         &mut self,
         storage: &'a dyn Storage,
-        swap_nfts: Vec<SwapNft>,
+        nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
         self.pool_quote_iter = Some(
@@ -270,14 +282,14 @@ impl<'a> SwapProcessor<'a> {
                 .keys(storage, None, None, Order::Descending),
         );
 
-        for swap_nft in swap_nfts {
+        for nft_swap in nfts_to_swap {
             let pool_pair_option = self.load_next_pool(storage)?;
             if pool_pair_option == None {
                 return Ok(());
             }
             let mut pool_pair = pool_pair_option.unwrap();
             {
-                let result = self.process_swap(&mut pool_pair.pool, swap_nft);
+                let result = self.process_sell(&mut pool_pair.pool, nft_swap);
                 match result {
                     Ok(_) => {}
                     Err(ContractError::SwapError(_err)) => {
@@ -296,7 +308,50 @@ impl<'a> SwapProcessor<'a> {
         Ok(())
     }
 
-    // pub fn process_swap(
+    pub fn swap_tokens_for_specific_nfts(
+        &mut self,
+        storage: &'a dyn Storage,
+        nfts_to_swap_for: Vec<PoolNftSwap>,
+        swap_params: SwapParams,
+    ) -> Result<(), ContractError> {
+        let mut pool_map: BTreeMap<u64, Pool> = BTreeMap::new();
+
+        for pool_nfts in nfts_to_swap_for {
+            let mut pool_option = pool_map.remove(&pool_nfts.pool_id);
+            if pool_option == None {
+                pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
+            }
+            if pool_option == None {
+                return Err(ContractError::InvalidPool("pool not found".to_string()));
+            }
+            let mut pool = pool_option.unwrap();
+
+            for nft_swap in pool_nfts.nft_swaps {
+                let result = self.process_buy(&mut pool, nft_swap);
+                match result {
+                    Ok(_) => {}
+                    Err(ContractError::SwapError(_err)) => {
+                        if swap_params.robust {
+                            break;
+                        } else {
+                            return Err(ContractError::SwapError(_err));
+                        }
+                    }
+                    Err(_err) => return Err(_err),
+                }
+            }
+            pool_map.insert(pool.id, pool);
+        }
+        for (_, pool) in pool_map {
+            self.pool_set.insert(PoolPair {
+                needs_saving: true,
+                pool,
+            });
+        }
+        Ok(())
+    }
+
+    // pub fn process_ask(
     //     &mut self,
     //     pool: &mut Pool,
     //     nft_token_id: String,
@@ -349,7 +404,7 @@ impl<'a> SwapProcessor<'a> {
     //                 ));
     //             }
     //             remaining_balance -= pool.spot_price;
-    //             self.process_swap(&mut pool, nft_token_id)?;
+    //             self.process_ask(&mut pool, nft_token_id)?;
     //         }
     //     }
 
@@ -389,7 +444,7 @@ impl<'a> SwapProcessor<'a> {
 
     //         let mut pool = pool.unwrap();
     //         token_output += pool.spot_price;
-    //         self.process_swap(&mut pool, nft_token_id);
+    //         self.process_ask(&mut pool, nft_token_id);
     //     }
 
     //     if token_output < min_expected_token_output {

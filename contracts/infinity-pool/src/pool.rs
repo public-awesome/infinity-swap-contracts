@@ -1,9 +1,11 @@
-use crate::msg::SwapNft;
+use crate::msg::NftSwap;
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
 use core::cmp::Ordering;
 use cosmwasm_std::{Addr, Uint128};
 use std::collections::BTreeSet;
+
+const MAX_BASIS_POINTS: u128 = 10000u128;
 
 impl Pool {
     pub fn new(
@@ -188,8 +190,8 @@ impl Pool {
             PoolType::Trade => match self.bonding_curve {
                 BondingCurve::Linear => Ok(self.spot_price + self.delta),
                 BondingCurve::Exponential => Ok(self.spot_price
-                    * (Uint128::from(10000u128) + self.delta)
-                    / Uint128::from(10000u128)),
+                    * (Uint128::from(MAX_BASIS_POINTS) + self.delta)
+                    / Uint128::from(MAX_BASIS_POINTS)),
                 BondingCurve::ConstantProduct => {
                     Ok(self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 - 1))
                 }
@@ -219,29 +221,51 @@ impl Pool {
         return Ok(Some(sell_price));
     }
 
-    // pub fn buy_nft_from_pool(&mut self, nft_token_id: String) -> Result<(), ContractError> {
-    //     if !self.can_sell_nfts() {
-    //         return Err(ContractError::InvalidPool(
-    //             "cannot buy nft from pool".to_string(),
-    //         ));
-    //     }
-    //     if !self.nft_token_ids.remove(&nft_token_id) {
-    //         return Err(ContractError::InvalidPool(
-    //             "nft_token_id not found in pool".to_string(),
-    //         ));
-    //     }
-    //     self.spot_price = match self.bonding_curve {
-    //         BondingCurve::Linear => self.spot_price + self.delta,
-    //         BondingCurve::Exponential => self.spot_price * self.delta,
-    //         BondingCurve::ConstantProduct => {
-    //             self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
-    //         }
-    //     };
+    pub fn buy_nft_from_pool(&mut self, nft_swap: &NftSwap) -> Result<Uint128, ContractError> {
+        if !self.can_sell_nfts() {
+            return Err(ContractError::InvalidPool(
+                "pool does not sell NFTs".to_string(),
+            ));
+        }
+        if !self.is_active {
+            return Err(ContractError::InvalidPool("pool is not active".to_string()));
+        }
+        // if self.id != nft_bid.pool_id {
+        //     return Err(ContractError::InvalidPool("incorrect pool".to_string()));
+        // }
+        let sell_quote = self.get_sell_quote()?;
 
-    //     Ok(())
-    // }
+        let sale_price = sell_quote.ok_or(ContractError::SwapError(
+            "pool cannot offer quote".to_string(),
+        ))?;
 
-    pub fn sell_nft_to_pool(&mut self, swap_nft: &SwapNft) -> Result<Uint128, ContractError> {
+        if sale_price > nft_swap.token_amount {
+            return Err(ContractError::SwapError(
+                "pool sale price is above max expected".to_string(),
+            ));
+        }
+
+        if !self.nft_token_ids.remove(&nft_swap.nft_token_id) {
+            return Err(ContractError::SwapError(
+                "pool does not own NFT".to_string(),
+            ));
+        }
+
+        self.spot_price = match self.bonding_curve {
+            BondingCurve::Linear => self.spot_price + self.delta,
+            BondingCurve::Exponential => {
+                self.spot_price * (Uint128::from(MAX_BASIS_POINTS) + self.delta)
+                    / Uint128::from(MAX_BASIS_POINTS)
+            }
+            BondingCurve::ConstantProduct => {
+                self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
+            }
+        };
+
+        Ok(sale_price)
+    }
+
+    pub fn sell_nft_to_pool(&mut self, nft_swap: &NftSwap) -> Result<Uint128, ContractError> {
         if !self.can_buy_nfts() {
             return Err(ContractError::InvalidPool(
                 "pool does not buy NFTs".to_string(),
@@ -256,15 +280,20 @@ impl Pool {
             "pool cannot offer quote".to_string(),
         ))?;
 
-        if sale_price < swap_nft.min_expected_token_output {
+        if sale_price < nft_swap.token_amount {
             return Err(ContractError::SwapError(
                 "pool sale price is below min expected".to_string(),
             ));
         }
 
+        self.total_tokens -= sale_price;
+
         self.spot_price = match self.bonding_curve {
             BondingCurve::Linear => self.spot_price - self.delta,
-            BondingCurve::Exponential => self.spot_price * self.delta,
+            BondingCurve::Exponential => {
+                self.spot_price * (Uint128::from(MAX_BASIS_POINTS) - self.delta)
+                    / Uint128::from(MAX_BASIS_POINTS)
+            }
             BondingCurve::ConstantProduct => {
                 self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
             }
