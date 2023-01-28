@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use crate::state::{BondingCurve, Config, Pool, PoolQuote, PoolType};
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Timestamp, Uint128};
@@ -91,30 +89,24 @@ pub enum ExecuteMsg {
         swap_params: SwapParams,
         token_recipient: Option<String>,
     },
-    DirectSwapTokensforSpecificNfts {
+    DirectSwapTokensForSpecificNfts {
         pool_id: u64,
         nfts_to_swap_for: Vec<NftSwap>,
         swap_params: SwapParams,
         nft_recipient: Option<String>,
     },
-    SwapTokensforSpecificNfts {
+    SwapTokensForSpecificNfts {
         collection: String,
-        nfts_to_swap_for: Vec<PoolNftSwap>,
+        pool_nfts_to_swap_for: Vec<PoolNftSwap>,
         swap_params: SwapParams,
         nft_recipient: Option<String>,
     },
-    // SwapTokensforSpecificNfts {
-    //     pool_id: u64,
-    //     swap_nfts: Vec<SwapNft>,
-    //     swap_params: SwapParams,
-    //     token_recipient: Option<String>,
-    // },
-    // SwapTokensforAnyNfts {
-    //     pool_id: u64,
-    //     swap_nfts: Vec<SwapNft>,
-    //     swap_params: SwapParams,
-    //     token_recipient: Option<String>,
-    // },
+    SwapTokensForAnyNfts {
+        collection: String,
+        max_expected_token_input: Vec<Uint128>,
+        swap_params: SwapParams,
+        nft_recipient: Option<String>,
+    },
 }
 
 #[cw_serde]
@@ -156,6 +148,24 @@ pub enum QueryMsg {
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
         token_recipient: String,
+    },
+    SimDirectSwapTokensforSpecificNfts {
+        pool_id: u64,
+        nfts_to_swap_for: Vec<NftSwap>,
+        swap_params: SwapParams,
+        nft_recipient: String,
+    },
+    SimSwapTokensForSpecificNfts {
+        collection: String,
+        pool_nfts_to_swap_for: Vec<PoolNftSwap>,
+        swap_params: SwapParams,
+        nft_recipient: String,
+    },
+    SimSwapTokensForAnyNfts {
+        collection: String,
+        max_expected_token_input: Vec<Uint128>,
+        swap_params: SwapParams,
+        nft_recipient: String,
     },
 }
 

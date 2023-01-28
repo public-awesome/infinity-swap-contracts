@@ -1,7 +1,6 @@
 use crate::msg::NftSwap;
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
-use core::cmp::Ordering;
 use cosmwasm_std::{Addr, Uint128};
 use std::collections::BTreeSet;
 

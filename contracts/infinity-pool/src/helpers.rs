@@ -1,10 +1,8 @@
-use crate::state::{
-    buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType, POOL_COUNTER,
-};
+use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, POOL_COUNTER};
 use crate::ContractError;
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, BankMsg, BlockInfo, Coin, Deps, Event, MessageInfo, Order,
-    StdResult, Storage, SubMsg, Timestamp, WasmMsg,
+    to_binary, Addr, Attribute, BankMsg, BlockInfo, Coin, Deps, MessageInfo, Order, StdResult,
+    Storage, SubMsg, Timestamp, WasmMsg,
 };
 use sg721::RoyaltyInfoResponse;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
