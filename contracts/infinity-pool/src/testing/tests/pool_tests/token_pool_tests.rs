@@ -261,11 +261,12 @@ fn withdraw_assets_token_pool() {
         asset_recipient: Some(asset_account.to_string()),
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
-    let total_withdrawn = res.as_ref().unwrap().events[2].attributes[2]
+    let total_withdrawn = res.as_ref().unwrap().events[1].attributes[2]
         .value
         .parse::<u128>()
         .unwrap();
-    let total_tokens = res.as_ref().unwrap().events[2].attributes[3]
+
+    let total_tokens = res.as_ref().unwrap().events[1].attributes[3]
         .value
         .parse::<u128>()
         .unwrap();
@@ -287,11 +288,11 @@ fn withdraw_assets_token_pool() {
         asset_recipient: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
-    let total_withdrawn = res.as_ref().unwrap().events[2].attributes[2]
+    let total_withdrawn = res.as_ref().unwrap().events[1].attributes[2]
         .value
         .parse::<u128>()
         .unwrap();
-    let total_tokens = res.as_ref().unwrap().events[2].attributes[3]
+    let total_tokens = res.as_ref().unwrap().events[1].attributes[3]
         .value
         .parse::<u128>()
         .unwrap();
