@@ -1,23 +1,14 @@
 use crate::error::ContractError;
-use crate::helpers::{
-    get_next_pool_counter, get_pool_attributes, only_owner, remove_pool, save_pool, transfer_nft,
-    transfer_token,
-};
-use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, QueryOptions, SwapParams};
-use crate::query::{query_pool_quotes_by_buy_price, query_pool_quotes_by_sell_price};
-use crate::state::{
-    buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Pool, PoolQuote, PoolType, CONFIG,
-};
+use crate::helpers::{transfer_nft, transfer_token};
+use crate::msg::{NftSwap, PoolNftSwap, SwapParams};
+use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolType};
 
 use core::cmp::Ordering;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo, StdResult, Storage, Uint128};
-use cosmwasm_std::{entry_point, Decimal, Deps, Order};
-use cw_utils::{maybe_addr, must_pay, nonpayable};
+use cosmwasm_std::{coin, Addr, StdResult, Storage, Uint128};
+use cosmwasm_std::{Decimal, Order};
 use sg1::fair_burn;
 use sg721::RoyaltyInfoResponse;
-use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
-use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::{Response, NATIVE_DENOM};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -351,108 +342,50 @@ impl<'a> SwapProcessor<'a> {
         Ok(())
     }
 
-    // pub fn process_ask(
-    //     &mut self,
-    //     pool: &mut Pool,
-    //     nft_token_id: String,
-    // ) -> Result<(), ContractError> {
-    //     // pool.buy_nft_from_pool(nft_token_id.clone())?;
-    //     self.calc_swap_fees(pool.spot_price, nft_token_id)?;
+    pub fn swap_tokens_for_any_nfts(
+        &mut self,
+        storage: &'a dyn Storage,
+        min_expected_token_input: Vec<Uint128>,
+        swap_params: SwapParams,
+    ) -> Result<(), ContractError> {
+        self.pool_quote_iter = Some(
+            buy_pool_quotes()
+                .idx
+                .collection_buy_price
+                .sub_prefix(self.collection.clone())
+                .keys(storage, None, None, Order::Ascending),
+        );
 
-    //     Ok(())
-    // }
-
-    // pub fn swap_token_for_specific_nfts(
-    //     &mut self,
-    //     deps: DepsMut,
-    //     specific_nfts: Vec<PoolNfts>,
-    //     max_expected_token_input: Uint128,
-    // ) -> Result<(), ContractError> {
-    //     if specific_nfts.len() == 0 {
-    //         return Err(ContractError::InvalidInput(
-    //             "specific_nfts.len() must be greater than 0".to_string(),
-    //         ));
-    //     }
-
-    //     let mut remaining_balance = max_expected_token_input.clone();
-
-    //     for pool_nft in specific_nfts {
-    //         if pool_nft.nft_token_ids.len() == 0 {
-    //             return Err(ContractError::InvalidInput(format!(
-    //                 "no nfts selected for pool_id {}",
-    //                 pool_nft.pool_id
-    //             )));
-    //         }
-
-    //         let mut pool = pools()
-    //             .load(deps.storage, pool_nft.pool_id)
-    //             .map_err(|_| ContractError::InvalidInput("pool does not exist".to_string()))?;
-
-    //         if !pool.can_sell_nfts() {
-    //             return Err(ContractError::InvalidPool(
-    //                 "pool cannot sell NFTs".to_string(),
-    //             ));
-    //         }
-    //         if !pool.is_active {
-    //             return Err(ContractError::InvalidPool("pool is inactive".to_string()));
-    //         }
-
-    //         for nft_token_id in pool_nft.nft_token_ids {
-    //             if pool.spot_price > remaining_balance {
-    //                 return Err(ContractError::InsufficientFunds(
-    //                     "insufficient funds to buy all NFTs".to_string(),
-    //                 ));
-    //             }
-    //             remaining_balance -= pool.spot_price;
-    //             self.process_ask(&mut pool, nft_token_id)?;
-    //         }
-    //     }
-
-    //     Ok(())
-    // }
-
-    // pub fn swap_nft_for_tokens(
-    //     &mut self,
-    //     storage: &'a mut dyn Storage,
-    //     collection: Addr,
-    //     nft_token_ids: Vec<String>,
-    //     min_expected_token_output: Uint128,
-    // ) -> Result<(), ContractError> {
-    //     if nft_token_ids.len() == 0 {
-    //         return Err(ContractError::InvalidInput(
-    //             "nft_token_ids.len() must be greater than 0".to_string(),
-    //         ));
-    //     }
-
-    //     let mut token_output = Uint128::zero();
-
-    //     if let None = self.pool_quote_iter {
-    //         self.pool_quote_iter = Some(
-    //             buy_pool_quotes()
-    //                 .idx
-    //                 .collection_buy_price
-    //                 .sub_prefix(self.collection.clone())
-    //                 .keys(storage, None, None, Order::Descending),
-    //         );
-    //     }
-
-    //     for nft_token_id in nft_token_ids {
-    //         let pool = self.load_next_pool(storage)?;
-    //         if let None = pool {
-    //             return Err(ContractError::InvalidInput("no pools found".to_string()));
-    //         }
-
-    //         let mut pool = pool.unwrap();
-    //         token_output += pool.spot_price;
-    //         self.process_ask(&mut pool, nft_token_id);
-    //     }
-
-    //     if token_output < min_expected_token_output {
-    //         return Err(ContractError::InsufficientFunds(
-    //             "insufficient funds to buy all NFTs".to_string(),
-    //         ));
-    //     }
-
-    //     Ok(())
-    // }
+        for token_amount in min_expected_token_input {
+            let pool_pair_option = self.load_next_pool(storage)?;
+            if pool_pair_option == None {
+                return Ok(());
+            }
+            let mut pool_pair = pool_pair_option.unwrap();
+            {
+                let nft_token_id = pool_pair.pool.nft_token_ids.first().unwrap().to_string();
+                let result = self.process_buy(
+                    &mut pool_pair.pool,
+                    NftSwap {
+                        nft_token_id,
+                        token_amount,
+                    },
+                );
+                match result {
+                    Ok(_) => {}
+                    Err(ContractError::SwapError(_err)) => {
+                        if swap_params.robust {
+                            return Ok(());
+                        } else {
+                            return Err(ContractError::SwapError(_err));
+                        }
+                    }
+                    Err(_err) => return Err(_err),
+                }
+            }
+            pool_pair.needs_saving = true;
+            self.pool_set.insert(pool_pair);
+        }
+        Ok(())
+    }
 }
