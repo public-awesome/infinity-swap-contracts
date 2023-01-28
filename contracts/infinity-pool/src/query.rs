@@ -3,8 +3,8 @@ use std::ops::Add;
 
 use crate::helpers::{load_collection_royalties, load_marketplace_params, option_bool_to_order};
 use crate::msg::{
-    ConfigResponse, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions,
-    SwapNft, SwapParams,
+    ConfigResponse, NftSwap, PoolNftSwap, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse,
+    QueryMsg, QueryOptions, SwapParams,
 };
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Config, Pool, PoolQuote, CONFIG};
 use crate::swap_processor::{Swap, SwapProcessor};
@@ -52,25 +52,25 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         )?),
         QueryMsg::SimDirectSwapNftsForTokens {
             pool_id,
-            swap_nfts,
+            nfts_to_swap,
             swap_params,
             token_recipient,
         } => to_binary(&sim_direct_swap_nfts_for_tokens(
             deps,
             pool_id,
-            swap_nfts,
+            nfts_to_swap,
             swap_params,
             api.addr_validate(&token_recipient)?,
         )?),
         QueryMsg::SimSwapNftsForTokens {
             collection,
-            swap_nfts,
+            nfts_to_swap,
             swap_params,
             token_recipient,
         } => to_binary(&sim_swap_nfts_for_tokens(
             deps,
             api.addr_validate(&collection)?,
-            swap_nfts,
+            nfts_to_swap,
             swap_params,
             api.addr_validate(&token_recipient)?,
         )?),
@@ -189,7 +189,7 @@ pub fn query_pool_quotes_by_sell_price(
 pub fn sim_direct_swap_nfts_for_tokens(
     deps: Deps,
     pool_id: u64,
-    swap_nfts: Vec<SwapNft>,
+    nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
     asset_recipient: Addr,
 ) -> StdResult<Vec<Swap>> {
@@ -211,7 +211,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
         collection_royalties,
     );
     processor
-        .direct_swap_nfts_for_tokens(pool, swap_nfts, swap_params)
+        .direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)
         .map_err(|_| StdError::generic_err("direct_swap_nft_for_tokens err"))?;
 
     Ok(processor.swaps)
@@ -220,7 +220,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
 pub fn sim_swap_nfts_for_tokens(
     deps: Deps,
     collection: Addr,
-    swap_nfts: Vec<SwapNft>,
+    nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
     asset_recipient: Addr,
 ) -> StdResult<Vec<Swap>> {
@@ -239,7 +239,7 @@ pub fn sim_swap_nfts_for_tokens(
         collection_royalties,
     );
     processor
-        .swap_nfts_for_tokens(deps.storage, swap_nfts, swap_params)
+        .swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)
         .map_err(|_| StdError::generic_err("direct_swap_nft_for_tokens err"))?;
 
     Ok(processor.swaps)
