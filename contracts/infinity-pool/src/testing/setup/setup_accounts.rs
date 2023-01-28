@@ -1,7 +1,7 @@
-use sg_marketplace::ContractError;
 use cosmwasm_std::{coins, Addr, Coin};
 use cw_multi_test::SudoMsg as CwSudoMsg;
 use cw_multi_test::{BankSudo, SudoMsg};
+use sg_marketplace::ContractError;
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
 

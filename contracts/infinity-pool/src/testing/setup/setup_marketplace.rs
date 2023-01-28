@@ -1,8 +1,8 @@
-use sg_marketplace::ContractError;
-use sg_marketplace::ExpiryRange;
 use cosmwasm_std::{Addr, Uint128};
 use cw_multi_test::Executor;
 use cw_utils::Duration;
+use sg_marketplace::ContractError;
+use sg_marketplace::ExpiryRange;
 use sg_multi_test::StargazeApp;
 
 use crate::testing::setup::setup_contracts::contract_marketplace;
