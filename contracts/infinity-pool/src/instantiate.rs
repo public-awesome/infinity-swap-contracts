@@ -1,12 +1,12 @@
 use crate::error::ContractError;
-use crate::msg::{InstantiateMsg};
-use crate::state::{POOL_COUNTER, CONFIG, Config};
+use crate::msg::InstantiateMsg;
+use crate::state::{Config, CONFIG, POOL_COUNTER};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
-use sg_std::{Response};
 use cw2::set_contract_version;
+use sg_std::Response;
 
 pub const CONTRACT_NAME: &str = "crates.io:infinity-pool";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -19,18 +19,20 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    
+
     POOL_COUNTER.save(deps.storage, &1)?;
-    CONFIG.save(deps.storage, &Config {
-        denom: msg.denom.clone(),
-        marketplace_addr: deps.api.addr_validate(&msg.marketplace_addr)?,
-    })?;
+    CONFIG.save(
+        deps.storage,
+        &Config {
+            denom: msg.denom.clone(),
+            marketplace_addr: deps.api.addr_validate(&msg.marketplace_addr)?,
+        },
+    )?;
 
     Ok(Response::new()
         .add_attribute("action", "instantiate")
         .add_attribute("contract_name", CONTRACT_NAME)
         .add_attribute("contract_version", CONTRACT_VERSION)
         .add_attribute("denom", msg.denom)
-        .add_attribute("marketplace_addr", msg.marketplace_addr)
-    )
+        .add_attribute("marketplace_addr", msg.marketplace_addr))
 }

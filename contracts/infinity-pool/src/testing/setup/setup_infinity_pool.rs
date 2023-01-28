@@ -1,9 +1,9 @@
-use sg_marketplace::ContractError;
-use cosmwasm_std::{Addr};
+use super::setup_contracts::contract_infinity_pool;
+use cosmwasm_std::Addr;
 use cw_multi_test::Executor;
+use sg_marketplace::ContractError;
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
-use super::setup_contracts::contract_infinity_pool;
 
 pub fn setup_infinity_pool(
     router: &mut StargazeApp,
@@ -16,14 +16,7 @@ pub fn setup_infinity_pool(
         marketplace_addr: marketplace_addr.to_string(),
     };
     let infinity_pool = router
-        .instantiate_contract(
-            infinity_pool_id,
-            sender,
-            &msg,
-            &[],
-            "Infinity Pool",
-            None,
-        )
+        .instantiate_contract(infinity_pool_id, sender, &msg, &[], "Infinity Pool", None)
         .unwrap();
     Ok(infinity_pool)
 }
