@@ -8,7 +8,7 @@ use sg_std::NATIVE_DENOM;
 // all amounts in ustars
 pub const INITIAL_BALANCE: u128 = 5_000_000_000;
 pub const CREATION_FEE: u128 = 5_000_000_000;
-pub const MINT_PRICE: u128 = 100_000_000;
+pub const _MINT_PRICE: u128 = 100_000_000;
 pub const SECOND_BIDDER_INITIAL_BALANCE: u128 = 2000;
 
 // initializes accounts with balances
