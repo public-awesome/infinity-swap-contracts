@@ -45,7 +45,7 @@ pub fn setup_marketplace(
     Ok(marketplace)
 }
 
-pub fn setup_marketplace_and_collections_with_params(
+pub fn _setup_marketplace_and_collections_with_params(
     router: &mut StargazeApp,
     marketplace_admin: Addr,
     instantiate_msg: sg_marketplace::msg::InstantiateMsg,

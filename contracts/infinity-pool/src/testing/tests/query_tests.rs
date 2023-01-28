@@ -1,48 +1,26 @@
-use std::collections::BTreeSet;
-use std::fmt::Error;
 use std::vec;
 
-use crate::error::ContractError;
-use crate::execute::execute;
-use crate::helpers::{get_next_pool_counter, save_pool};
-use crate::instantiate::instantiate;
 use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, PoolQuoteResponse, PoolsByIdResponse,
-    PoolsResponse, QueryMsg, QueryOptions,
+    ConfigResponse, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions,
 };
-use crate::state::{
-    buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Config, Pool, PoolQuote, PoolType,
-    POOL_COUNTER,
-};
-use crate::testing::helpers::fixtures::{
-    create_and_activate_pool_fixtures, create_pool_fixtures, get_pool_fixtures,
-};
-use crate::testing::helpers::pool_functions::create_pool;
-use crate::testing::setup::setup_accounts::setup_accounts;
+use crate::state::{Config, PoolQuote};
+use crate::testing::helpers::fixtures::{create_and_activate_pool_fixtures, create_pool_fixtures};
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
 use crate::testing::setup::setup_marketplace::setup_marketplace;
 use crate::testing::setup::templates::standard_minter_template;
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::{coins, Addr, Attribute, Uint128};
-use cw_multi_test::Executor;
+use cosmwasm_std::{Addr, Uint128};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
-use test_suite::common_setup::contract_boxes::custom_mock_app;
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
-const CREATOR: &str = "creator";
 const USER: &str = "user";
 const ASSET_ACCOUNT: &str = "asset";
-const MARKETPLACE: &str = "marketplace";
-const COLLECTION: &str = "collection";
-const TOKEN_ID: u32 = 123;
 
 #[test]
 fn try_query_config() {
-    let mut app = custom_mock_app();
     let vt = standard_minter_template(5000);
-    let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
-    let collection = vt.collection_response_vec[0].collection.clone().unwrap();
-    let asset_account = Addr::unchecked(ASSET_ACCOUNT);
+    let (mut router, creator, _bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
+    let _collection = vt.collection_response_vec[0].collection.clone().unwrap();
+    let _asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
     let infinity_pool =
@@ -67,7 +45,7 @@ fn try_query_config() {
 #[test]
 fn try_query_pools() {
     let vt = standard_minter_template(5000);
-    let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
+    let (mut router, creator, _bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let user = Addr::unchecked(ASSET_ACCOUNT);
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
@@ -105,7 +83,7 @@ fn try_query_pools() {
 #[test]
 fn try_query_pools_by_id() {
     let vt = standard_minter_template(5000);
-    let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
+    let (mut router, creator, _bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let user = Addr::unchecked(ASSET_ACCOUNT);
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
@@ -139,7 +117,7 @@ fn try_query_pools_by_id() {
 #[test]
 fn try_query_pools_by_owner() {
     let vt = standard_minter_template(5000);
-    let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
+    let (mut router, creator, _bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let user = Addr::unchecked(USER);
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
@@ -191,7 +169,7 @@ fn try_query_pools_by_buy_price() {
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
 
-    let pools = create_and_activate_pool_fixtures(
+    let _pools = create_and_activate_pool_fixtures(
         &mut router,
         infinity_pool.clone(),
         minter,
@@ -257,7 +235,7 @@ fn try_query_pools_by_sell_price() {
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
 
-    let pools = create_and_activate_pool_fixtures(
+    let _pools = create_and_activate_pool_fixtures(
         &mut router,
         infinity_pool.clone(),
         minter,

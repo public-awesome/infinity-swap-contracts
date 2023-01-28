@@ -21,7 +21,7 @@ pub fn mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) -> u32
     res.unwrap().events[1].attributes[4].value.parse().unwrap()
 }
 
-pub fn mint_for(
+pub fn _mint_for(
     router: &mut StargazeApp,
     owner: &Addr,
     creator: &Addr,
@@ -57,7 +57,7 @@ pub fn approve(
     assert!(res.is_ok());
 }
 
-pub fn transfer(
+pub fn _transfer(
     router: &mut StargazeApp,
     creator: &Addr,
     recipient: &Addr,
@@ -72,7 +72,7 @@ pub fn transfer(
     assert!(res.is_ok());
 }
 
-pub fn burn(router: &mut StargazeApp, creator: &Addr, collection: &Addr, token_id: u32) {
+pub fn _burn(router: &mut StargazeApp, creator: &Addr, collection: &Addr, token_id: u32) {
     let transfer_msg: Sg721ExecuteMsg<Empty, Empty> = Sg721ExecuteMsg::Burn {
         token_id: token_id.to_string(),
     };

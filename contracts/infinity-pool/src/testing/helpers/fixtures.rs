@@ -1,9 +1,9 @@
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::testing::helpers::nft_functions::{approve, mint};
 use crate::testing::helpers::pool_functions::create_pool;
-use cosmwasm_std::{Addr, MessageInfo, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use sg_multi_test::StargazeApp;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 use super::pool_functions::{activate, deposit_nfts, deposit_tokens};
 

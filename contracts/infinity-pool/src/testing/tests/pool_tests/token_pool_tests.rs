@@ -1,37 +1,26 @@
-use std::fmt::Error;
 use std::vec;
 
 use crate::error::ContractError;
-use crate::execute::execute;
-use crate::instantiate::instantiate;
-use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::msg::ExecuteMsg;
 use crate::state::{BondingCurve, PoolType};
-use crate::testing::helpers::nft_functions::{approve, mint, mint_for};
+use crate::testing::helpers::nft_functions::{approve, mint};
 use crate::testing::helpers::pool_functions::{create_pool, deposit_tokens};
 use crate::testing::helpers::utils::assert_error;
-use crate::testing::setup::setup_accounts::{
-    setup_accounts, setup_second_bidder_account, INITIAL_BALANCE,
-};
+use crate::testing::setup::setup_accounts::{setup_second_bidder_account, INITIAL_BALANCE};
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
 use crate::testing::setup::setup_marketplace::setup_marketplace;
 use crate::testing::setup::templates::standard_minter_template;
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, Addr, Attribute, Uint128};
 use cw_multi_test::Executor;
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
-use test_suite::common_setup::contract_boxes::custom_mock_app;
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
-const CREATOR: &str = "creator";
 const ASSET_ACCOUNT: &str = "asset";
-const MARKETPLACE: &str = "marketplace";
-const COLLECTION: &str = "collection";
-const TOKEN_ID: u32 = 123;
 
 #[test]
 fn create_token_pool() {
     let vt = standard_minter_template(5000);
-    let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
+    let (mut router, creator, _bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
@@ -109,7 +98,7 @@ fn deposit_assets_token_pool() {
         vt.accts.creator,
         vt.accts.bidder,
     );
-    let user2 = setup_second_bidder_account(&mut router);
+    let _user2 = setup_second_bidder_account(&mut router);
 
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
@@ -513,7 +502,7 @@ fn activate_token_pool() {
     );
 
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
-    let asset_account = Addr::unchecked(ASSET_ACCOUNT);
+    let _asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
