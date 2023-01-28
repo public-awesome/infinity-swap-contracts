@@ -353,26 +353,64 @@
     {
       "type": "object",
       "required": [
-        "direct_swap_nft_for_tokens"
+        "direct_swap_nfts_for_tokens"
       ],
       "properties": {
-        "direct_swap_nft_for_tokens": {
+        "direct_swap_nfts_for_tokens": {
           "type": "object",
           "required": [
+            "nfts_to_swap",
             "pool_id",
-            "swap_nfts",
             "swap_params"
           ],
           "properties": {
+            "nfts_to_swap": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/NftSwap"
+              }
+            },
             "pool_id": {
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
             },
-            "swap_nfts": {
+            "swap_params": {
+              "$ref": "#/definitions/SwapParams"
+            },
+            "token_recipient": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "swap_nfts_for_tokens"
+      ],
+      "properties": {
+        "swap_nfts_for_tokens": {
+          "type": "object",
+          "required": [
+            "collection",
+            "nfts_to_swap",
+            "swap_params"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "nfts_to_swap": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/SwapNft"
+                "$ref": "#/definitions/NftSwap"
               }
             },
             "swap_params": {
@@ -383,6 +421,122 @@
                 "string",
                 "null"
               ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "direct_swap_tokens_for_specific_nfts"
+      ],
+      "properties": {
+        "direct_swap_tokens_for_specific_nfts": {
+          "type": "object",
+          "required": [
+            "nfts_to_swap_for",
+            "pool_id",
+            "swap_params"
+          ],
+          "properties": {
+            "nft_recipient": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "nfts_to_swap_for": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/NftSwap"
+              }
+            },
+            "pool_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "swap_params": {
+              "$ref": "#/definitions/SwapParams"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "swap_tokens_for_specific_nfts"
+      ],
+      "properties": {
+        "swap_tokens_for_specific_nfts": {
+          "type": "object",
+          "required": [
+            "collection",
+            "pool_nfts_to_swap_for",
+            "swap_params"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "nft_recipient": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "pool_nfts_to_swap_for": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/PoolNftSwap"
+              }
+            },
+            "swap_params": {
+              "$ref": "#/definitions/SwapParams"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "swap_tokens_for_any_nfts"
+      ],
+      "properties": {
+        "swap_tokens_for_any_nfts": {
+          "type": "object",
+          "required": [
+            "collection",
+            "max_expected_token_input",
+            "swap_params"
+          ],
+          "properties": {
+            "collection": {
+              "type": "string"
+            },
+            "max_expected_token_input": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Uint128"
+              }
+            },
+            "nft_recipient": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "swap_params": {
+              "$ref": "#/definitions/SwapParams"
             }
           },
           "additionalProperties": false
@@ -400,6 +554,43 @@
         "constant_product"
       ]
     },
+    "NftSwap": {
+      "type": "object",
+      "required": [
+        "nft_token_id",
+        "token_amount"
+      ],
+      "properties": {
+        "nft_token_id": {
+          "type": "string"
+        },
+        "token_amount": {
+          "$ref": "#/definitions/Uint128"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PoolNftSwap": {
+      "type": "object",
+      "required": [
+        "nft_swaps",
+        "pool_id"
+      ],
+      "properties": {
+        "nft_swaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/NftSwap"
+          }
+        },
+        "pool_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
     "PoolType": {
       "type": "string",
       "enum": [
@@ -407,22 +598,6 @@
         "nft",
         "trade"
       ]
-    },
-    "SwapNft": {
-      "type": "object",
-      "required": [
-        "min_expected_token_output",
-        "nft_token_id"
-      ],
-      "properties": {
-        "min_expected_token_output": {
-          "$ref": "#/definitions/Uint128"
-        },
-        "nft_token_id": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
     },
     "SwapParams": {
       "type": "object",
