@@ -102,6 +102,8 @@ pub fn execute(
             spot_price,
             finders_fee_bps,
             swap_fee_bps,
+            reinvest_tokens,
+            reinvest_nfts,
         } => execute_update_pool_config(
             deps,
             info,
@@ -111,6 +113,8 @@ pub fn execute(
             spot_price,
             finders_fee_bps,
             swap_fee_bps,
+            reinvest_tokens,
+            reinvest_nfts,
         ),
         ExecuteMsg::SetActivePool { pool_id, is_active } => {
             execute_set_active_pool(deps, info, pool_id, is_active)
@@ -437,6 +441,8 @@ pub fn execute_update_pool_config(
     spot_price: Option<Uint128>,
     finders_fee_bps: Option<u64>,
     swap_fee_bps: Option<u64>,
+    reinvest_tokens: Option<bool>,
+    reinvest_nfts: Option<bool>,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
@@ -457,6 +463,12 @@ pub fn execute_update_pool_config(
     }
     if let Some(_finders_fee_bps) = finders_fee_bps {
         pool.finders_fee_percent = Decimal::percent(_finders_fee_bps);
+    }
+    if let Some(_reinvest_tokens) = reinvest_tokens {
+        pool.reinvest_tokens = _reinvest_tokens;
+    }
+    if let Some(_reinvest_nfts) = reinvest_nfts {
+        pool.reinvest_nfts = _reinvest_nfts;
     }
 
     let config = CONFIG.load(deps.storage)?;
