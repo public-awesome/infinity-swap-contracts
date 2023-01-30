@@ -31,7 +31,8 @@ pub fn execute(
             bonding_curve,
             delta,
             spot_price,
-            fee_bps,
+            finders_fee_bps,
+            swap_fee_bps,
         } => execute_create_pool(
             deps,
             info,
@@ -41,7 +42,8 @@ pub fn execute(
             bonding_curve,
             spot_price,
             delta,
-            fee_bps,
+            finders_fee_bps,
+            swap_fee_bps,
         ),
         ExecuteMsg::DepositTokens { pool_id } => execute_deposit_tokens(deps, info, pool_id),
         ExecuteMsg::DepositNfts {
@@ -91,7 +93,8 @@ pub fn execute(
             asset_recipient,
             delta,
             spot_price,
-            fee_bps,
+            finders_fee_bps,
+            swap_fee_bps,
         } => execute_update_pool_config(
             deps,
             info,
@@ -99,7 +102,8 @@ pub fn execute(
             maybe_addr(api, asset_recipient)?,
             delta,
             spot_price,
-            fee_bps,
+            finders_fee_bps,
+            swap_fee_bps,
         ),
         ExecuteMsg::SetActivePool { pool_id, is_active } => {
             execute_set_active_pool(deps, info, pool_id, is_active)
@@ -113,6 +117,7 @@ pub fn execute(
             nfts_to_swap,
             swap_params,
             token_recipient,
+            finder,
         } => execute_direct_swap_nfts_for_tokens(
             deps,
             info,
@@ -121,12 +126,14 @@ pub fn execute(
             nfts_to_swap,
             swap_params,
             maybe_addr(api, token_recipient)?,
+            maybe_addr(api, finder)?,
         ),
         ExecuteMsg::SwapNftsForTokens {
             collection,
             nfts_to_swap,
             swap_params,
             token_recipient,
+            finder,
         } => execute_swap_nfts_for_tokens(
             deps,
             info,
@@ -135,12 +142,14 @@ pub fn execute(
             nfts_to_swap,
             swap_params,
             maybe_addr(api, token_recipient)?,
+            maybe_addr(api, finder)?,
         ),
         ExecuteMsg::DirectSwapTokensForSpecificNfts {
             pool_id,
             nfts_to_swap_for,
             swap_params,
             nft_recipient,
+            finder,
         } => execute_direct_swap_tokens_for_specific_nfts(
             deps,
             info,
@@ -149,12 +158,14 @@ pub fn execute(
             nfts_to_swap_for,
             swap_params,
             maybe_addr(api, nft_recipient)?,
+            maybe_addr(api, finder)?,
         ),
         ExecuteMsg::SwapTokensForSpecificNfts {
             collection,
             pool_nfts_to_swap_for,
             swap_params,
             nft_recipient,
+            finder,
         } => execute_swap_tokens_for_specific_nfts(
             deps,
             info,
@@ -163,12 +174,14 @@ pub fn execute(
             pool_nfts_to_swap_for,
             swap_params,
             maybe_addr(api, nft_recipient)?,
+            maybe_addr(api, finder)?,
         ),
         ExecuteMsg::SwapTokensForAnyNfts {
             collection,
             max_expected_token_input,
             swap_params,
             nft_recipient,
+            finder,
         } => execute_swap_tokens_for_any_nfts(
             deps,
             info,
@@ -177,6 +190,7 @@ pub fn execute(
             max_expected_token_input,
             swap_params,
             maybe_addr(api, nft_recipient)?,
+            maybe_addr(api, finder)?,
         ),
     }
 }
@@ -190,7 +204,8 @@ pub fn execute_create_pool(
     bonding_curve: BondingCurve,
     spot_price: Uint128,
     delta: Uint128,
-    fee_bps: Option<u16>,
+    finders_fee_bps: u16,
+    swap_fee_bps: u16,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
@@ -206,7 +221,8 @@ pub fn execute_create_pool(
         bonding_curve,
         spot_price,
         delta,
-        fee_bps,
+        finders_fee_bps,
+        swap_fee_bps,
     );
     save_pool(deps.storage, &pool)?;
 
@@ -402,7 +418,8 @@ pub fn execute_update_pool_config(
     asset_recipient: Option<Addr>,
     delta: Option<Uint128>,
     spot_price: Option<Uint128>,
-    fee_bps: Option<u16>,
+    finders_fee_bps: Option<u16>,
+    swap_fee_bps: Option<u16>,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
@@ -420,8 +437,11 @@ pub fn execute_update_pool_config(
     if let Some(_delta) = delta {
         pool.delta = _delta;
     }
-    if let Some(_fee_bps) = fee_bps {
-        pool.fee_bps = Some(_fee_bps);
+    if let Some(_swap_fee_bps) = swap_fee_bps {
+        pool.swap_fee_bps = _swap_fee_bps;
+    }
+    if let Some(_finders_fee_bps) = finders_fee_bps {
+        pool.finders_fee_bps = _finders_fee_bps;
     }
     save_pool(deps.storage, &pool)?;
 
@@ -508,6 +528,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
     nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
     asset_recipient: Option<Addr>,
+    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
     check_deadline(&env.block, swap_params.deadline)?;
 
@@ -524,6 +545,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
         seller_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
+        finder,
     );
     processor.direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)?;
     processor.commit_messages(&mut response)?;
@@ -539,6 +561,7 @@ pub fn execute_swap_nfts_for_tokens(
     nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
     asset_recipient: Option<Addr>,
+    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
     check_deadline(&env.block, swap_params.deadline)?;
 
@@ -556,6 +579,7 @@ pub fn execute_swap_nfts_for_tokens(
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
             collection_royalties,
+            finder,
         );
         processor.swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)?;
         processor.commit_messages(&mut response)?;
@@ -579,6 +603,7 @@ pub fn execute_direct_swap_tokens_for_specific_nfts(
     nfts_to_swap_for: Vec<NftSwap>,
     swap_params: SwapParams,
     asset_recipient: Option<Addr>,
+    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
     check_deadline(&env.block, swap_params.deadline)?;
 
@@ -594,6 +619,7 @@ pub fn execute_direct_swap_tokens_for_specific_nfts(
         }],
         swap_params,
         asset_recipient,
+        finder,
     )
 }
 
@@ -605,6 +631,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
     nfts_to_swap_for: Vec<PoolNftSwap>,
     swap_params: SwapParams,
     asset_recipient: Option<Addr>,
+    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
     check_deadline(&env.block, swap_params.deadline)?;
 
@@ -622,6 +649,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
             collection_royalties,
+            finder,
         );
         processor.swap_tokens_for_specific_nfts(deps.storage, nfts_to_swap_for, swap_params)?;
         processor.commit_messages(&mut response)?;
@@ -645,6 +673,7 @@ pub fn execute_swap_tokens_for_any_nfts(
     max_expected_token_input: Vec<Uint128>,
     swap_params: SwapParams,
     asset_recipient: Option<Addr>,
+    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
     check_deadline(&env.block, swap_params.deadline)?;
 
@@ -662,6 +691,7 @@ pub fn execute_swap_tokens_for_any_nfts(
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
             collection_royalties,
+            finder,
         );
         processor.swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)?;
         processor.commit_messages(&mut response)?;

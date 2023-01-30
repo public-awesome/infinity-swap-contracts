@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::helpers::{transfer_nft, transfer_token};
+use crate::helpers::{mul_by_bps, transfer_nft, transfer_token};
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams};
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolType};
 
@@ -60,6 +60,7 @@ pub struct Swap {
     pub pool_type: PoolType,
     pub spot_price: Uint128,
     pub network_fee: Uint128,
+    pub finder_payment: Option<TokenPayment>,
     pub royalty_payment: Option<TokenPayment>,
     pub nft_payment: NftPayment,
     pub seller_payment: TokenPayment,
@@ -71,6 +72,7 @@ pub struct SwapProcessor<'a> {
     pub seller_recipient: Addr,
     pub trading_fee_percent: Decimal,
     pub royalty: Option<RoyaltyInfoResponse>,
+    pub finder: Option<Addr>,
     pub pool_set: BTreeSet<PoolPair>,
     pub latest: Option<u64>,
     pub pool_quote_iter: Option<Box<dyn Iterator<Item = StdResult<u64>> + 'a>>,
@@ -82,6 +84,7 @@ impl<'a> SwapProcessor<'a> {
         seller_recipient: Addr,
         trading_fee_percent: Decimal,
         royalty: Option<RoyaltyInfoResponse>,
+        finder: Option<Addr>,
     ) -> Self {
         Self {
             swaps: vec![],
@@ -89,6 +92,7 @@ impl<'a> SwapProcessor<'a> {
             seller_recipient,
             trading_fee_percent,
             royalty,
+            finder,
             pool_set: BTreeSet::new(),
             latest: None,
             pool_quote_iter: None,
@@ -100,29 +104,46 @@ impl<'a> SwapProcessor<'a> {
         pool: &Pool,
         payment_amount: Uint128,
         nft_token_id: String,
-        nft_recipient: &Addr,
-        token_recipient: &Addr,
+        tx_type: TransactionType,
     ) -> Swap {
         let network_fee = payment_amount * self.trading_fee_percent / Uint128::from(100u128);
         let mut seller_amount = payment_amount - network_fee;
 
-        // finders fee?
+        let mut finder_payment = None;
+        if self.finder.is_some() && pool.finders_fee_bps > 0 {
+            let finder_amount = mul_by_bps(payment_amount, pool.finders_fee_bps);
+            if !finder_amount.is_zero() {
+                seller_amount -= finder_amount;
+                finder_payment = Some(TokenPayment {
+                    amount: finder_amount,
+                    address: self.finder.as_ref().unwrap().to_string(),
+                });
+            }
+        }
 
         let mut royalty_payment = None;
         if let Some(_royalty) = &self.royalty {
             let royalty_amount = payment_amount * _royalty.share;
-            seller_amount -= royalty_amount;
-            royalty_payment = Some(TokenPayment {
-                amount: royalty_amount,
-                address: _royalty.payment_address.clone(),
-            });
+            if !royalty_amount.is_zero() {
+                seller_amount -= royalty_amount;
+                royalty_payment = Some(TokenPayment {
+                    amount: royalty_amount,
+                    address: _royalty.payment_address.clone(),
+                });
+            }
         }
+
+        let (nft_recipient, token_recipient) = match tx_type {
+            TransactionType::Buy => (self.seller_recipient.clone(), pool.get_recipient()),
+            TransactionType::Sell => (pool.get_recipient(), self.seller_recipient.clone()),
+        };
 
         Swap {
             pool_id: pool.id,
             pool_type: pool.pool_type.clone(),
             spot_price: payment_amount,
             network_fee,
+            finder_payment,
             royalty_payment,
             nft_payment: NftPayment {
                 nft_token_id,
@@ -135,32 +156,17 @@ impl<'a> SwapProcessor<'a> {
         }
     }
 
-    pub fn process_sell(
+    pub fn process_swap(
         &mut self,
         pool: &mut Pool,
         nft_swap: NftSwap,
+        tx_type: TransactionType,
     ) -> Result<(), ContractError> {
-        let sale_price = pool.sell_nft_to_pool(&nft_swap)?;
-        let swap = self.create_swap(
-            pool,
-            sale_price,
-            nft_swap.nft_token_id,
-            &pool.get_recipient(),
-            &self.seller_recipient.clone(),
-        );
-        self.swaps.push(swap);
-        Ok(())
-    }
-
-    pub fn process_buy(&mut self, pool: &mut Pool, nft_swap: NftSwap) -> Result<(), ContractError> {
-        let sale_price = pool.buy_nft_from_pool(&nft_swap)?;
-        let swap = self.create_swap(
-            pool,
-            sale_price,
-            nft_swap.nft_token_id,
-            &self.seller_recipient.clone(),
-            &pool.get_recipient(),
-        );
+        let sale_price = match tx_type {
+            TransactionType::Buy => pool.buy_nft_from_pool(&nft_swap)?,
+            TransactionType::Sell => pool.sell_nft_to_pool(&nft_swap)?,
+        };
+        let swap = self.create_swap(pool, sale_price, nft_swap.nft_token_id, tx_type);
         self.swaps.push(swap);
         Ok(())
     }
@@ -175,6 +181,13 @@ impl<'a> SwapProcessor<'a> {
 
         for swap in self.swaps.iter() {
             total_network_fee += swap.network_fee;
+
+            if let Some(_finder_payment) = &swap.finder_payment {
+                let payment = token_payments
+                    .entry(&_finder_payment.address)
+                    .or_insert(Uint128::zero());
+                *payment += _finder_payment.amount;
+            }
 
             if let Some(_royalty_payment) = &swap.royalty_payment {
                 let payment = token_payments
@@ -238,7 +251,7 @@ impl<'a> SwapProcessor<'a> {
         let mut pool = pool;
         {
             for nft_swap in nfts_to_swap {
-                let result = self.process_sell(&mut pool, nft_swap);
+                let result = self.process_swap(&mut pool, nft_swap, TransactionType::Sell);
                 match result {
                     Ok(_) => {}
                     Err(ContractError::SwapError(_err)) => {
@@ -280,7 +293,8 @@ impl<'a> SwapProcessor<'a> {
             }
             let mut pool_pair = pool_pair_option.unwrap();
             {
-                let result = self.process_sell(&mut pool_pair.pool, nft_swap);
+                let result =
+                    self.process_swap(&mut pool_pair.pool, nft_swap, TransactionType::Sell);
                 match result {
                     Ok(_) => {}
                     Err(ContractError::SwapError(_err)) => {
@@ -318,7 +332,7 @@ impl<'a> SwapProcessor<'a> {
             let mut pool = pool_option.unwrap();
 
             for nft_swap in pool_nfts.nft_swaps {
-                let result = self.process_buy(&mut pool, nft_swap);
+                let result = self.process_swap(&mut pool, nft_swap, TransactionType::Buy);
                 match result {
                     Ok(_) => {}
                     Err(ContractError::SwapError(_err)) => {
@@ -364,12 +378,13 @@ impl<'a> SwapProcessor<'a> {
             let mut pool_pair = pool_pair_option.unwrap();
             {
                 let nft_token_id = pool_pair.pool.nft_token_ids.first().unwrap().to_string();
-                let result = self.process_buy(
+                let result = self.process_swap(
                     &mut pool_pair.pool,
                     NftSwap {
                         nft_token_id,
                         token_amount,
                     },
+                    TransactionType::Buy,
                 );
                 match result {
                     Ok(_) => {}

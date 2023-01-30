@@ -9,6 +9,7 @@ use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, Deps, Env, Order, StdError, StdResult, Uint128,
 };
 use cw_storage_plus::Bound;
+use cw_utils::maybe_addr;
 
 // Query limits
 const DEFAULT_QUERY_LIMIT: u32 = 10;
@@ -51,60 +52,70 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             nfts_to_swap,
             swap_params,
             token_recipient,
+            finder,
         } => to_binary(&sim_direct_swap_nfts_for_tokens(
             deps,
             pool_id,
             nfts_to_swap,
             swap_params,
             api.addr_validate(&token_recipient)?,
+            maybe_addr(api, finder)?,
         )?),
         QueryMsg::SimSwapNftsForTokens {
             collection,
             nfts_to_swap,
             swap_params,
             token_recipient,
+            finder,
         } => to_binary(&sim_swap_nfts_for_tokens(
             deps,
             api.addr_validate(&collection)?,
             nfts_to_swap,
             swap_params,
             api.addr_validate(&token_recipient)?,
+            maybe_addr(api, finder)?,
         )?),
         QueryMsg::SimDirectSwapTokensforSpecificNfts {
             pool_id,
             nfts_to_swap_for,
             swap_params,
             nft_recipient,
+            finder,
         } => to_binary(&sim_direct_swap_tokens_for_specific_nfts(
             deps,
             pool_id,
             nfts_to_swap_for,
             swap_params,
             api.addr_validate(&nft_recipient)?,
+            maybe_addr(api, finder)?,
         )?),
         QueryMsg::SimSwapTokensForSpecificNfts {
             collection,
             pool_nfts_to_swap_for,
             swap_params,
             nft_recipient,
+            finder,
         } => to_binary(&sim_swap_tokens_for_specific_nfts(
             deps,
             api.addr_validate(&collection)?,
             pool_nfts_to_swap_for,
             swap_params,
             api.addr_validate(&nft_recipient)?,
+            maybe_addr(api, finder)?,
         )?),
         QueryMsg::SimSwapTokensForAnyNfts {
             collection,
             max_expected_token_input,
             swap_params,
             nft_recipient,
+            finder,
         } => to_binary(&sim_swap_tokens_for_any_nfts(
             deps,
             api.addr_validate(&collection)?,
             max_expected_token_input,
             swap_params,
             api.addr_validate(&nft_recipient)?,
+            maybe_addr(api, finder)?,
         )?),
     }
 }
@@ -224,6 +235,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
     nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
     asset_recipient: Addr,
+    finder: Option<Addr>,
 ) -> StdResult<Vec<Swap>> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -241,6 +253,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
         asset_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
+        finder,
     );
     processor
         .direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)
@@ -255,6 +268,7 @@ pub fn sim_swap_nfts_for_tokens(
     nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
     asset_recipient: Addr,
+    finder: Option<Addr>,
 ) -> StdResult<Vec<Swap>> {
     let config = CONFIG.load(deps.storage)?;
 
@@ -269,6 +283,7 @@ pub fn sim_swap_nfts_for_tokens(
         asset_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
+        finder,
     );
     processor
         .swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)
@@ -283,6 +298,7 @@ pub fn sim_direct_swap_tokens_for_specific_nfts(
     nfts_to_swap_for: Vec<NftSwap>,
     swap_params: SwapParams,
     nft_recipient: Addr,
+    finder: Option<Addr>,
 ) -> StdResult<Vec<Swap>> {
     let pool = pools().load(deps.storage, pool_id)?;
 
@@ -295,6 +311,7 @@ pub fn sim_direct_swap_tokens_for_specific_nfts(
         }],
         swap_params,
         nft_recipient,
+        finder,
     )
 }
 
@@ -304,6 +321,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
     pool_nfts_to_swap_for: Vec<PoolNftSwap>,
     swap_params: SwapParams,
     nft_recipient: Addr,
+    finder: Option<Addr>,
 ) -> StdResult<Vec<Swap>> {
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
@@ -317,6 +335,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
         nft_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
+        finder,
     );
     processor
         .swap_tokens_for_specific_nfts(deps.storage, pool_nfts_to_swap_for, swap_params)
@@ -331,6 +350,7 @@ pub fn sim_swap_tokens_for_any_nfts(
     max_expected_token_input: Vec<Uint128>,
     swap_params: SwapParams,
     nft_recipient: Addr,
+    finder: Option<Addr>,
 ) -> StdResult<Vec<Swap>> {
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
@@ -344,6 +364,7 @@ pub fn sim_swap_tokens_for_any_nfts(
         nft_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
+        finder,
     );
     processor
         .swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)

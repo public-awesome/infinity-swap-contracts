@@ -2,13 +2,15 @@ use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PO
 use crate::ContractError;
 use cosmwasm_std::{
     to_binary, Addr, Attribute, BankMsg, BlockInfo, Coin, Deps, MessageInfo, Order, StdResult,
-    Storage, SubMsg, Timestamp, WasmMsg,
+    Storage, SubMsg, Timestamp, Uint128, WasmMsg,
 };
 use sg721::RoyaltyInfoResponse;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::Response;
+
+const BPS_100_PCT: u16 = 10000;
 
 pub fn load_marketplace_params(
     deps: Deps,
@@ -153,8 +155,8 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
             .join(""),
         },
         Attribute {
-            key: "fee_bps".to_string(),
-            value: pool.fee_bps.map_or("None".to_string(), |f| f.to_string()),
+            key: "swap_fee_bps".to_string(),
+            value: pool.swap_fee_bps.to_string(),
         },
     ]
 }
@@ -216,4 +218,8 @@ pub fn check_deadline(block: &BlockInfo, deadline: Timestamp) -> Result<(), Cont
         return Err(ContractError::DeadlinePassed);
     }
     Ok(())
+}
+
+pub fn mul_by_bps(amount: Uint128, bps: u16) -> Uint128 {
+    amount * Uint128::from(bps) / Uint128::from(BPS_100_PCT)
 }
