@@ -6,6 +6,7 @@ use crate::state::{Config, CONFIG, POOL_COUNTER};
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
+use cw_utils::maybe_addr;
 use sg_std::Response;
 
 pub const CONTRACT_NAME: &str = "crates.io:infinity-pool";
@@ -26,6 +27,7 @@ pub fn instantiate(
         &Config {
             denom: msg.denom.clone(),
             marketplace_addr: deps.api.addr_validate(&msg.marketplace_addr)?,
+            developer: maybe_addr(deps.api, msg.developer)?,
         },
     )?;
 

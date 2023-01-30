@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
 use std::collections::BTreeSet;
 use std::fmt;
@@ -12,6 +12,7 @@ pub struct Config {
     pub denom: String,
     /// The address of the marketplace contract
     pub marketplace_addr: Addr,
+    pub developer: Option<Addr>,
 }
 
 pub const CONFIG: Item<Config> = Item::new("config");
@@ -55,8 +56,8 @@ pub struct Pool {
     pub total_tokens: Uint128,
     pub nft_token_ids: BTreeSet<String>,
     pub is_active: bool,
-    pub finders_fee_bps: u16,
-    pub swap_fee_bps: u16,
+    pub finders_fee_percent: Decimal,
+    pub swap_fee_percent: Decimal,
 }
 
 pub struct PoolIndices<'a> {

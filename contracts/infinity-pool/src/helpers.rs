@@ -10,8 +10,6 @@ use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::Response;
 
-const BPS_100_PCT: u16 = 10000;
-
 pub fn load_marketplace_params(
     deps: Deps,
     marketplace_addr: &Addr,
@@ -38,63 +36,96 @@ pub fn get_next_pool_counter(store: &mut dyn Storage) -> Result<u64, ContractErr
     Ok(pool_counter)
 }
 
-pub fn update_pool_quotes(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractError> {
-    if pool.can_buy_nfts() {
-        if !pool.is_active {
-            buy_pool_quotes().remove(store, pool.id)?;
-        } else if let Some(_buy_price_quote) = pool.get_buy_quote()? {
-            buy_pool_quotes().save(
-                store,
-                pool.id,
-                &PoolQuote {
-                    id: pool.id,
-                    collection: pool.collection.clone(),
-                    quote_price: _buy_price_quote,
-                },
-            )?;
-        } else {
-            buy_pool_quotes().remove(store, pool.id)?;
-        }
+pub fn update_buy_pool_quotes(
+    store: &mut dyn Storage,
+    pool: &Pool,
+    min_price: Uint128,
+) -> Result<(), ContractError> {
+    if !pool.can_buy_nfts() {
+        return Ok(());
     }
-    if pool.can_sell_nfts() {
-        if !pool.is_active {
-            sell_pool_quotes().remove(store, pool.id)?;
-        } else if let Some(_sell_price_quote) = pool.get_sell_quote()? {
-            sell_pool_quotes().save(
-                store,
-                pool.id,
-                &PoolQuote {
-                    id: pool.id,
-                    collection: pool.collection.clone(),
-                    quote_price: _sell_price_quote,
-                },
-            )?;
-        } else {
-            sell_pool_quotes().remove(store, pool.id)?;
-        }
+    if !pool.is_active {
+        buy_pool_quotes().remove(store, pool.id)?;
+        return Ok(());
     }
-
+    let buy_pool_quote = pool.get_buy_quote()?;
+    if buy_pool_quote.is_none() || buy_pool_quote.unwrap() < min_price {
+        buy_pool_quotes().remove(store, pool.id)?;
+        return Ok(());
+    }
+    buy_pool_quotes().save(
+        store,
+        pool.id,
+        &PoolQuote {
+            id: pool.id,
+            collection: pool.collection.clone(),
+            quote_price: buy_pool_quote.unwrap(),
+        },
+    )?;
     Ok(())
 }
 
-pub fn save_pool(store: &mut dyn Storage, pool: &Pool) -> Result<(), ContractError> {
-    pool.validate()?;
-    update_pool_quotes(store, pool)?;
+pub fn update_sell_pool_quotes(
+    store: &mut dyn Storage,
+    pool: &Pool,
+    min_price: Uint128,
+) -> Result<(), ContractError> {
+    if !pool.can_sell_nfts() {
+        return Ok(());
+    }
+    if !pool.is_active {
+        sell_pool_quotes().remove(store, pool.id)?;
+        return Ok(());
+    }
+    let sell_pool_quote = pool.get_sell_quote()?;
+    if sell_pool_quote.is_none() || sell_pool_quote.unwrap() < min_price {
+        sell_pool_quotes().remove(store, pool.id)?;
+        return Ok(());
+    }
+    sell_pool_quotes().save(
+        store,
+        pool.id,
+        &PoolQuote {
+            id: pool.id,
+            collection: pool.collection.clone(),
+            quote_price: sell_pool_quote.unwrap(),
+        },
+    )?;
+    Ok(())
+}
+
+pub fn save_pool(
+    store: &mut dyn Storage,
+    pool: &Pool,
+    marketplace_params: &ParamsResponse,
+) -> Result<(), ContractError> {
+    pool.validate(marketplace_params)?;
+    update_buy_pool_quotes(store, pool, marketplace_params.params.min_price)?;
+    update_sell_pool_quotes(store, pool, marketplace_params.params.min_price)?;
     pools().save(store, pool.id, pool)?;
 
     Ok(())
 }
 
-pub fn save_pools(store: &mut dyn Storage, pools: Vec<Pool>) -> Result<(), ContractError> {
+pub fn save_pools(
+    store: &mut dyn Storage,
+    pools: Vec<Pool>,
+    marketplace_params: &ParamsResponse,
+) -> Result<(), ContractError> {
     for pool in pools {
-        save_pool(store, &pool)?;
+        save_pool(store, &pool, marketplace_params)?;
     }
     Ok(())
 }
 
-pub fn remove_pool(store: &mut dyn Storage, pool: &mut Pool) -> Result<(), ContractError> {
+pub fn remove_pool(
+    store: &mut dyn Storage,
+    pool: &mut Pool,
+    marketplace_params: &ParamsResponse,
+) -> Result<(), ContractError> {
     pool.set_active(false)?;
-    update_pool_quotes(store, pool)?;
+    update_buy_pool_quotes(store, pool, marketplace_params.params.min_price)?;
+    update_sell_pool_quotes(store, pool, marketplace_params.params.min_price)?;
     pools().remove(store, pool.id)?;
 
     Ok(())
@@ -155,8 +186,12 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
             .join(""),
         },
         Attribute {
-            key: "swap_fee_bps".to_string(),
-            value: pool.swap_fee_bps.to_string(),
+            key: "swap_fee_percent".to_string(),
+            value: pool.swap_fee_percent.to_string(),
+        },
+        Attribute {
+            key: "finders_fee_percent".to_string(),
+            value: pool.finders_fee_percent.to_string(),
         },
     ]
 }
@@ -220,6 +255,16 @@ pub fn check_deadline(block: &BlockInfo, deadline: Timestamp) -> Result<(), Cont
     Ok(())
 }
 
-pub fn mul_by_bps(amount: Uint128, bps: u16) -> Uint128 {
-    amount * Uint128::from(bps) / Uint128::from(BPS_100_PCT)
+pub fn validate_finder(
+    finder: &Option<Addr>,
+    sender: &Addr,
+    asset_recipient: &Option<Addr>,
+) -> Result<(), ContractError> {
+    if finder.is_none() {
+        return Ok(());
+    }
+    if finder == asset_recipient || finder.as_ref().unwrap() == sender {
+        return Err(ContractError::InvalidInput("finder is invalid".to_string()));
+    }
+    Ok(())
 }
