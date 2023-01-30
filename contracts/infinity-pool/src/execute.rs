@@ -4,7 +4,7 @@ use crate::helpers::{
     load_marketplace_params, only_owner, remove_pool, save_pool, save_pools, transfer_nft,
     transfer_token, validate_finder,
 };
-use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, SwapParams};
+use crate::msg::{ExecuteMsg, NftSwap, PoolInfo, PoolNftSwap, SwapParams};
 use crate::state::{pools, BondingCurve, Pool, PoolType, CONFIG};
 use crate::swap_processor::SwapProcessor;
 
@@ -34,17 +34,23 @@ pub fn execute(
             spot_price,
             finders_fee_bps,
             swap_fee_bps,
+            reinvest_tokens,
+            reinvest_nfts,
         } => execute_create_pool(
             deps,
             info,
-            api.addr_validate(&collection)?,
-            maybe_addr(api, asset_recipient)?,
-            pool_type,
-            bonding_curve,
-            spot_price,
-            delta,
-            finders_fee_bps,
-            swap_fee_bps,
+            PoolInfo {
+                collection: api.addr_validate(&collection)?,
+                asset_recipient: maybe_addr(api, asset_recipient)?,
+                pool_type,
+                bonding_curve,
+                spot_price,
+                delta,
+                finders_fee_percent: Decimal::percent(finders_fee_bps),
+                swap_fee_percent: Decimal::percent(swap_fee_bps),
+                reinvest_tokens,
+                reinvest_nfts,
+            },
         ),
         ExecuteMsg::DepositTokens { pool_id } => execute_deposit_tokens(deps, info, pool_id),
         ExecuteMsg::DepositNfts {
@@ -199,27 +205,22 @@ pub fn execute(
 pub fn execute_create_pool(
     deps: DepsMut,
     info: MessageInfo,
-    collection: Addr,
-    asset_recipient: Option<Addr>,
-    pool_type: PoolType,
-    bonding_curve: BondingCurve,
-    spot_price: Uint128,
-    delta: Uint128,
-    finders_fee_bps: u64,
-    swap_fee_bps: u64,
+    pool_info: PoolInfo,
 ) -> Result<Response, ContractError> {
     let pool_counter = get_next_pool_counter(deps.storage)?;
     let pool = Pool::new(
         pool_counter,
-        collection,
+        pool_info.collection,
         info.sender.clone(),
-        asset_recipient,
-        pool_type,
-        bonding_curve,
-        spot_price,
-        delta,
-        Decimal::percent(finders_fee_bps),
-        Decimal::percent(swap_fee_bps),
+        pool_info.asset_recipient,
+        pool_info.pool_type,
+        pool_info.bonding_curve,
+        pool_info.spot_price,
+        pool_info.delta,
+        pool_info.finders_fee_percent,
+        pool_info.swap_fee_percent,
+        pool_info.reinvest_tokens,
+        pool_info.reinvest_nfts,
     );
 
     let config = CONFIG.load(deps.storage)?;

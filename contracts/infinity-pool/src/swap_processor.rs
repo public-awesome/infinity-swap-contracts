@@ -12,11 +12,6 @@ use sg721::RoyaltyInfoResponse;
 use sg_std::{Response, NATIVE_DENOM};
 use std::collections::{BTreeMap, BTreeSet};
 
-pub enum TransactionType {
-    Sell,
-    Buy,
-}
-
 pub struct PoolPair {
     pub needs_saving: bool,
     pub pool: Pool,
@@ -43,6 +38,11 @@ impl PartialEq for PoolPair {
 impl Eq for PoolPair {}
 
 #[cw_serde]
+pub enum TransactionType {
+    Sell,
+    Buy,
+}
+#[cw_serde]
 pub struct TokenPayment {
     pub amount: Uint128,
     pub address: String,
@@ -57,13 +57,13 @@ pub struct NftPayment {
 #[cw_serde]
 pub struct Swap {
     pub pool_id: u64,
-    pub pool_type: PoolType,
+    pub transaction_type: TransactionType,
     pub spot_price: Uint128,
     pub network_fee: Uint128,
     pub finder_payment: Option<TokenPayment>,
     pub royalty_payment: Option<TokenPayment>,
-    pub nft_payment: NftPayment,
-    pub seller_payment: TokenPayment,
+    pub nft_payment: Option<NftPayment>,
+    pub seller_payment: Option<TokenPayment>,
 }
 
 pub struct SwapProcessor<'a> {
@@ -143,19 +143,19 @@ impl<'a> SwapProcessor<'a> {
 
         Swap {
             pool_id: pool.id,
-            pool_type: pool.pool_type.clone(),
+            transaction_type: tx_type,
             spot_price: payment_amount,
             network_fee,
             finder_payment,
             royalty_payment,
-            nft_payment: NftPayment {
+            nft_payment: Some(NftPayment {
                 nft_token_id,
                 address: nft_recipient.to_string(),
-            },
-            seller_payment: TokenPayment {
+            }),
+            seller_payment: Some(TokenPayment {
                 amount: seller_amount,
                 address: token_recipient.to_string(),
-            },
+            }),
         }
     }
 
@@ -169,7 +169,21 @@ impl<'a> SwapProcessor<'a> {
             TransactionType::Buy => pool.buy_nft_from_pool(&nft_swap)?,
             TransactionType::Sell => pool.sell_nft_to_pool(&nft_swap)?,
         };
-        let swap = self.create_swap(pool, sale_price, nft_swap.nft_token_id, tx_type);
+        let mut swap = self.create_swap(pool, sale_price, nft_swap.nft_token_id, tx_type);
+        // pool.update_spot_price()?;
+
+        // if pool.pool_type == PoolType::Trade {
+        //     if tx_type == TransactionType::Buy && pool.reinvest_tokens {
+        //         let reinvest_amount = swap.seller_payment.unwrap().amount;
+        //         swap.seller_payment = None;
+        //         pool.deposit_tokens(reinvest_amount)?;
+        //     } else if tx_type == TransactionType::Sell && pool.reinvest_nfts {
+        //         let reinvest_nft_token_id = swap.nft_payment.unwrap().nft_token_id;
+        //         swap.nft_payment = None;
+        //         pool.deposit_nfts(&vec![reinvest_nft_token_id])?;
+        //     }
+        // }
+
         self.swaps.push(swap);
         Ok(())
     }
@@ -198,17 +212,22 @@ impl<'a> SwapProcessor<'a> {
                     .or_insert(Uint128::zero());
                 *payment += _royalty_payment.amount;
             }
-            let payment = token_payments
-                .entry(&swap.seller_payment.address)
-                .or_insert(Uint128::zero());
-            *payment += swap.seller_payment.amount;
 
-            transfer_nft(
-                &swap.nft_payment.nft_token_id,
-                &swap.nft_payment.address,
-                self.collection.as_ref(),
-                response,
-            )?;
+            if let Some(_seller_payment) = &swap.seller_payment {
+                let payment = token_payments
+                    .entry(&_seller_payment.address)
+                    .or_insert(Uint128::zero());
+                *payment += _seller_payment.amount;
+            }
+
+            if let Some(_nft_payment) = &swap.nft_payment {
+                transfer_nft(
+                    &_nft_payment.nft_token_id,
+                    &_nft_payment.address,
+                    self.collection.as_ref(),
+                    response,
+                )?;
+            }
         }
 
         fair_burn(total_network_fee.u128(), self.developer.clone(), response);

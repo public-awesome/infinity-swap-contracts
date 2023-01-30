@@ -1,5 +1,3 @@
-#![allow(clippy::too_many_arguments)]
-
 pub mod execute;
 pub mod instantiate;
 pub mod msg;

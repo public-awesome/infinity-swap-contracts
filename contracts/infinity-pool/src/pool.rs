@@ -19,6 +19,8 @@ impl Pool {
         delta: Uint128,
         finders_fee_percent: Decimal,
         swap_fee_percent: Decimal,
+        reinvest_tokens: bool,
+        reinvest_nfts: bool,
     ) -> Self {
         Self {
             id,
@@ -31,9 +33,11 @@ impl Pool {
             delta,
             total_tokens: Uint128::zero(),
             nft_token_ids: BTreeSet::new(),
-            is_active: false,
             finders_fee_percent,
             swap_fee_percent,
+            is_active: false,
+            reinvest_tokens,
+            reinvest_nfts,
         }
     }
 
@@ -41,6 +45,11 @@ impl Pool {
         if self.finders_fee_percent > marketplace_params.params.max_finders_fee_percent {
             return Err(ContractError::InvalidPool(
                 "finders_fee_percent is above max_finders_fee_percent".to_string(),
+            ));
+        }
+        if self.bonding_curve == BondingCurve::Exponential && self.delta.u128() > MAX_BASIS_POINTS {
+            return Err(ContractError::InvalidPool(
+                "delta cannot exceed max basis points on exponential curves".to_string(),
             ));
         }
 
@@ -67,6 +76,16 @@ impl Pool {
                             .to_string(),
                     ));
                 }
+                if self.reinvest_tokens {
+                    return Err(ContractError::InvalidPool(
+                        "cannot reinvest buy side on one sided pools".to_string(),
+                    ));
+                }
+                if self.reinvest_nfts {
+                    return Err(ContractError::InvalidPool(
+                        "cannot reinvest sell side on one sided pools".to_string(),
+                    ));
+                }
             }
             PoolType::Nft => {
                 if self.total_tokens > Uint128::zero() {
@@ -87,6 +106,16 @@ impl Pool {
                 if self.bonding_curve == BondingCurve::ConstantProduct {
                     return Err(ContractError::InvalidPool(
                         "constant product bonding curve cannot be used with nft pools".to_string(),
+                    ));
+                }
+                if self.reinvest_tokens {
+                    return Err(ContractError::InvalidPool(
+                        "cannot reinvest buy side on one sided pools".to_string(),
+                    ));
+                }
+                if self.reinvest_nfts {
+                    return Err(ContractError::InvalidPool(
+                        "cannot reinvest sell side on one sided pools".to_string(),
                     ));
                 }
             }
@@ -196,8 +225,7 @@ impl Pool {
             PoolType::Trade => match self.bonding_curve {
                 BondingCurve::Linear => Ok(self.spot_price + self.delta),
                 BondingCurve::Exponential => Ok(self.spot_price
-                    * (Uint128::from(MAX_BASIS_POINTS) + self.delta)
-                    / Uint128::from(MAX_BASIS_POINTS)),
+                    * Decimal::percent((MAX_BASIS_POINTS + self.delta.u128()) as u64)),
                 BondingCurve::ConstantProduct => {
                     Ok(self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 - 1))
                 }
@@ -236,9 +264,6 @@ impl Pool {
         if !self.is_active {
             return Err(ContractError::InvalidPool("pool is not active".to_string()));
         }
-        // if self.id != nft_bid.pool_id {
-        //     return Err(ContractError::InvalidPool("incorrect pool".to_string()));
-        // }
         let sell_quote = self.get_sell_quote()?;
 
         let sale_price = sell_quote
@@ -259,8 +284,7 @@ impl Pool {
         self.spot_price = match self.bonding_curve {
             BondingCurve::Linear => self.spot_price + self.delta,
             BondingCurve::Exponential => {
-                self.spot_price * (Uint128::from(MAX_BASIS_POINTS) + self.delta)
-                    / Uint128::from(MAX_BASIS_POINTS)
+                self.spot_price * Decimal::percent((MAX_BASIS_POINTS + self.delta.u128()) as u64)
             }
             BondingCurve::ConstantProduct => {
                 self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
@@ -295,8 +319,7 @@ impl Pool {
         self.spot_price = match self.bonding_curve {
             BondingCurve::Linear => self.spot_price - self.delta,
             BondingCurve::Exponential => {
-                self.spot_price * (Uint128::from(MAX_BASIS_POINTS) - self.delta)
-                    / Uint128::from(MAX_BASIS_POINTS)
+                self.spot_price * Decimal::percent((MAX_BASIS_POINTS - self.delta.u128()) as u64)
             }
             BondingCurve::ConstantProduct => {
                 self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
