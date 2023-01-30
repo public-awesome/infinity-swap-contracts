@@ -4,7 +4,7 @@ use crate::msg::{
     QueryMsg, QueryOptions, SwapParams,
 };
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, PoolQuote, CONFIG};
-use crate::swap_processor::{Swap, SwapProcessor};
+use crate::swap_processor::{Swap, SwapProcessor, TransactionType};
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, Deps, Env, Order, StdError, StdResult, Uint128,
 };
@@ -249,6 +249,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
         .map_err(|_| StdError::generic_err("Collection not found"))?;
 
     let mut processor = SwapProcessor::new(
+        TransactionType::Sell,
         pool.collection.clone(),
         asset_recipient,
         marketplace_params.params.trading_fee_percent,
@@ -280,6 +281,7 @@ pub fn sim_swap_nfts_for_tokens(
         .map_err(|_| StdError::generic_err("Collection not found"))?;
 
     let mut processor = SwapProcessor::new(
+        TransactionType::Sell,
         collection,
         asset_recipient,
         marketplace_params.params.trading_fee_percent,
@@ -333,6 +335,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
         .map_err(|_| StdError::generic_err("Collection not found"))?;
 
     let mut processor = SwapProcessor::new(
+        TransactionType::Buy,
         collection,
         nft_recipient,
         marketplace_params.params.trading_fee_percent,
@@ -363,6 +366,7 @@ pub fn sim_swap_tokens_for_any_nfts(
         .map_err(|_| StdError::generic_err("Collection not found"))?;
 
     let mut processor = SwapProcessor::new(
+        TransactionType::Buy,
         collection,
         nft_recipient,
         marketplace_params.params.trading_fee_percent,

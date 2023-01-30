@@ -1,5 +1,6 @@
 use crate::msg::NftSwap;
 use crate::state::{BondingCurve, Pool, PoolType};
+use crate::swap_processor::TransactionType;
 use crate::ContractError;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use sg_marketplace::msg::ParamsResponse;
@@ -281,16 +282,6 @@ impl Pool {
             ));
         }
 
-        self.spot_price = match self.bonding_curve {
-            BondingCurve::Linear => self.spot_price + self.delta,
-            BondingCurve::Exponential => {
-                self.spot_price * Decimal::percent((MAX_BASIS_POINTS + self.delta.u128()) as u64)
-            }
-            BondingCurve::ConstantProduct => {
-                self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
-            }
-        };
-
         Ok(sale_price)
     }
 
@@ -316,16 +307,31 @@ impl Pool {
 
         self.total_tokens -= sale_price;
 
-        self.spot_price = match self.bonding_curve {
-            BondingCurve::Linear => self.spot_price - self.delta,
-            BondingCurve::Exponential => {
-                self.spot_price * Decimal::percent((MAX_BASIS_POINTS - self.delta.u128()) as u64)
-            }
-            BondingCurve::ConstantProduct => {
-                self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
-            }
-        };
-
         Ok(sale_price)
+    }
+
+    pub fn update_spot_price(&mut self, tx_type: &TransactionType) {
+        self.spot_price = match tx_type {
+            TransactionType::Buy => match self.bonding_curve {
+                BondingCurve::Linear => self.spot_price + self.delta,
+                BondingCurve::Exponential => {
+                    self.spot_price
+                        * Decimal::percent((MAX_BASIS_POINTS + self.delta.u128()) as u64)
+                }
+                BondingCurve::ConstantProduct => {
+                    self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
+                }
+            },
+            TransactionType::Sell => match self.bonding_curve {
+                BondingCurve::Linear => self.spot_price - self.delta,
+                BondingCurve::Exponential => {
+                    self.spot_price
+                        * Decimal::percent((MAX_BASIS_POINTS - self.delta.u128()) as u64)
+                }
+                BondingCurve::ConstantProduct => {
+                    self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
+                }
+            },
+        };
     }
 }

@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::helpers::{transfer_nft, transfer_token};
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams};
-use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolType};
+use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType};
 
 use core::cmp::Ordering;
 use cosmwasm_schema::cw_serde;
@@ -14,12 +14,13 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub struct PoolPair {
     pub needs_saving: bool,
+    pub quote_price: Uint128,
     pub pool: Pool,
 }
 
 impl Ord for PoolPair {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.pool.spot_price.cmp(&other.pool.spot_price)
+        self.quote_price.cmp(&other.quote_price)
     }
 }
 
@@ -31,7 +32,7 @@ impl PartialOrd for PoolPair {
 
 impl PartialEq for PoolPair {
     fn eq(&self, other: &Self) -> bool {
-        self.pool.spot_price == other.pool.spot_price
+        self.quote_price == other.quote_price
     }
 }
 
@@ -67,7 +68,7 @@ pub struct Swap {
 }
 
 pub struct SwapProcessor<'a> {
-    pub swaps: Vec<Swap>,
+    pub tx_type: TransactionType,
     pub collection: Addr,
     pub seller_recipient: Addr,
     pub trading_fee_percent: Decimal,
@@ -76,11 +77,13 @@ pub struct SwapProcessor<'a> {
     pub developer: Option<Addr>,
     pub pool_set: BTreeSet<PoolPair>,
     pub latest: Option<u64>,
-    pub pool_quote_iter: Option<Box<dyn Iterator<Item = StdResult<u64>> + 'a>>,
+    pub pool_quote_iter: Option<Box<dyn Iterator<Item = StdResult<(u64, PoolQuote)>> + 'a>>,
+    pub swaps: Vec<Swap>,
 }
 
 impl<'a> SwapProcessor<'a> {
     pub fn new(
+        tx_type: TransactionType,
         collection: Addr,
         seller_recipient: Addr,
         trading_fee_percent: Decimal,
@@ -89,7 +92,7 @@ impl<'a> SwapProcessor<'a> {
         developer: Option<Addr>,
     ) -> Self {
         Self {
-            swaps: vec![],
+            tx_type,
             collection,
             seller_recipient,
             trading_fee_percent,
@@ -99,16 +102,11 @@ impl<'a> SwapProcessor<'a> {
             pool_set: BTreeSet::new(),
             latest: None,
             pool_quote_iter: None,
+            swaps: vec![],
         }
     }
 
-    fn create_swap(
-        &mut self,
-        pool: &Pool,
-        payment_amount: Uint128,
-        nft_token_id: String,
-        tx_type: TransactionType,
-    ) -> Swap {
+    fn create_swap(&mut self, pool: &Pool, payment_amount: Uint128, nft_token_id: String) -> Swap {
         let network_fee = payment_amount * self.trading_fee_percent / Uint128::from(100u128);
         let mut seller_amount = payment_amount - network_fee;
 
@@ -136,14 +134,14 @@ impl<'a> SwapProcessor<'a> {
             }
         }
 
-        let (nft_recipient, token_recipient) = match tx_type {
+        let (nft_recipient, token_recipient) = match &self.tx_type {
             TransactionType::Buy => (self.seller_recipient.clone(), pool.get_recipient()),
             TransactionType::Sell => (pool.get_recipient(), self.seller_recipient.clone()),
         };
 
         Swap {
             pool_id: pool.id,
-            transaction_type: tx_type,
+            transaction_type: self.tx_type.clone(),
             spot_price: payment_amount,
             network_fee,
             finder_payment,
@@ -169,20 +167,20 @@ impl<'a> SwapProcessor<'a> {
             TransactionType::Buy => pool.buy_nft_from_pool(&nft_swap)?,
             TransactionType::Sell => pool.sell_nft_to_pool(&nft_swap)?,
         };
-        let mut swap = self.create_swap(pool, sale_price, nft_swap.nft_token_id, tx_type);
-        // pool.update_spot_price()?;
+        let mut swap = self.create_swap(pool, sale_price, nft_swap.nft_token_id);
 
-        // if pool.pool_type == PoolType::Trade {
-        //     if tx_type == TransactionType::Buy && pool.reinvest_tokens {
-        //         let reinvest_amount = swap.seller_payment.unwrap().amount;
-        //         swap.seller_payment = None;
-        //         pool.deposit_tokens(reinvest_amount)?;
-        //     } else if tx_type == TransactionType::Sell && pool.reinvest_nfts {
-        //         let reinvest_nft_token_id = swap.nft_payment.unwrap().nft_token_id;
-        //         swap.nft_payment = None;
-        //         pool.deposit_nfts(&vec![reinvest_nft_token_id])?;
-        //     }
-        // }
+        if pool.pool_type == PoolType::Trade {
+            if tx_type == TransactionType::Buy && pool.reinvest_tokens {
+                let reinvest_amount = swap.seller_payment.unwrap().amount;
+                swap.seller_payment = None;
+                pool.deposit_tokens(reinvest_amount)?;
+            } else if tx_type == TransactionType::Sell && pool.reinvest_nfts {
+                let reinvest_nft_token_id = swap.nft_payment.unwrap().nft_token_id;
+                swap.nft_payment = None;
+                pool.deposit_nfts(&vec![reinvest_nft_token_id])?;
+            }
+        }
+        pool.update_spot_price(&self.tx_type);
 
         self.swaps.push(swap);
         Ok(())
@@ -245,10 +243,30 @@ impl<'a> SwapProcessor<'a> {
 
     pub fn load_next_pool(
         &mut self,
-        storage: &dyn Storage,
+        storage: &'a dyn Storage,
     ) -> Result<Option<PoolPair>, ContractError> {
-        if self.pool_set.is_empty() || Some(self.pool_set.first().unwrap().pool.id) == self.latest {
-            let pool_id = self.pool_quote_iter.as_mut().unwrap().next().unwrap()?;
+        if self.pool_quote_iter.is_none() {
+            self.pool_quote_iter = Some(match &self.tx_type {
+                TransactionType::Buy => buy_pool_quotes()
+                    .idx
+                    .collection_buy_price
+                    .sub_prefix(self.collection.clone())
+                    .range(storage, None, None, Order::Ascending),
+                TransactionType::Sell => sell_pool_quotes()
+                    .idx
+                    .collection_sell_price
+                    .sub_prefix(self.collection.clone())
+                    .range(storage, None, None, Order::Descending),
+            })
+        }
+
+        let current = match &self.tx_type {
+            TransactionType::Buy => self.pool_set.first(),
+            TransactionType::Sell => self.pool_set.last(),
+        };
+
+        if current.is_none() || Some(current.unwrap().pool.id) == self.latest {
+            let (pool_id, pool_quote) = self.pool_quote_iter.as_mut().unwrap().next().unwrap()?;
 
             let pool = pools()
                 .load(storage, pool_id)
@@ -256,12 +274,16 @@ impl<'a> SwapProcessor<'a> {
 
             self.pool_set.insert(PoolPair {
                 needs_saving: false,
+                quote_price: pool_quote.quote_price,
                 pool,
             });
             self.latest = Some(pool_id);
         }
 
-        Ok(self.pool_set.pop_first())
+        Ok(match &self.tx_type {
+            TransactionType::Buy => self.pool_set.pop_first(),
+            TransactionType::Sell => self.pool_set.pop_last(),
+        })
     }
 
     pub fn direct_swap_nfts_for_tokens(
@@ -289,6 +311,7 @@ impl<'a> SwapProcessor<'a> {
         }
         self.pool_set.insert(PoolPair {
             needs_saving: true,
+            quote_price: Uint128::zero(),
             pool,
         });
         Ok(())
@@ -300,14 +323,6 @@ impl<'a> SwapProcessor<'a> {
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
-        self.pool_quote_iter = Some(
-            sell_pool_quotes()
-                .idx
-                .collection_sell_price
-                .sub_prefix(self.collection.clone())
-                .keys(storage, None, None, Order::Descending),
-        );
-
         for nft_swap in nfts_to_swap {
             let pool_pair_option = self.load_next_pool(storage)?;
             if pool_pair_option.is_none() {
@@ -372,6 +387,7 @@ impl<'a> SwapProcessor<'a> {
         for (_, pool) in pool_map {
             self.pool_set.insert(PoolPair {
                 needs_saving: true,
+                quote_price: Uint128::zero(),
                 pool,
             });
         }
@@ -384,14 +400,6 @@ impl<'a> SwapProcessor<'a> {
         min_expected_token_input: Vec<Uint128>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
-        self.pool_quote_iter = Some(
-            buy_pool_quotes()
-                .idx
-                .collection_buy_price
-                .sub_prefix(self.collection.clone())
-                .keys(storage, None, None, Order::Ascending),
-        );
-
         for token_amount in min_expected_token_input {
             let pool_pair_option = self.load_next_pool(storage)?;
             if pool_pair_option.is_none() {
