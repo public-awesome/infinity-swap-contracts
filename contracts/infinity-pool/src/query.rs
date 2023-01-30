@@ -1,10 +1,10 @@
 use crate::helpers::{load_collection_royalties, load_marketplace_params, option_bool_to_order};
 use crate::msg::{
     ConfigResponse, NftSwap, PoolNftSwap, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse,
-    QueryMsg, QueryOptions, SwapParams,
+    QueryMsg, QueryOptions, SwapParams, SwapResponse,
 };
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, PoolQuote, CONFIG};
-use crate::swap_processor::{Swap, SwapProcessor, TransactionType};
+use crate::swap_processor::{SwapProcessor, TransactionType};
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, Deps, Env, Order, StdError, StdResult, Uint128,
 };
@@ -236,7 +236,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
     swap_params: SwapParams,
     asset_recipient: Addr,
     finder: Option<Addr>,
-) -> StdResult<Vec<Swap>> {
+) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
 
     // convert to StdErr
@@ -261,7 +261,9 @@ pub fn sim_direct_swap_nfts_for_tokens(
         .direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)
         .map_err(|_| StdError::generic_err("direct_swap_nft_for_tokens err"))?;
 
-    Ok(processor.swaps)
+    Ok(SwapResponse {
+        swaps: processor.swaps,
+    })
 }
 
 pub fn sim_swap_nfts_for_tokens(
@@ -271,7 +273,7 @@ pub fn sim_swap_nfts_for_tokens(
     swap_params: SwapParams,
     asset_recipient: Addr,
     finder: Option<Addr>,
-) -> StdResult<Vec<Swap>> {
+) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
 
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
@@ -291,9 +293,11 @@ pub fn sim_swap_nfts_for_tokens(
     );
     processor
         .swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)
-        .map_err(|_| StdError::generic_err("direct_swap_nft_for_tokens err"))?;
+        .map_err(|_| StdError::generic_err("swap_nfts_for_tokens err"))?;
 
-    Ok(processor.swaps)
+    Ok(SwapResponse {
+        swaps: processor.swaps,
+    })
 }
 
 pub fn sim_direct_swap_tokens_for_specific_nfts(
@@ -303,7 +307,7 @@ pub fn sim_direct_swap_tokens_for_specific_nfts(
     swap_params: SwapParams,
     nft_recipient: Addr,
     finder: Option<Addr>,
-) -> StdResult<Vec<Swap>> {
+) -> StdResult<SwapResponse> {
     let pool = pools().load(deps.storage, pool_id)?;
 
     sim_swap_tokens_for_specific_nfts(
@@ -326,7 +330,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
     swap_params: SwapParams,
     nft_recipient: Addr,
     finder: Option<Addr>,
-) -> StdResult<Vec<Swap>> {
+) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
         .map_err(|_| StdError::generic_err("Marketplace not found"))?;
@@ -347,7 +351,9 @@ pub fn sim_swap_tokens_for_specific_nfts(
         .swap_tokens_for_specific_nfts(deps.storage, pool_nfts_to_swap_for, swap_params)
         .map_err(|_| StdError::generic_err("swap_tokens_for_specific_nfts err"))?;
 
-    Ok(processor.swaps)
+    Ok(SwapResponse {
+        swaps: processor.swaps,
+    })
 }
 
 pub fn sim_swap_tokens_for_any_nfts(
@@ -357,7 +363,7 @@ pub fn sim_swap_tokens_for_any_nfts(
     swap_params: SwapParams,
     nft_recipient: Addr,
     finder: Option<Addr>,
-) -> StdResult<Vec<Swap>> {
+) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
         .map_err(|_| StdError::generic_err("Marketplace not found"))?;
@@ -378,5 +384,7 @@ pub fn sim_swap_tokens_for_any_nfts(
         .swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)
         .map_err(|_| StdError::generic_err("swap_tokens_for_any_nfts err"))?;
 
-    Ok(processor.swaps)
+    Ok(SwapResponse {
+        swaps: processor.swaps,
+    })
 }

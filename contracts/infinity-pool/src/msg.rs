@@ -279,5 +279,5 @@ pub struct PoolQuoteResponse {
 
 #[cw_serde]
 pub struct SwapResponse {
-    pub swap: Vec<Swap>,
+    pub swaps: Vec<Swap>,
 }
