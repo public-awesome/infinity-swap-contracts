@@ -1,7 +1,8 @@
 use crate::msg::NftSwap;
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Decimal, Uint128};
+use sg_marketplace::msg::ParamsResponse;
 use std::collections::BTreeSet;
 
 const MAX_BASIS_POINTS: u128 = 10000u128;
@@ -16,8 +17,8 @@ impl Pool {
         bonding_curve: BondingCurve,
         spot_price: Uint128,
         delta: Uint128,
-        finders_fee_bps: u16,
-        swap_fee_bps: u16,
+        finders_fee_percent: Decimal,
+        swap_fee_percent: Decimal,
     ) -> Self {
         Self {
             id,
@@ -31,12 +32,18 @@ impl Pool {
             total_tokens: Uint128::zero(),
             nft_token_ids: BTreeSet::new(),
             is_active: false,
-            finders_fee_bps,
-            swap_fee_bps,
+            finders_fee_percent,
+            swap_fee_percent,
         }
     }
 
-    pub fn validate(&self) -> Result<(), ContractError> {
+    pub fn validate(&self, marketplace_params: &ParamsResponse) -> Result<(), ContractError> {
+        if self.finders_fee_percent > marketplace_params.params.max_finders_fee_percent {
+            return Err(ContractError::InvalidPool(
+                "finders_fee_percent is above max_finders_fee_percent".to_string(),
+            ));
+        }
+
         match &self.pool_type {
             PoolType::Token => {
                 if !self.nft_token_ids.is_empty() {
@@ -49,9 +56,9 @@ impl Pool {
                         "spot_price must be non-zero for token pool".to_string(),
                     ));
                 }
-                if self.swap_fee_bps > 0 {
+                if self.swap_fee_percent > Decimal::zero() {
                     return Err(ContractError::InvalidPool(
-                        "swap_fee_bps must be 0 for token pool".to_string(),
+                        "swap_fee_percent must be 0 for token pool".to_string(),
                     ));
                 }
                 if self.bonding_curve == BondingCurve::ConstantProduct {
@@ -72,9 +79,9 @@ impl Pool {
                         "spot_price must be non-zero for nft pool".to_string(),
                     ));
                 }
-                if self.swap_fee_bps > 0 {
+                if self.swap_fee_percent > Decimal::zero() {
                     return Err(ContractError::InvalidPool(
-                        "swap_fee_bps must be 0 for nft pool".to_string(),
+                        "swap_fee_percent must be 0 for nft pool".to_string(),
                     ));
                 }
                 if self.bonding_curve == BondingCurve::ConstantProduct {
@@ -84,9 +91,9 @@ impl Pool {
                 }
             }
             PoolType::Trade => {
-                if self.swap_fee_bps > 9000 {
+                if self.swap_fee_percent > Decimal::percent(9000u64) {
                     return Err(ContractError::InvalidPool(
-                        "swap_fee_bps is greater than 9000".to_string(),
+                        "swap_fee_percent is greater than 90%".to_string(),
                     ));
                 }
                 if self.is_active {

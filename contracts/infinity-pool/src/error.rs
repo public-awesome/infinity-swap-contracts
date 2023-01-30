@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use cw_utils::PaymentError;
 use thiserror::Error;
 
@@ -12,6 +12,9 @@ pub enum ContractError {
 
     #[error("Invalid pool: {0}")]
     InvalidPool(String),
+
+    #[error("InvalidListingFee: {0}")]
+    InvalidListingFee(Uint128),
 
     #[error("{0}")]
     PaymentError(#[from] PaymentError),

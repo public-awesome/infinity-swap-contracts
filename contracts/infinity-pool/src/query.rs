@@ -254,6 +254,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
         finder,
+        config.developer,
     );
     processor
         .direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)
@@ -284,6 +285,7 @@ pub fn sim_swap_nfts_for_tokens(
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
         finder,
+        config.developer,
     );
     processor
         .swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)
@@ -336,6 +338,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
         finder,
+        config.developer,
     );
     processor
         .swap_tokens_for_specific_nfts(deps.storage, pool_nfts_to_swap_for, swap_params)
@@ -365,6 +368,7 @@ pub fn sim_swap_tokens_for_any_nfts(
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
         finder,
+        config.developer,
     );
     processor
         .swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)

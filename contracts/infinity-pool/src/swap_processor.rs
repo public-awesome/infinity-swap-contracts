@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::helpers::{mul_by_bps, transfer_nft, transfer_token};
+use crate::helpers::{transfer_nft, transfer_token};
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams};
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolType};
 
@@ -73,6 +73,7 @@ pub struct SwapProcessor<'a> {
     pub trading_fee_percent: Decimal,
     pub royalty: Option<RoyaltyInfoResponse>,
     pub finder: Option<Addr>,
+    pub developer: Option<Addr>,
     pub pool_set: BTreeSet<PoolPair>,
     pub latest: Option<u64>,
     pub pool_quote_iter: Option<Box<dyn Iterator<Item = StdResult<u64>> + 'a>>,
@@ -85,6 +86,7 @@ impl<'a> SwapProcessor<'a> {
         trading_fee_percent: Decimal,
         royalty: Option<RoyaltyInfoResponse>,
         finder: Option<Addr>,
+        developer: Option<Addr>,
     ) -> Self {
         Self {
             swaps: vec![],
@@ -93,6 +95,7 @@ impl<'a> SwapProcessor<'a> {
             trading_fee_percent,
             royalty,
             finder,
+            developer,
             pool_set: BTreeSet::new(),
             latest: None,
             pool_quote_iter: None,
@@ -110,8 +113,8 @@ impl<'a> SwapProcessor<'a> {
         let mut seller_amount = payment_amount - network_fee;
 
         let mut finder_payment = None;
-        if self.finder.is_some() && pool.finders_fee_bps > 0 {
-            let finder_amount = mul_by_bps(payment_amount, pool.finders_fee_bps);
+        if self.finder.is_some() && !pool.finders_fee_percent.is_zero() {
+            let finder_amount = payment_amount * pool.finders_fee_percent;
             if !finder_amount.is_zero() {
                 seller_amount -= finder_amount;
                 finder_payment = Some(TokenPayment {
@@ -208,7 +211,7 @@ impl<'a> SwapProcessor<'a> {
             )?;
         }
 
-        fair_burn(total_network_fee.u128(), None, response);
+        fair_burn(total_network_fee.u128(), self.developer.clone(), response);
 
         for token_payment in token_payments {
             transfer_token(
