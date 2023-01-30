@@ -5,8 +5,8 @@ use crate::helpers::{
     transfer_token, validate_finder,
 };
 use crate::msg::{ExecuteMsg, NftSwap, PoolInfo, PoolNftSwap, SwapParams};
-use crate::state::{pools, BondingCurve, Pool, PoolType, CONFIG};
-use crate::swap_processor::SwapProcessor;
+use crate::state::{pools, Pool, CONFIG};
+use crate::swap_processor::{SwapProcessor, TransactionType};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -565,6 +565,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
 
     let mut response = Response::new();
     let mut processor = SwapProcessor::new(
+        TransactionType::Sell,
         pool.collection.clone(),
         seller_recipient,
         marketplace_params.params.trading_fee_percent,
@@ -601,6 +602,7 @@ pub fn execute_swap_nfts_for_tokens(
     let mut response = Response::new();
     {
         let mut processor = SwapProcessor::new(
+            TransactionType::Sell,
             collection,
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
@@ -674,6 +676,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
     let mut response = Response::new();
     {
         let mut processor = SwapProcessor::new(
+            TransactionType::Buy,
             collection,
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
@@ -718,6 +721,7 @@ pub fn execute_swap_tokens_for_any_nfts(
     let mut response = Response::new();
     {
         let mut processor = SwapProcessor::new(
+            TransactionType::Buy,
             collection,
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
