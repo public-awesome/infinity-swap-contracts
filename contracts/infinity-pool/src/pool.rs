@@ -16,7 +16,8 @@ impl Pool {
         bonding_curve: BondingCurve,
         spot_price: Uint128,
         delta: Uint128,
-        fee_bps: Option<u16>,
+        finders_fee_bps: u16,
+        swap_fee_bps: u16,
     ) -> Self {
         Self {
             id,
@@ -29,8 +30,9 @@ impl Pool {
             delta,
             total_tokens: Uint128::zero(),
             nft_token_ids: BTreeSet::new(),
-            fee_bps,
             is_active: false,
+            finders_fee_bps,
+            swap_fee_bps,
         }
     }
 
@@ -47,9 +49,9 @@ impl Pool {
                         "spot_price must be non-zero for token pool".to_string(),
                     ));
                 }
-                if self.fee_bps.is_some() {
+                if self.swap_fee_bps > 0 {
                     return Err(ContractError::InvalidPool(
-                        "fee_bps must be 0 for token pool".to_string(),
+                        "swap_fee_bps must be 0 for token pool".to_string(),
                     ));
                 }
                 if self.bonding_curve == BondingCurve::ConstantProduct {
@@ -70,9 +72,9 @@ impl Pool {
                         "spot_price must be non-zero for nft pool".to_string(),
                     ));
                 }
-                if self.fee_bps.is_some() {
+                if self.swap_fee_bps > 0 {
                     return Err(ContractError::InvalidPool(
-                        "fee_bps must be 0 for nft pool".to_string(),
+                        "swap_fee_bps must be 0 for nft pool".to_string(),
                     ));
                 }
                 if self.bonding_curve == BondingCurve::ConstantProduct {
@@ -82,12 +84,10 @@ impl Pool {
                 }
             }
             PoolType::Trade => {
-                if let Some(_fee) = self.fee_bps {
-                    if _fee > 9000 {
-                        return Err(ContractError::InvalidPool(
-                            "fee_bps is greater than 9000".to_string(),
-                        ));
-                    }
+                if self.swap_fee_bps > 9000 {
+                    return Err(ContractError::InvalidPool(
+                        "swap_fee_bps is greater than 9000".to_string(),
+                    ));
                 }
                 if self.is_active {
                     if self.total_tokens == Uint128::zero() {
