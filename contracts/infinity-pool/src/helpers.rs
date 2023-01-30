@@ -10,6 +10,7 @@ use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::Response;
 
+/// Load the marketplace params for use within the contract
 pub fn load_marketplace_params(
     deps: Deps,
     marketplace_addr: &Addr,
@@ -20,6 +21,7 @@ pub fn load_marketplace_params(
     Ok(marketplace_params)
 }
 
+/// Load the collection royalties as defined on the NFT collection contract
 pub fn load_collection_royalties(
     deps: Deps,
     collection_addr: &Addr,
@@ -30,12 +32,14 @@ pub fn load_collection_royalties(
     Ok(collection_info.royalty_info)
 }
 
+/// Retrieve the next pool counter from storage and increment it
 pub fn get_next_pool_counter(store: &mut dyn Storage) -> Result<u64, ContractError> {
     let pool_counter = POOL_COUNTER.load(store)?;
     POOL_COUNTER.save(store, &(pool_counter + 1))?;
     Ok(pool_counter)
 }
 
+/// Update the indexed buy pool quotes for a specific pool
 pub fn update_buy_pool_quotes(
     store: &mut dyn Storage,
     pool: &Pool,
@@ -49,6 +53,8 @@ pub fn update_buy_pool_quotes(
         return Ok(());
     }
     let buy_pool_quote = pool.get_buy_quote()?;
+
+    // If the pool quote is less than the minimum price, remove it from the index
     if buy_pool_quote.is_none() || buy_pool_quote.unwrap() < min_price {
         buy_pool_quotes().remove(store, pool.id)?;
         return Ok(());
@@ -65,6 +71,7 @@ pub fn update_buy_pool_quotes(
     Ok(())
 }
 
+/// Update the indexed sell pool quotes for a specific pool
 pub fn update_sell_pool_quotes(
     store: &mut dyn Storage,
     pool: &Pool,
@@ -78,6 +85,8 @@ pub fn update_sell_pool_quotes(
         return Ok(());
     }
     let sell_pool_quote = pool.get_sell_quote()?;
+
+    // If the pool quote is less than the minimum price, remove it from the index
     if sell_pool_quote.is_none() || sell_pool_quote.unwrap() < min_price {
         sell_pool_quotes().remove(store, pool.id)?;
         return Ok(());
@@ -94,6 +103,8 @@ pub fn update_sell_pool_quotes(
     Ok(())
 }
 
+/// Save a pool, check invariants, update pool quotes
+/// IMPORTANT: this function must always be called when saving a pool!
 pub fn save_pool(
     store: &mut dyn Storage,
     pool: &Pool,
@@ -107,6 +118,7 @@ pub fn save_pool(
     Ok(())
 }
 
+/// Save pools batch convenience function
 pub fn save_pools(
     store: &mut dyn Storage,
     pools: Vec<Pool>,
@@ -118,6 +130,8 @@ pub fn save_pools(
     Ok(())
 }
 
+/// Remove a pool, and remove pool quotes
+/// IMPORTANT: this function must always be called when removing a pool!
 pub fn remove_pool(
     store: &mut dyn Storage,
     pool: &mut Pool,
@@ -131,6 +145,7 @@ pub fn remove_pool(
     Ok(())
 }
 
+/// Convenience function for collection pool attributes
 pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
     vec![
         Attribute {
@@ -196,6 +211,7 @@ pub fn get_pool_attributes(pool: &Pool) -> Vec<Attribute> {
     ]
 }
 
+/// Push the transfer NFT message on the NFT collection contract
 pub fn transfer_nft(
     token_id: &str,
     recipient: &str,
@@ -216,6 +232,7 @@ pub fn transfer_nft(
     Ok(())
 }
 
+/// Push the BankeMsg send message
 pub fn transfer_token(coin_send: Coin, recipient: &str, response: &mut Response) -> StdResult<()> {
     let token_transfer_msg = BankMsg::Send {
         to_address: recipient.to_string(),
@@ -226,6 +243,7 @@ pub fn transfer_token(coin_send: Coin, recipient: &str, response: &mut Response)
     Ok(())
 }
 
+/// Verify that a message is indeed invoked by the owner
 pub fn only_owner(info: &MessageInfo, pool: &Pool) -> Result<(), ContractError> {
     if pool.owner != info.sender {
         return Err(ContractError::Unauthorized(String::from(
@@ -235,6 +253,7 @@ pub fn only_owner(info: &MessageInfo, pool: &Pool) -> Result<(), ContractError> 
     Ok(())
 }
 
+/// Convert an option bool to an Order
 pub fn option_bool_to_order(descending: Option<bool>, default: Order) -> Order {
     match descending {
         Some(_descending) => {
@@ -248,6 +267,7 @@ pub fn option_bool_to_order(descending: Option<bool>, default: Order) -> Order {
     }
 }
 
+/// Verify that a message has been processed before the specified deadline
 pub fn check_deadline(block: &BlockInfo, deadline: Timestamp) -> Result<(), ContractError> {
     if deadline <= block.time {
         return Err(ContractError::DeadlinePassed);
@@ -255,6 +275,7 @@ pub fn check_deadline(block: &BlockInfo, deadline: Timestamp) -> Result<(), Cont
     Ok(())
 }
 
+/// Verify that the finder address is neither the sender nor the asset recipient
 pub fn validate_finder(
     finder: &Option<Addr>,
     sender: &Addr,

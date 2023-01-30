@@ -206,6 +206,7 @@ pub fn execute(
     }
 }
 
+/// Execute a CreatePool message
 pub fn execute_create_pool(
     deps: DepsMut,
     info: MessageInfo,
@@ -231,6 +232,7 @@ pub fn execute_create_pool(
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
     save_pool(deps.storage, &pool, &marketplace_params)?;
 
+    // Burn the listing fee set on the marketplace contract
     let listing_fee = may_pay(&info, NATIVE_DENOM)?;
     if listing_fee != marketplace_params.params.listing_fee {
         return Err(ContractError::InvalidListingFee(listing_fee));
@@ -249,6 +251,7 @@ pub fn execute_create_pool(
     Ok(response.add_event(event))
 }
 
+/// Execute a DepositTokens message
 pub fn execute_deposit_tokens(
     deps: DepsMut,
     info: MessageInfo,
@@ -258,8 +261,10 @@ pub fn execute_deposit_tokens(
     let received_amount = must_pay(&info, &config.denom)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
+    // Only the owner of the pool can deposit and withdraw assets
     only_owner(&info, &pool)?;
 
+    // Track the total amount of tokens that have been deposited into the pool
     pool.deposit_tokens(received_amount)?;
 
     let config = CONFIG.load(deps.storage)?;
@@ -275,6 +280,7 @@ pub fn execute_deposit_tokens(
     Ok(response.add_event(event))
 }
 
+/// Execute a DepositNfts message
 pub fn execute_deposit_nfts(
     deps: DepsMut,
     info: MessageInfo,
@@ -286,14 +292,16 @@ pub fn execute_deposit_nfts(
     nonpayable(&info)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
+    // Only the owner of the pool can deposit and withdraw assets
     only_owner(&info, &pool)?;
     if pool.collection != collection {
-        return Err(ContractError::InvalidPool(format!(
+        return Err(ContractError::InvalidInput(format!(
             "invalid collection ({}) for pool ({})",
             collection, pool.id
         )));
     }
 
+    // Push the NFT transfer messages
     let mut response = Response::new();
     for nft_token_id in &nft_token_ids {
         transfer_nft(
@@ -303,6 +311,7 @@ pub fn execute_deposit_nfts(
             &mut response,
         )?;
     }
+    // Track the NFTs that have been deposited into the pool
     pool.deposit_nfts(&nft_token_ids)?;
 
     let config = CONFIG.load(deps.storage)?;
@@ -322,6 +331,7 @@ pub fn execute_deposit_nfts(
     Ok(response.add_event(event))
 }
 
+/// Execute a WithdrawNfts message
 pub fn execute_withdraw_tokens(
     deps: DepsMut,
     info: MessageInfo,
@@ -332,17 +342,20 @@ pub fn execute_withdraw_tokens(
     nonpayable(&info)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
+    // Only the owner of the pool can deposit and withdraw assets
     only_owner(&info, &pool)?;
 
     let mut response = Response::new();
 
     let config = CONFIG.load(deps.storage)?;
+    // Withdraw tokens to the asset recipient if specified, otherwise to the sender
     let recipient = asset_recipient.unwrap_or(info.sender);
     transfer_token(
         coin(amount.u128(), config.denom),
         recipient.as_ref(),
         &mut response,
     )?;
+    // Track total amount owned by the pool
     pool.withdraw_tokens(amount)?;
 
     let config = CONFIG.load(deps.storage)?;
@@ -357,6 +370,7 @@ pub fn execute_withdraw_tokens(
     Ok(response.add_event(event))
 }
 
+/// Execute a WithdrawAllNfts message, a convenvience method for withdrawing all tokens
 pub fn execute_withdraw_all_tokens(
     deps: DepsMut,
     info: MessageInfo,
@@ -369,6 +383,7 @@ pub fn execute_withdraw_all_tokens(
     execute_withdraw_tokens(deps, info, pool_id, pool.total_tokens, asset_recipient)
 }
 
+/// Execute a WithdrawNfts message
 pub fn execute_withdraw_nfts(
     deps: DepsMut,
     info: MessageInfo,
@@ -379,10 +394,12 @@ pub fn execute_withdraw_nfts(
     nonpayable(&info)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
+    // Only the owner of the pool can deposit and withdraw assets
     only_owner(&info, &pool)?;
 
     let mut response = Response::new();
 
+    // Withdraw NFTs to the asset recipient if specified, otherwise to the sender
     let recipient = asset_recipient.unwrap_or(info.sender);
     for nft_token_id in &nft_token_ids {
         transfer_nft(
@@ -392,6 +409,7 @@ pub fn execute_withdraw_nfts(
             &mut response,
         )?;
     }
+    // Track the NFTs that have been withdrawn from the pool
     pool.withdraw_nfts(&nft_token_ids)?;
 
     let config = CONFIG.load(deps.storage)?;
@@ -412,6 +430,7 @@ pub fn execute_withdraw_nfts(
     Ok(response.add_event(event))
 }
 
+/// Execute a WithdrawAllNfts message, a convenvience method for withdrawing all NFTs
 pub fn execute_withdraw_all_nfts(
     deps: DepsMut,
     info: MessageInfo,
@@ -432,6 +451,8 @@ pub fn execute_withdraw_all_nfts(
     execute_withdraw_nfts(deps, info, pool_id, nft_token_ids, asset_recipient)
 }
 
+/// Execute an UpdatePoolConfig message
+/// Option paramaters that are not specified will not be updated
 pub fn execute_update_pool_config(
     deps: DepsMut,
     info: MessageInfo,
@@ -447,6 +468,7 @@ pub fn execute_update_pool_config(
     nonpayable(&info)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
+    // Only the owner of the pool can update the pool config
     only_owner(&info, &pool)?;
 
     if let Some(_asset_recipient) = asset_recipient {
@@ -485,6 +507,7 @@ pub fn execute_update_pool_config(
     Ok(response.add_event(event))
 }
 
+/// Execute a SetActivePool message
 pub fn execute_set_active_pool(
     deps: DepsMut,
     info: MessageInfo,
@@ -494,6 +517,7 @@ pub fn execute_set_active_pool(
     nonpayable(&info)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
+    // Only the owner of the pool can update the pool config
     only_owner(&info, &pool)?;
 
     pool.set_active(is_active)?;
@@ -510,6 +534,7 @@ pub fn execute_set_active_pool(
     Ok(response.add_event(event))
 }
 
+/// Execute a RemovePool message
 pub fn execute_remove_pool(
     deps: DepsMut,
     info: MessageInfo,
@@ -519,8 +544,10 @@ pub fn execute_remove_pool(
     nonpayable(&info)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
+    // Only the owner of the pool can remove the pool
     only_owner(&info, &pool)?;
 
+    // Pools that hold NFTs cannot be removed
     if !pool.nft_token_ids.is_empty() {
         let all_nft_token_ids = pool
             .nft_token_ids
@@ -534,10 +561,11 @@ pub fn execute_remove_pool(
         )));
     }
 
+    let config = CONFIG.load(deps.storage)?;
     let mut response = Response::new();
 
+    // If the pool has tokens, transfer them to the asset recipient
     if pool.total_tokens > Uint128::zero() {
-        let config = CONFIG.load(deps.storage)?;
         let recipient = asset_recipient.unwrap_or(info.sender);
         transfer_token(
             coin(pool.total_tokens.u128(), config.denom),
@@ -546,15 +574,14 @@ pub fn execute_remove_pool(
         )?;
     }
 
-    let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
     remove_pool(deps.storage, &mut pool, &marketplace_params)?;
 
     let event = Event::new("remove_pool").add_attribute("pool_id", pool_id.to_string());
-
     Ok(response.add_event(event))
 }
 
+/// Execute a DirectSwapNftsForTokens message
 pub fn execute_direct_swap_nfts_for_tokens(
     deps: DepsMut,
     info: MessageInfo,
@@ -571,26 +598,37 @@ pub fn execute_direct_swap_nfts_for_tokens(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let pool = pools().load(deps.storage, pool_id)?;
+    let mut pool = pools().load(deps.storage, pool_id)?;
     let seller_recipient = asset_recipient.unwrap_or(info.sender);
     let collection_royalties = load_collection_royalties(deps.as_ref(), &pool.collection)?;
 
     let mut response = Response::new();
-    let mut processor = SwapProcessor::new(
-        TransactionType::Sell,
-        pool.collection.clone(),
-        seller_recipient,
-        marketplace_params.params.trading_fee_percent,
-        collection_royalties,
-        finder,
-        config.developer,
-    );
-    processor.direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)?;
-    processor.commit_messages(&mut response)?;
+    {
+        let mut processor = SwapProcessor::new(
+            TransactionType::Sell,
+            pool.collection.clone(),
+            seller_recipient,
+            marketplace_params.params.trading_fee_percent,
+            collection_royalties,
+            finder,
+            config.developer,
+        );
+        processor.direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)?;
+        processor.commit_messages(&mut response)?;
+        pool = processor
+            .pool_set
+            .into_iter()
+            .filter(|p| p.needs_saving)
+            .map(|p| p.pool)
+            .next()
+            .unwrap();
+    }
+    save_pool(deps.storage, &pool, &marketplace_params)?;
 
     Ok(response)
 }
 
+/// Execute a SwapNftsForTokens message
 pub fn execute_swap_nfts_for_tokens(
     deps: DepsMut,
     info: MessageInfo,
@@ -636,6 +674,7 @@ pub fn execute_swap_nfts_for_tokens(
     Ok(response)
 }
 
+/// Execute a DirectSwapTokensForSpecificNfts message
 pub fn execute_direct_swap_tokens_for_specific_nfts(
     deps: DepsMut,
     info: MessageInfo,
@@ -665,6 +704,7 @@ pub fn execute_direct_swap_tokens_for_specific_nfts(
     )
 }
 
+/// Execute a SwapTokensForSpecificNfts message
 pub fn execute_swap_tokens_for_specific_nfts(
     deps: DepsMut,
     info: MessageInfo,
@@ -710,6 +750,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
     Ok(response)
 }
 
+/// Execute a SwapTokensForAnyNfts message
 pub fn execute_swap_tokens_for_any_nfts(
     deps: DepsMut,
     info: MessageInfo,
