@@ -55,9 +55,11 @@ pub struct Pool {
     pub delta: Uint128,
     pub total_tokens: Uint128,
     pub nft_token_ids: BTreeSet<String>,
-    pub is_active: bool,
     pub finders_fee_percent: Decimal,
     pub swap_fee_percent: Decimal,
+    pub is_active: bool,
+    pub reinvest_tokens: bool,
+    pub reinvest_nfts: bool,
 }
 
 pub struct PoolIndices<'a> {

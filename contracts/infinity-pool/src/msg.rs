@@ -1,6 +1,6 @@
 use crate::state::{BondingCurve, Config, Pool, PoolQuote, PoolType};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Timestamp, Uint128};
+use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -27,6 +27,20 @@ pub struct PoolNftSwap {
 }
 
 #[cw_serde]
+pub struct PoolInfo {
+    pub collection: Addr,
+    pub asset_recipient: Option<Addr>,
+    pub pool_type: PoolType,
+    pub bonding_curve: BondingCurve,
+    pub spot_price: Uint128,
+    pub delta: Uint128,
+    pub finders_fee_percent: Decimal,
+    pub swap_fee_percent: Decimal,
+    pub reinvest_tokens: bool,
+    pub reinvest_nfts: bool,
+}
+
+#[cw_serde]
 pub enum ExecuteMsg {
     CreatePool {
         collection: String,
@@ -37,6 +51,8 @@ pub enum ExecuteMsg {
         delta: Uint128,
         finders_fee_bps: u64,
         swap_fee_bps: u64,
+        reinvest_tokens: bool,
+        reinvest_nfts: bool,
     },
     DepositTokens {
         pool_id: u64,
