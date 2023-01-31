@@ -8,9 +8,18 @@
   ],
   "properties": {
     "denom": {
+      "description": "The fungible token used in the pools",
       "type": "string"
     },
+    "developer": {
+      "description": "The address of the developer who will receive a portion of the fair burn",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "marketplace_addr": {
+      "description": "The address of the marketplace contract",
       "type": "string"
     }
   },
