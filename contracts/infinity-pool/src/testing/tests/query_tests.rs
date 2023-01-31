@@ -36,7 +36,8 @@ fn try_query_config() {
         res.config,
         Config {
             denom: NATIVE_DENOM.to_string(),
-            marketplace_addr: marketplace
+            marketplace_addr: marketplace,
+            developer: None,
         }
     )
 }
@@ -156,7 +157,6 @@ fn try_query_pools_by_buy_price() {
     let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let minter = vt.collection_response_vec[0].minter.clone().unwrap();
-    // let user = Addr::unchecked(USER);
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
@@ -192,25 +192,25 @@ fn try_query_pools_by_buy_price() {
     assert_eq!(
         res.pool_quotes[0],
         PoolQuote {
-            id: 6,
-            collection: collection.clone(),
-            quote_price: Uint128::from(603u64)
-        }
-    );
-    assert_eq!(
-        res.pool_quotes[1],
-        PoolQuote {
             id: 8,
             collection: collection.clone(),
             quote_price: Uint128::from(800u64)
         }
     );
     assert_eq!(
-        res.pool_quotes[2],
+        res.pool_quotes[1],
         PoolQuote {
             id: 9,
-            collection,
+            collection: collection.clone(),
             quote_price: Uint128::from(900u64)
+        }
+    );
+    assert_eq!(
+        res.pool_quotes[2],
+        PoolQuote {
+            id: 12,
+            collection,
+            quote_price: Uint128::from(1320u64)
         }
     );
 }

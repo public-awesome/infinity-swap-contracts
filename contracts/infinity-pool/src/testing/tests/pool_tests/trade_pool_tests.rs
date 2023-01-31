@@ -34,12 +34,15 @@ fn create_trade_pool() {
         bonding_curve: BondingCurve::Linear,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
-        fee_bps: Some(9001u16),
+        finders_fee_bps: 0,
+        swap_fee_bps: 9001u64,
+        reinvest_nfts: false,
+        reinvest_tokens: false,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
     assert_error(
         res,
-        ContractError::InvalidPool(String::from("fee_bps is greater than 9000")),
+        ContractError::InvalidPool(String::from("swap_fee_percent is greater than 90%")),
     );
 
     // Can create a Linear Trade Pool w/ no fee
@@ -50,7 +53,10 @@ fn create_trade_pool() {
         bonding_curve: BondingCurve::Linear,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
-        fee_bps: None,
+        finders_fee_bps: 0,
+        swap_fee_bps: 0,
+        reinvest_nfts: false,
+        reinvest_tokens: false,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
     assert!(res.is_ok());
@@ -63,7 +69,10 @@ fn create_trade_pool() {
         bonding_curve: BondingCurve::Exponential,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
-        fee_bps: Some(2000u16),
+        finders_fee_bps: 0,
+        swap_fee_bps: 200u64,
+        reinvest_nfts: false,
+        reinvest_tokens: false,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
     assert!(res.is_ok());
@@ -76,7 +85,10 @@ fn create_trade_pool() {
         bonding_curve: BondingCurve::ConstantProduct,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
-        fee_bps: Some(2000u16),
+        finders_fee_bps: 0,
+        swap_fee_bps: 200u64,
+        reinvest_nfts: false,
+        reinvest_tokens: false,
     };
     let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     assert!(res.is_ok());
@@ -99,23 +111,28 @@ fn deposit_assets_trade_pool() {
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
     let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
-    let pool_id = create_pool(
+    let pool = create_pool(
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        collection.clone(),
-        Some(asset_account),
-        PoolType::Trade,
-        BondingCurve::Linear,
-        Uint128::from(2400u64),
-        Uint128::from(100u64),
-        None,
+        ExecuteMsg::CreatePool {
+            collection: collection.to_string(),
+            asset_recipient: Some(asset_account.to_string()),
+            pool_type: PoolType::Trade,
+            bonding_curve: BondingCurve::Linear,
+            spot_price: Uint128::from(2400u64),
+            delta: Uint128::from(100u64),
+            finders_fee_bps: 0,
+            swap_fee_bps: 0,
+            reinvest_tokens: false,
+            reinvest_nfts: false,
+        },
     )
     .unwrap();
 
     // Only owner of pool can deposit tokens
     let deposit_amount = 1000u128;
-    let msg = ExecuteMsg::DepositTokens { pool_id };
+    let msg = ExecuteMsg::DepositTokens { pool_id: pool.id };
     let res = router.execute_contract(
         user1.clone(),
         infinity_pool.clone(),
@@ -129,7 +146,7 @@ fn deposit_assets_trade_pool() {
 
     // Owner can deposit tokens
     let deposit_amount = 1000u128;
-    let msg = ExecuteMsg::DepositTokens { pool_id };
+    let msg = ExecuteMsg::DepositTokens { pool_id: pool.id };
     let res = router.execute_contract(
         creator.clone(),
         infinity_pool.clone(),
@@ -144,7 +161,7 @@ fn deposit_assets_trade_pool() {
     let token_id_2 = mint(&mut router, &user1, minter);
     approve(&mut router, &user1, &collection, &infinity_pool, token_id_2);
     let msg = ExecuteMsg::DepositNfts {
-        pool_id,
+        pool_id: pool.id,
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };
@@ -172,7 +189,7 @@ fn deposit_assets_trade_pool() {
         token_id_2,
     );
     let msg = ExecuteMsg::DepositNfts {
-        pool_id,
+        pool_id: pool.id,
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };

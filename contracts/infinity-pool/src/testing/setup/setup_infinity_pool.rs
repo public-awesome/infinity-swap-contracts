@@ -14,6 +14,7 @@ pub fn setup_infinity_pool(
     let msg = crate::msg::InstantiateMsg {
         denom: NATIVE_DENOM.to_string(),
         marketplace_addr: marketplace_addr.to_string(),
+        developer: None,
     };
     let infinity_pool = router
         .instantiate_contract(infinity_pool_id, sender, &msg, &[], "Infinity Pool", None)
