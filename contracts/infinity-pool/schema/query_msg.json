@@ -3,6 +3,7 @@
   "title": "QueryMsg",
   "oneOf": [
     {
+      "description": "Get the global contract configuration object Return type: `ConfigResponse`",
       "type": "object",
       "required": [
         "config"
@@ -16,6 +17,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Retrieve pools sorted by their pool id Return type: `PoolsResponse`",
       "type": "object",
       "required": [
         "pools"
@@ -37,6 +39,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Retrieve pools by their pool id Return type: `PoolsByIdResponse`",
       "type": "object",
       "required": [
         "pools_by_id"
@@ -63,6 +66,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Retrieve pools by their owner address Return type: `PoolsResponse`",
       "type": "object",
       "required": [
         "pools_by_owner"
@@ -88,6 +92,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Retrieve pool quotes sorted by their buy quote price Return type: `PoolQuoteResponse`",
       "type": "object",
       "required": [
         "pool_quotes_buy"
@@ -113,6 +118,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Retrieve pool quotes sorted by their sell quote price Return type: `PoolQuoteResponse`",
       "type": "object",
       "required": [
         "pool_quotes_sell"
@@ -138,6 +144,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Simulate a DirectSwapNftsForTokens transaction Return type: `SwapResponse`",
       "type": "object",
       "required": [
         "sim_direct_swap_nfts_for_tokens"
@@ -152,6 +159,12 @@
             "token_recipient"
           ],
           "properties": {
+            "finder": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "nfts_to_swap": {
               "type": "array",
               "items": {
@@ -176,6 +189,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Simulate a SwapNftsForTokens transaction Return type: `SwapResponse`",
       "type": "object",
       "required": [
         "sim_swap_nfts_for_tokens"
@@ -192,6 +206,12 @@
           "properties": {
             "collection": {
               "type": "string"
+            },
+            "finder": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "nfts_to_swap": {
               "type": "array",
@@ -212,6 +232,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Simulate a DirectSwapTokensforSpecificNfts transaction Return type: `SwapResponse`",
       "type": "object",
       "required": [
         "sim_direct_swap_tokensfor_specific_nfts"
@@ -226,6 +247,12 @@
             "swap_params"
           ],
           "properties": {
+            "finder": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "nft_recipient": {
               "type": "string"
             },
@@ -250,6 +277,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Simulate a SimSwapTokensForSpecificNfts transaction Return type: `SwapResponse`",
       "type": "object",
       "required": [
         "sim_swap_tokens_for_specific_nfts"
@@ -266,6 +294,12 @@
           "properties": {
             "collection": {
               "type": "string"
+            },
+            "finder": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "nft_recipient": {
               "type": "string"
@@ -286,6 +320,7 @@
       "additionalProperties": false
     },
     {
+      "description": "Simulate a SwapTokensForAnyNfts transaction Return type: `SwapResponse`",
       "type": "object",
       "required": [
         "sim_swap_tokens_for_any_nfts"
@@ -302,6 +337,12 @@
           "properties": {
             "collection": {
               "type": "string"
+            },
+            "finder": {
+              "type": [
+                "string",
+                "null"
+              ]
             },
             "max_expected_token_input": {
               "type": "array",
@@ -324,6 +365,7 @@
   ],
   "definitions": {
     "NftSwap": {
+      "description": "NftSwap contains the parameters for an NFT swap",
       "type": "object",
       "required": [
         "nft_token_id",
@@ -331,15 +373,22 @@
       ],
       "properties": {
         "nft_token_id": {
+          "description": "The id of the NFT to swap",
           "type": "string"
         },
         "token_amount": {
-          "$ref": "#/definitions/Uint128"
+          "description": "The amount of tokens to accept in exchange for the NFT Note: this could be the minimum acceptable amount for a sale or the maximum acceptable amount for a purchase",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Uint128"
+            }
+          ]
         }
       },
       "additionalProperties": false
     },
     "PoolNftSwap": {
+      "description": "PoolNftSwap is the parent of NftSwap and organizes swaps by pool_id",
       "type": "object",
       "required": [
         "nft_swaps",
@@ -347,12 +396,14 @@
       ],
       "properties": {
         "nft_swaps": {
+          "description": "The NFT swaps to execute",
           "type": "array",
           "items": {
             "$ref": "#/definitions/NftSwap"
           }
         },
         "pool_id": {
+          "description": "The id of the pool to swap in",
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
@@ -361,9 +412,11 @@
       "additionalProperties": false
     },
     "QueryOptions_for_Tuple_of_Uint128_and_uint64": {
+      "description": "QueryOptions are used to paginate contract queries",
       "type": "object",
       "properties": {
         "descending": {
+          "description": "Whether to sort items in ascending or descending order",
           "type": [
             "boolean",
             "null"
@@ -378,6 +431,7 @@
           "minimum": 0.0
         },
         "start_after": {
+          "description": "The key to start the query after",
           "type": [
             "array",
             "null"
@@ -399,9 +453,11 @@
       "additionalProperties": false
     },
     "QueryOptions_for_uint64": {
+      "description": "QueryOptions are used to paginate contract queries",
       "type": "object",
       "properties": {
         "descending": {
+          "description": "Whether to sort items in ascending or descending order",
           "type": [
             "boolean",
             "null"
@@ -416,6 +472,7 @@
           "minimum": 0.0
         },
         "start_after": {
+          "description": "The key to start the query after",
           "type": [
             "integer",
             "null"
@@ -427,6 +484,7 @@
       "additionalProperties": false
     },
     "SwapParams": {
+      "description": "SwapParams contains the parameters for a swap",
       "type": "object",
       "required": [
         "deadline",
@@ -434,9 +492,15 @@
       ],
       "properties": {
         "deadline": {
-          "$ref": "#/definitions/Timestamp"
+          "description": "The deadline after which the swap will be rejected",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Timestamp"
+            }
+          ]
         },
         "robust": {
+          "description": "Whether or not to revert the entire trade if one of the swaps fails",
           "type": "boolean"
         }
       },
