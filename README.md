@@ -1,4 +1,4 @@
-# Infinity Pool
+# Infinity Pool - NFT AMM
 
 <img width="896" alt="Screenshot 2023-01-31 at 10 48 07 AM" src="https://user-images.githubusercontent.com/6496257/215808478-7e9ef4f4-edaf-47d6-afc4-baadda383e59.png">
 
