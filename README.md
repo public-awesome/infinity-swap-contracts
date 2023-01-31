@@ -1,6 +1,7 @@
 # Infinity Pool
 
-## Image
+<img width="896" alt="Screenshot 2023-01-31 at 10 48 07 AM" src="https://user-images.githubusercontent.com/6496257/215808478-7e9ef4f4-edaf-47d6-afc4-baadda383e59.png">
+
 
 ## Overview
 
@@ -10,13 +11,15 @@ This protocol is a derivative of the [sudoswap](https://github.com/sudoswap/lssv
 
 ## How It Works
 
-> 1. Liquidity providers begin by creating a pool with specific parameters. They define which pools the assets will hold and the bonding curve which will be used to determine the price. Once the pool is created, liquidity providers can deposit tokens and/or NFTs into the pool. Once the pool is funded, liquidity providers can activate the pool so that it can begin trading.
-> 2. Traders can then buy and sell NFTs from the pool. The price of the NFTs is determined by the bonding curve and the assets held by the pool. The price of the NFTs will change as the pool is traded.
-> 3. Liquidity providers can withdraw their assets from the pool at any time.
+1. Liquidity providers begin by creating a pool with specific parameters. They define which pools the assets will hold and the bonding curve which will be used to determine the price. Once the pool is created, liquidity providers can deposit tokens and/or NFTs into the pool. Once the pool is funded, liquidity providers can activate the pool so that it can begin trading.
+2. Traders can then buy and sell NFTs from the pool. The price of the NFTs is determined by the bonding curve and the assets held by the pool. The price of the NFTs will change as the pool is traded.
+3. Liquidity providers can withdraw their assets from the pool at any time.
 
 ### Creating Pools
 
 Creating pools follows a three message process where the first message creates the pool, the second message deposits assets into the pool, and the third message activates the pool. The three messages can be concatenated into a single transaction by the client.
+
+![Screenshot 2023-01-31 at 10 45 07 AM](https://user-images.githubusercontent.com/6496257/215807687-3dca764a-5178-4eb9-8503-7c360c5e0954.png)
 
 ### Types of Pools
 
@@ -42,6 +45,8 @@ The user flow for performing swaps is as follows:
 2. The contract simulates the transaction, and returns a summary of the swap to the user.
 3. The user then finalizes their swap by specifying their slippage tolerance and signing the transaction.
 4. The contract performs the swaps, sends the requested assets to the user, and sends the accrued fees to their proper destination.
+
+![Screenshot 2023-01-31 at 10 45 55 AM](https://user-images.githubusercontent.com/6496257/215808047-0c848d90-539c-438f-a1cd-bcf396dafea6.png)
 
 ### Features
 
