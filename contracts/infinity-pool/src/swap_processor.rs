@@ -76,6 +76,8 @@ pub struct Swap {
     pub seller_payment: Option<TokenPayment>,
 }
 
+type IterResults = StdResult<(u64, PoolQuote)>;
+
 /// A struct for managing a series of swaps
 pub struct SwapProcessor<'a> {
     /// The type of transaction (buy or sell)
@@ -97,7 +99,7 @@ pub struct SwapProcessor<'a> {
     /// The latest pool that was retrieved
     pub latest: Option<u64>,
     /// An iterator for retrieving sorted pool quotes
-    pub pool_quote_iter: Option<Box<dyn Iterator<Item = StdResult<(u64, PoolQuote)>> + 'a>>,
+    pub pool_quote_iter: Option<Box<dyn Iterator<Item = IterResults> + 'a>>,
     /// A list of swaps that have been processed
     pub swaps: Vec<Swap>,
 }

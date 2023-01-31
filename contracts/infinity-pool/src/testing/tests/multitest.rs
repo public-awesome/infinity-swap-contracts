@@ -17,6 +17,7 @@ fn proper_initialization() {
     let msg = InstantiateMsg {
         denom: NATIVE_DENOM.to_string(),
         marketplace_addr: marketplace_addr.to_string(),
+        developer: None,
     };
     let info = mock_info("creator", &coins(1000, NATIVE_DENOM));
 
