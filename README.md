@@ -2,12 +2,26 @@
 
 <img width="896" alt="Screenshot 2023-01-31 at 10 48 07 AM" src="https://user-images.githubusercontent.com/6496257/215808478-7e9ef4f4-edaf-47d6-afc4-baadda383e59.png">
 
-
 ## Overview
 
 Infinity Pool is an automated market maker (AMM) protocol that allows for the buying and selling of NFT assets with a specified fungible token. The buy and sell price of the NFT assets are determined by the parameters of the pool, the bonding curve, and the assets custodied by the pool.
 
 This protocol is a derivative of the [sudoswap](https://github.com/sudoswap/lssvm) protocol written in Solidity. Infinity Pool makes use of the sudoswap design, but is written for [CosmWasm](https://github.com/CosmWasm/cosmwasm) so that it may be used on Cosmos SDK based chains.
+
+## Features
+
+- Pool pricing indexed within the contract for optimized price discovery
+- Respects listing price of marketplace contract
+- Respects the minimum price of marketplace contract
+- Respects the maximum finders fee of marketplace contract
+- Respects the trading fee percentage of the marketplace contract
+- Pool owner can set a finders fee that is paid to the finder address on a trade
+- Pool owner can set a swap fee that is paid to the pool owner of a Trade pool
+- Reinvestment of tokens and NFTs back into Trade pools based on parameter flags
+- Flexible asset redirection for trader and pool owner
+- Queries that allow for simulation of swaps
+- User slippage tolerance for swaps
+- User may decide to revert whole transaction or revert individual swaps using the robust flag
 
 ## How It Works
 
@@ -47,18 +61,3 @@ The user flow for performing swaps is as follows:
 4. The contract performs the swaps, sends the requested assets to the user, and sends the accrued fees to their proper destination.
 
 ![Screenshot 2023-01-31 at 10 45 55 AM](https://user-images.githubusercontent.com/6496257/215808047-0c848d90-539c-438f-a1cd-bcf396dafea6.png)
-
-### Features
-
-- Pool pricing indexed within the contract for optimized price discovery
-- Respects listing price of marketplace contract
-- Respects the minimum price of marketplace contract
-- Respects the maximum finders fee of marketplace contract
-- Respects the trading fee percentage of the marketplace contract
-- Pool owner can set a finders fee that is paid to the finder address on a trade
-- Pool owner can set a swap fee that is paid to the pool owner of a Trade pool
-- Reinvestment of tokens and NFTs back into Trade pools based on parameter flags
-- Flexible asset redirection for trader and pool owner
-- Queries that allow for simulation of swaps
-- User slippage tolerance for swaps
-- User may decide to revert whole transaction or revert individual swaps using the robust flag
