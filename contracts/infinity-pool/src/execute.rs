@@ -596,7 +596,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
-    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let seller_recipient = asset_recipient.unwrap_or_else(|| info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &pool.collection)?;
 
     for nft_swap in nfts_to_swap.iter() {
@@ -654,7 +654,7 @@ pub fn execute_swap_nfts_for_tokens(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let seller_recipient = asset_recipient.unwrap_or_else(|| info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
 
     for nft_swap in nfts_to_swap.iter() {
@@ -754,7 +754,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let seller_recipient = asset_recipient.unwrap_or_else(|| info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
 
     let pools_to_save: Vec<Pool>;
@@ -815,7 +815,7 @@ pub fn execute_swap_tokens_for_any_nfts(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let seller_recipient = asset_recipient.unwrap_or_else(|| info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
 
     let pools_to_save: Vec<Pool>;
