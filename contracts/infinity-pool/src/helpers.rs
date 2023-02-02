@@ -1,14 +1,17 @@
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, POOL_COUNTER};
 use crate::ContractError;
 use cosmwasm_std::{
-    to_binary, Addr, Attribute, BankMsg, BlockInfo, Coin, Deps, MessageInfo, Order, StdResult,
-    Storage, SubMsg, Timestamp, Uint128, WasmMsg,
+    to_binary, Addr, Attribute, BankMsg, BlockInfo, Coin, Deps, Empty, MessageInfo, Order,
+    StdResult, Storage, SubMsg, Timestamp, Uint128, WasmMsg,
 };
+use cw721::OwnerOfResponse;
+use cw721_base::helpers::Cw721Contract;
 use sg721::RoyaltyInfoResponse;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::Response;
+use std::marker::PhantomData;
 
 /// Load the marketplace params for use within the contract
 pub fn load_marketplace_params(
@@ -251,6 +254,23 @@ pub fn only_owner(info: &MessageInfo, pool: &Pool) -> Result<(), ContractError> 
         )));
     }
     Ok(())
+}
+
+pub fn only_nft_owner(
+    deps: Deps,
+    info: &MessageInfo,
+    collection: &Addr,
+    token_id: &str,
+) -> Result<OwnerOfResponse, ContractError> {
+    let res = Cw721Contract::<Empty, Empty>(collection.clone(), PhantomData, PhantomData)
+        .owner_of(&deps.querier, token_id, false)?;
+    if res.owner != info.sender {
+        return Err(ContractError::Unauthorized(String::from(
+            "only the owner can call this function",
+        )));
+    }
+
+    Ok(res)
 }
 
 /// Convert an option bool to an Order
