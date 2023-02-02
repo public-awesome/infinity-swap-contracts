@@ -251,6 +251,8 @@ pub fn sim_direct_swap_nfts_for_tokens(
     let mut processor = SwapProcessor::new(
         TransactionType::Sell,
         pool.collection.clone(),
+        asset_recipient.clone(),
+        Uint128::zero(),
         asset_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
@@ -285,6 +287,8 @@ pub fn sim_swap_nfts_for_tokens(
     let mut processor = SwapProcessor::new(
         TransactionType::Sell,
         collection,
+        asset_recipient.clone(),
+        Uint128::zero(),
         asset_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
@@ -341,6 +345,8 @@ pub fn sim_swap_tokens_for_specific_nfts(
     let mut processor = SwapProcessor::new(
         TransactionType::Buy,
         collection,
+        nft_recipient.clone(),
+        Uint128::zero(),
         nft_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,
@@ -374,6 +380,8 @@ pub fn sim_swap_tokens_for_any_nfts(
     let mut processor = SwapProcessor::new(
         TransactionType::Buy,
         collection,
+        nft_recipient.clone(),
+        Uint128::zero(),
         nft_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,

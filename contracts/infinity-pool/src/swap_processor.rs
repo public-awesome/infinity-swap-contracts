@@ -84,6 +84,10 @@ pub struct SwapProcessor<'a> {
     pub tx_type: TransactionType,
     /// The address of the NFT collection
     pub collection: Addr,
+    /// The sender address
+    pub sender: Addr,
+    /// The amount of tokens sent to the contract by the end user
+    pub remaining_balance: Uint128,
     /// The address that will receive assets on the side of the end user
     pub seller_recipient: Addr,
     /// The trading fee percentage to be burned
@@ -109,6 +113,8 @@ impl<'a> SwapProcessor<'a> {
     pub fn new(
         tx_type: TransactionType,
         collection: Addr,
+        sender: Addr,
+        remaining_balance: Uint128,
         seller_recipient: Addr,
         trading_fee_percent: Decimal,
         royalty: Option<RoyaltyInfoResponse>,
@@ -118,6 +124,8 @@ impl<'a> SwapProcessor<'a> {
         Self {
             tx_type,
             collection,
+            sender,
+            remaining_balance,
             seller_recipient,
             trading_fee_percent,
             royalty,
@@ -132,6 +140,11 @@ impl<'a> SwapProcessor<'a> {
 
     /// Create an individual swap object
     fn create_swap(&mut self, pool: &Pool, payment_amount: Uint128, nft_token_id: String) -> Swap {
+        // Subtract from received amount in the case of a buy
+        if self.tx_type == TransactionType::Buy {
+            self.remaining_balance -= payment_amount;
+        }
+
         // Calculate burn fee
         let network_fee = payment_amount * self.trading_fee_percent / Uint128::from(100u128);
 
@@ -229,7 +242,12 @@ impl<'a> SwapProcessor<'a> {
         }
 
         let mut total_network_fee = Uint128::zero();
-        let mut token_payments = BTreeMap::new();
+        let mut token_payments: BTreeMap<&str, Uint128> = BTreeMap::new();
+
+        // Insert refund amount if there is a remainder
+        if !self.remaining_balance.is_zero() {
+            token_payments.insert(self.sender.as_str(), self.remaining_balance);
+        }
 
         // Iterate over swaps and reduce token payments that need to be made
         for swap in self.swaps.iter() {

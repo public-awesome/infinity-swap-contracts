@@ -377,8 +377,6 @@ pub fn execute_withdraw_all_tokens(
     pool_id: u64,
     asset_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
-    nonpayable(&info)?;
-
     let pool = pools().load(deps.storage, pool_id)?;
     execute_withdraw_tokens(deps, info, pool_id, pool.total_tokens, asset_recipient)
 }
@@ -437,8 +435,6 @@ pub fn execute_withdraw_all_nfts(
     pool_id: u64,
     asset_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
-    nonpayable(&info)?;
-
     let pool = pools().load(deps.storage, pool_id)?;
 
     let withdrawal_batch_size: u8 = 10;
@@ -592,6 +588,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
     asset_recipient: Option<Addr>,
     finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     check_deadline(&env.block, swap_params.deadline)?;
     validate_finder(&finder, &info.sender, &asset_recipient)?;
 
@@ -616,6 +613,8 @@ pub fn execute_direct_swap_nfts_for_tokens(
         let mut processor = SwapProcessor::new(
             TransactionType::Sell,
             pool.collection.clone(),
+            info.sender,
+            Uint128::zero(),
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
             collection_royalties,
@@ -648,6 +647,7 @@ pub fn execute_swap_nfts_for_tokens(
     asset_recipient: Option<Addr>,
     finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
     check_deadline(&env.block, swap_params.deadline)?;
     validate_finder(&finder, &info.sender, &asset_recipient)?;
 
@@ -667,6 +667,8 @@ pub fn execute_swap_nfts_for_tokens(
         let mut processor = SwapProcessor::new(
             TransactionType::Sell,
             collection,
+            info.sender,
+            Uint128::zero(),
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
             collection_royalties,
@@ -731,10 +733,28 @@ pub fn execute_swap_tokens_for_specific_nfts(
     check_deadline(&env.block, swap_params.deadline)?;
     validate_finder(&finder, &info.sender, &asset_recipient)?;
 
+    // User must send enough tokens to cover the swap
+    // Should be the sum of all the token amounts in the nft_swaps
+    let received_amount = must_pay(&info, NATIVE_DENOM)?;
+    let expected_amount = nfts_to_swap_for
+        .iter()
+        .fold(Uint128::zero(), |acc, nft_swap| {
+            acc + nft_swap
+                .nft_swaps
+                .iter()
+                .fold(Uint128::zero(), |acc, nft| acc + nft.token_amount)
+        });
+    if received_amount < expected_amount {
+        return Err(ContractError::InsufficientFunds(format!(
+            "expected {} but received {}",
+            expected_amount, received_amount
+        )));
+    }
+
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender);
+    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
 
     let pools_to_save: Vec<Pool>;
@@ -743,6 +763,8 @@ pub fn execute_swap_tokens_for_specific_nfts(
         let mut processor = SwapProcessor::new(
             TransactionType::Buy,
             collection,
+            info.sender,
+            received_amount,
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
             collection_royalties,
@@ -777,10 +799,23 @@ pub fn execute_swap_tokens_for_any_nfts(
     check_deadline(&env.block, swap_params.deadline)?;
     validate_finder(&finder, &info.sender, &asset_recipient)?;
 
+    // User must send enough tokens to cover the swap
+    // Should be the sum of all the token amounts in max_expected_token_input
+    let received_amount = must_pay(&info, NATIVE_DENOM)?;
+    let expected_amount = max_expected_token_input
+        .iter()
+        .fold(Uint128::zero(), |acc, amount| acc + amount);
+    if received_amount < expected_amount {
+        return Err(ContractError::InsufficientFunds(format!(
+            "expected {} but received {}",
+            expected_amount, received_amount
+        )));
+    }
+
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender);
+    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
 
     let pools_to_save: Vec<Pool>;
@@ -789,6 +824,8 @@ pub fn execute_swap_tokens_for_any_nfts(
         let mut processor = SwapProcessor::new(
             TransactionType::Buy,
             collection,
+            info.sender,
+            received_amount,
             seller_recipient,
             marketplace_params.params.trading_fee_percent,
             collection_royalties,
