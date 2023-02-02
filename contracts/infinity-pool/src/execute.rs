@@ -1,8 +1,8 @@
 use crate::error::ContractError;
 use crate::helpers::{
     check_deadline, get_next_pool_counter, get_pool_attributes, load_collection_royalties,
-    load_marketplace_params, only_owner, remove_pool, save_pool, save_pools, transfer_nft,
-    transfer_token, validate_finder,
+    load_marketplace_params, only_nft_owner, only_owner, remove_pool, save_pool, save_pools,
+    transfer_nft, transfer_token, validate_finder,
 };
 use crate::msg::{ExecuteMsg, NftSwap, PoolInfo, PoolNftSwap, SwapParams};
 use crate::state::{pools, Pool, CONFIG};
@@ -599,8 +599,17 @@ pub fn execute_direct_swap_nfts_for_tokens(
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
-    let seller_recipient = asset_recipient.unwrap_or(info.sender);
+    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &pool.collection)?;
+
+    for nft_swap in nfts_to_swap.iter() {
+        only_nft_owner(
+            deps.as_ref(),
+            &info,
+            &pool.collection,
+            &nft_swap.nft_token_id,
+        )?;
+    }
 
     let mut response = Response::new();
     {
@@ -645,8 +654,12 @@ pub fn execute_swap_nfts_for_tokens(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let seller_recipient = asset_recipient.unwrap_or(info.sender);
+    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
     let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
+
+    for nft_swap in nfts_to_swap.iter() {
+        only_nft_owner(deps.as_ref(), &info, &collection, &nft_swap.nft_token_id)?;
+    }
 
     let pools_to_save: Vec<Pool>;
     let mut response = Response::new();
