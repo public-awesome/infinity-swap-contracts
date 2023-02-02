@@ -295,7 +295,7 @@ impl<'a> SwapProcessor<'a> {
         for token_payment in token_payments {
             transfer_token(
                 coin(token_payment.1.u128(), NATIVE_DENOM),
-                &token_payment.0.to_string(),
+                token_payment.0,
                 response,
             )?;
         }
