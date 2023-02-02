@@ -61,3 +61,13 @@ The user flow for performing swaps is as follows:
 4. The contract performs the swaps, sends the requested assets to the user, and sends the accrued fees to their proper destination.
 
 ![Screenshot 2023-01-31 at 10 45 55 AM](https://user-images.githubusercontent.com/6496257/215808047-0c848d90-539c-438f-a1cd-bcf396dafea6.png)
+
+### Types of swaps
+
+These are the types of swaps that can be performed by the contract. Note that each swap can be be run as an ExecuteMsg or a QueryMsg. When run as an ExecuteMsg the full swap is performed and assets are transferred to their proper destination. When run as a query, the swap is performed in simulation mode and the results are returned to the client, but assets are not transferred.
+
+- `DirectSwapNftsForTokens` - Swap NFTs for tokens directly with a specified pool
+- `SwapNftsForTokens` - Swap NFTs for tokens at optimal sale prices
+- `DirectSwapTokensForNfts` - Swap tokens for NFTs directly with a specified pool
+- `SwapTokensForSpecificNfts` - Swap tokens for specific NFTs at optimal purchase prices
+- `SwapTokensForAnyNfts` - Swap tokens for any NFTs at optimal purchase prices
