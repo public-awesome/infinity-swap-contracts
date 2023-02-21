@@ -1,6 +1,18 @@
+<img width="896" alt="Screenshot 2023-01-31 at 10 48 07 AM" src="https://user-images.githubusercontent.com/6496257/215808478-7e9ef4f4-edaf-47d6-afc4-baadda383e59.png">
+
 # Infinity Pool - NFT AMM
 
-<img width="896" alt="Screenshot 2023-01-31 at 10 48 07 AM" src="https://user-images.githubusercontent.com/6496257/215808478-7e9ef4f4-edaf-47d6-afc4-baadda383e59.png">
+[![CircleCI](https://circleci.com/gh/tasiov/infinity-pool/tree/main.svg?style=svg)](https://circleci.com/gh/tasiov/infinity-pool/tree/main)
+
+## WARNING: NOT FOR COMMERCIAL USE
+
+This repo is under a business source license simliar to Uniswap V3. This means it is **not available** under an open source license for a period of time. Please see [LICENSE](LICENSE) for full details.
+
+## DISCLAIMER
+
+INFINITY POOL IS PROVIDED “AS IS”, AT YOUR OWN RISK, AND WITHOUT WARRANTIES OF ANY KIND. No developer or entity involved in creating or instantiating Infinity Pool smart contracts will be liable for any claims or damages whatsoever associated with your use, inability to use, or your interaction with other users of Infinity Pool, including any direct, indirect, incidental, special, exemplary, punitive or consequential damages, or loss of profits, cryptocurrencies, tokens, or anything else of value.
+
+---
 
 ## Overview
 
