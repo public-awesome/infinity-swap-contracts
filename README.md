@@ -18,7 +18,7 @@ INFINITY POOL IS PROVIDED “AS IS”, AT YOUR OWN RISK, AND WITHOUT WARRANTIES 
 
 Infinity Pool is an automated market maker (AMM) protocol that allows for the buying and selling of NFT assets with a specified fungible token. The buy and sell price of the NFT assets are determined by the parameters of the pool, the bonding curve, and the assets custodied by the pool.
 
-This protocol is a derivative of the [sudoswap](https://github.com/sudoswap/lssvm) protocol written in Solidity. Infinity Pool makes use of the sudoswap design, but is written for [CosmWasm](https://github.com/CosmWasm/cosmwasm) so that it may be used on Cosmos SDK based chains.
+Infinity Pool makes use of an NFT AMM design, but is written for [CosmWasm](https://github.com/CosmWasm/cosmwasm) so that it may be used on Cosmos SDK based chains.
 
 ## Features
 
