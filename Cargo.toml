@@ -1,5 +1,12 @@
 [workspace]
-members = ["contracts/*"]
+members = ["contracts/*",  "e2e"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/tasiov/infinity-pool"
+description = "An NFT AMM protocol written for CosmWasm"
+license = "BUSL-1.1"
 
 [profile.release.package.infinity-pool]
 codegen-units = 1

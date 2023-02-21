@@ -1,10 +1,9 @@
 [package]
 name = "infinity-pool"
-version = "0.1.0"
-edition = "2021"
-repository = "https://github.com/tasiov/infinity-pool"
-description = "An implementation of the Sudo Swap protocol written for CosmWasm"
-license = "AGPL-3.0-only"
+version    = { workspace = true }
+edition    = { workspace = true }
+repository = { workspace = true }
+license    = { workspace = true }
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
