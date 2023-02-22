@@ -1,5 +1,5 @@
 .PHONY: optimize optimize-arm lint schema dl-launchpad-artifacts dl-marketplace-artifacts
-.PHONY: deploy-local e2etest e2etest-full e2etest-full-arm
+.PHONY: deploy-local e2e-test e2e-test-full e2e-test-full-arm
 
 TEST_ADDRS ?= $(shell jq -r '.[].address' ./e2e/configs/test_accounts.json | tr '\n' ' ')
 GAS_LIMIT ?= "75000000"

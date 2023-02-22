@@ -57,7 +57,7 @@ jobs:
         run: make optimize
 
       - name: Run Integration Tests
-        run: make e2etest
+        run: make e2e-test
 
       - name: Combine Test Gas Reports
         run: cd e2e/ && jq -rs 'reduce .[] as $item ({}; . * $item)' gas_reports/*.json > gas_report.json
