@@ -17,10 +17,10 @@ optimize-arm: artifacts target
 	sh scripts/optimize-arm.sh
 
 dl-launchpad-artifacts: artifacts
-	sh scripts/dl-launchpad-artifacts.sh
+	scripts/dl-launchpad-artifacts.sh
 
 dl-marketplace-artifacts: artifacts
-	sh scripts/dl-marketplace-artifacts.sh
+	scripts/dl-marketplace-artifacts.sh
 
 lint:
 	cargo clippy --all-targets -- -D warnings
