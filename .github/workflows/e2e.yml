@@ -46,7 +46,13 @@ jobs:
 
       - name: Deploy local Stargaze node
         run: make deploy-local
-      
+
+      - name: Download launchpad artifacts
+        run: make dl-launchpad-artifacts
+
+      - name: Download marketplace artifacts
+        run: make dl-marketplace-artifacts
+
       - name: Optimize Contracts
         run: make optimize
 
