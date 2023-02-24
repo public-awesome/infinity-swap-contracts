@@ -238,7 +238,6 @@ pub fn sim_direct_swap_nfts_for_tokens(
     finder: Option<Addr>,
 ) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
-
     // convert to StdErr
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
         .map_err(|_| StdError::generic_err("Marketplace not found"))?;
@@ -261,7 +260,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
     );
     processor
         .direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)
-        .map_err(|_| StdError::generic_err("direct_swap_nft_for_tokens err"))?;
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     Ok(SwapResponse {
         swaps: processor.swaps,
@@ -276,6 +275,7 @@ pub fn sim_swap_nfts_for_tokens(
     asset_recipient: Addr,
     finder: Option<Addr>,
 ) -> StdResult<SwapResponse> {
+    println!("in the function");
     let config = CONFIG.load(deps.storage)?;
 
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
@@ -284,6 +284,7 @@ pub fn sim_swap_nfts_for_tokens(
     let collection_royalties = load_collection_royalties(deps, &collection)
         .map_err(|_| StdError::generic_err("Collection not found"))?;
 
+    println!("before the processor");
     let mut processor = SwapProcessor::new(
         TransactionType::Sell,
         collection,
