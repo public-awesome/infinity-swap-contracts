@@ -86,5 +86,3 @@ pub fn activate(
     assert!(res.is_ok());
     Ok(is_active)
 }
-
-

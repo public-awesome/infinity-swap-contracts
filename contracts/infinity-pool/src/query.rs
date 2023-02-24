@@ -275,7 +275,6 @@ pub fn sim_swap_nfts_for_tokens(
     asset_recipient: Addr,
     finder: Option<Addr>,
 ) -> StdResult<SwapResponse> {
-    println!("in the function");
     let config = CONFIG.load(deps.storage)?;
 
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)
@@ -284,7 +283,6 @@ pub fn sim_swap_nfts_for_tokens(
     let collection_royalties = load_collection_royalties(deps, &collection)
         .map_err(|_| StdError::generic_err("Collection not found"))?;
 
-    println!("before the processor");
     let mut processor = SwapProcessor::new(
         TransactionType::Sell,
         collection,
