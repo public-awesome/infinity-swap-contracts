@@ -16,10 +16,16 @@ test-context   = "0.1.4"
 once_cell      = "1.13.0"
 serde          = { version = "1.0", default-features = false, features = ["derive"] }
 rand           = "0.8"
-
+sg-std = "0.21.8"
+sg-marketplace = { git = "https://github.com/public-awesome/marketplace", features = ["library"] }
+infinity-pool = { path = "../contracts/infinity-pool" }
+cw-utils = "0.16.0"
 cosmwasm-std = "1.1.9"
 sg2 = "0.21.8"
+sg4 = "0.21.8"
 sg721 = { version = "0.21.8", features = ["library"] }
 sg721-base = { version = "0.21.8", features = ["library"] }
-vending-minter = { version = "0.21.8"}
-vending-factory = { version = "0.21.8"}
+cw721-base = { version = "0.16.0", features = ["library"] }
+cw721 = "0.16.0"
+base-minter = { version = "0.21.8"}
+base-factory = { version = "0.21.8"}

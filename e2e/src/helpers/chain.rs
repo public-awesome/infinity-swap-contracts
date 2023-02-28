@@ -10,6 +10,10 @@ use std::path::Path;
 use std::time::Duration;
 use test_context::TestContext;
 
+use super::instantiate::{
+    instantiate_base_factory, instantiate_infinity_pools, instantiate_marketplace,
+};
+
 static CONFIG: OnceCell<Cfg> = OnceCell::new();
 
 #[derive(Clone, Debug)]
@@ -79,9 +83,13 @@ fn global_setup() -> Cfg {
             .unwrap();
 
         save_gas_report(&orc, &gas_report_dir);
+        prep_base_contracts(&mut orc, &accounts[0], &cfg.chain_cfg.denom);
 
         // persist stored code_ids in CONFIG, so we can reuse for all tests
         cfg.contract_deploy_info = orc.contract_map.deploy_info().clone();
+
+        // print contract map
+        println!("{:#?}", cfg.contract_deploy_info);
     }
 
     Cfg {
@@ -122,4 +130,10 @@ fn save_gas_report(orc: &CosmOrc<CosmosgRPC>, gas_report_dir: &str) {
     let mut rng = rand::thread_rng();
     let file_name = format!("test-{}.json", rng.gen::<u32>());
     fs::write(p.join(file_name), j.to_string()).unwrap();
+}
+
+fn prep_base_contracts(orc: &mut CosmOrc<CosmosgRPC>, creator: &SigningAccount, denom: &str) {
+    instantiate_base_factory(orc, creator, denom).unwrap();
+    instantiate_marketplace(orc, creator).unwrap();
+    instantiate_infinity_pools(orc, denom, creator).unwrap();
 }
