@@ -4,9 +4,14 @@ use base_minter::msg::ExecuteMsg as BaseMinterExecuteMsg;
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosm_orc::orchestrator::ExecResponse;
 use cosm_orc::orchestrator::{ExecReq, SigningKey};
+use itertools::Itertools;
 use sg721_base::ExecuteMsg as SG721ExecuteMsg;
+use std::time::Duration;
 
-pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> ExecResponse {
+const MINTS_PER_TX: usize = 15;
+const TXS_PER_BLOCK: usize = 5;
+
+pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<ExecResponse> {
     let denom = &chain.cfg.orc_cfg.chain_cfg.denom;
 
     let mut reqs = vec![];
@@ -26,10 +31,43 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> ExecRes
         });
     }
 
-    chain
-        .orc
-        .execute_batch("base_minter_batch_mint", reqs, user)
-        .unwrap()
+    let mut responses: Vec<ExecResponse> = vec![];
+
+    let chunked_reqs: Vec<Vec<ExecReq>> = reqs
+        .into_iter()
+        .chunks(MINTS_PER_TX)
+        .into_iter()
+        .map(|chunk| chunk.collect())
+        .collect();
+
+    let chunked_chunked_reqs: Vec<Vec<Vec<ExecReq>>> = chunked_reqs
+        .into_iter()
+        .chunks(TXS_PER_BLOCK)
+        .into_iter()
+        .map(|chunk| chunk.collect())
+        .collect();
+
+    let mut mint_ctr = 0;
+    for chunked_chunked_req in chunked_chunked_reqs {
+        for chunked_req in chunked_chunked_req {
+            mint_ctr += chunked_req.len() as u32;
+
+            let resp = chain
+                .orc
+                .execute_batch("base_minter_batch_mint", chunked_req, user)
+                .unwrap();
+
+            responses.push(resp);
+        }
+
+        println!("Minted {} NFTs", mint_ctr);
+        chain
+            .orc
+            .poll_for_n_blocks(2, Duration::from_secs(10), true)
+            .unwrap();
+    }
+
+    return responses;
 }
 
 pub fn approve_all_nfts(
