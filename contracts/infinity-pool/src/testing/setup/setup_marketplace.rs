@@ -15,14 +15,15 @@ pub const MAX_EXPIRY: u64 = 180 * 24 * 60 * 60; // 6 months (in seconds)
 pub const MAX_FINDERS_FEE_BPS: u64 = 1000; // 10%
 pub const BID_REMOVAL_REWARD_BPS: u64 = 500; // 5%
 
-pub fn setup_marketplace(
+pub fn execute_marketplace_setup(
     router: &mut StargazeApp,
     marketplace_admin: Addr,
-) -> Result<Addr, ContractError> {
+    trading_fee: u64,
+) -> Addr {
     let marketplace_id = router.store_code(contract_marketplace());
     let msg = sg_marketplace::msg::InstantiateMsg {
         operators: vec!["operator1".to_string()],
-        trading_fee_bps: TRADING_FEE_BPS,
+        trading_fee_bps: trading_fee,
         ask_expiry: ExpiryRange::new(MIN_EXPIRY, MAX_EXPIRY),
         bid_expiry: ExpiryRange::new(MIN_EXPIRY, MAX_EXPIRY),
         sale_hook: None,
@@ -32,7 +33,7 @@ pub fn setup_marketplace(
         bid_removal_reward_bps: BID_REMOVAL_REWARD_BPS,
         listing_fee: Uint128::from(LISTING_FEE),
     };
-    let marketplace = router
+    router
         .instantiate_contract(
             marketplace_id,
             marketplace_admin,
@@ -41,7 +42,27 @@ pub fn setup_marketplace(
             "Marketplace",
             None,
         )
-        .unwrap();
+        .unwrap()
+}
+
+pub fn setup_marketplace(
+    router: &mut StargazeApp,
+    marketplace_admin: Addr,
+) -> Result<Addr, ContractError> {
+    let marketplace = execute_marketplace_setup(router, marketplace_admin, TRADING_FEE_BPS);
+    Ok(marketplace)
+}
+
+pub fn setup_marketplace_trading_fee(
+    router: &mut StargazeApp,
+    marketplace_admin: Addr,
+    trading_fee: Option<u64>,
+) -> Result<Addr, ContractError> {
+    let marketplace = execute_marketplace_setup(
+        router,
+        marketplace_admin,
+        trading_fee.unwrap_or(TRADING_FEE_BPS),
+    );
     Ok(marketplace)
 }
 

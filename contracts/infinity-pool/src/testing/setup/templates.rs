@@ -1,6 +1,6 @@
 use crate::testing::setup::msg::MarketAccounts;
 use crate::testing::setup::setup_accounts::setup_accounts;
-use cosmwasm_std::{coin, Timestamp};
+use cosmwasm_std::{coin, Decimal, Timestamp};
 use sg2::{
     msg::CollectionParams,
     tests::{
@@ -8,6 +8,7 @@ use sg2::{
         mock_curator_payment_address,
     },
 };
+use sg721::{CollectionInfo, RoyaltyInfoResponse};
 use sg_std::GENESIS_MINT_START_TIME;
 use test_suite::common_setup::{
     contract_boxes::custom_mock_app,
@@ -178,6 +179,55 @@ pub fn _minter_two_collections_with_time(
         creator.clone(),
         vec![collection_params, collection_params_two],
         vec![minter_params, minter_params_two],
+        code_ids,
+    );
+    VendingTemplateResponse {
+        router: app,
+        collection_response_vec: minter_collection_response,
+        accts: MarketAccounts {
+            owner,
+            bidder,
+            creator,
+        },
+    }
+}
+
+pub fn mock_collection_params_30_pct_fee(
+    start_trading_time: Option<Timestamp>,
+) -> CollectionParams {
+    CollectionParams {
+        code_id: 1,
+        name: String::from("Test Coin"),
+        symbol: String::from("TEST"),
+        info: CollectionInfo {
+            creator: "creator".to_string(),
+            description: String::from("Stargaze Monkeys"),
+            image:
+                "ipfs://bafybeigi3bwpvyvsmnbj46ra4hyffcxdeaj6ntfk5jpic5mx27x6ih2qvq/images/1.png"
+                    .to_string(),
+            external_link: Some("https://example.com/external.html".to_string()),
+            royalty_info: Some(RoyaltyInfoResponse {
+                payment_address: "creator".to_string(),
+                share: Decimal::percent(30),
+            }),
+            start_trading_time,
+            explicit_content: None,
+        },
+    }
+}
+
+pub fn _minter_template_30_pct_fee(num_tokens: u32) -> VendingTemplateResponse<MarketAccounts> {
+    let mut app = custom_mock_app();
+    let (owner, bidder, creator) = setup_accounts(&mut app).unwrap();
+    let start_time = Timestamp::from_nanos(GENESIS_MINT_START_TIME);
+    let collection_params = mock_collection_params_30_pct_fee(Some(start_time));
+    let minter_params = minter_params_token(num_tokens);
+    let code_ids = vending_minter_code_ids(&mut app);
+    let minter_collection_response: Vec<MinterCollectionResponse> = configure_minter(
+        &mut app,
+        creator.clone(),
+        vec![collection_params],
+        vec![minter_params],
         code_ids,
     );
     VendingTemplateResponse {
