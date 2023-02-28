@@ -1,5 +1,5 @@
 .PHONY: optimize optimize-arm lint schema dl-launchpad-artifacts dl-marketplace-artifacts
-.PHONY: deploy-local e2e-test e2e-test-full e2e-test-full-arm
+.PHONY: dl-artifacts deploy-local e2e-test e2e-test-full e2e-test-full-arm
 
 TEST_ADDRS ?= $(shell jq -r '.[].address' ./e2e/configs/test_accounts.json | tr '\n' ' ')
 GAS_LIMIT ?= "75000000"
@@ -42,11 +42,11 @@ deploy-local:
 		--mount type=volume,source=stargaze_data,target=/root \
 		publicawesome/stargaze:8.0.0 /data/entry-point.sh $(TEST_ADDRS)
 
-e2e-test-prep: deploy-local dl-launchpad-artifacts dl-marketplace-artifacts
+dl-artifacts: dl-launchpad-artifacts dl-marketplace-artifacts
 
-e2e-test:
+e2e-test: deploy-local
 	RUST_LOG=info CONFIG=configs/cosm-orc.yaml cargo integration-test $(TEST_NAME)
 
-e2e-test-full: e2e-test-prep optimize e2e-test
+e2e-test-full: dl-artifacts optimize e2e-test
 
-e2e-test-full-arm: e2e-test-prep optimize-arm e2e-test
+e2e-test-full-arm: dl-artifacts optimize-arm e2e-test
