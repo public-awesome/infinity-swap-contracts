@@ -852,6 +852,7 @@ dependencies = [
  "cw721-base",
  "env_logger",
  "infinity-pool",
+ "itertools",
  "once_cell",
  "rand",
  "serde",

@@ -29,3 +29,4 @@ cw721-base = { version = "0.16.0", features = ["library"] }
 cw721 = "0.16.0"
 base-minter = { version = "0.21.8"}
 base-factory = { version = "0.21.8"}
+itertools = "0.10.5"
