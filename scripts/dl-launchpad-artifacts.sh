@@ -9,14 +9,14 @@ contracts=(
     "base_factory"
     "base_minter"
     "sg721_base"
-    "sg721_metadata_onchain"
-    "sg721_nt"
-    "sg_eth_airdrop"
-    "sg_splits"
-    "sg_whitelist"
-    "vending_factory"
-    "vending_minter"
-    "whitelist_immutable"
+    # "sg721_metadata_onchain"
+    # "sg721_nt"
+    # "sg_eth_airdrop"
+    # "sg_splits"
+    # "sg_whitelist"
+    # "vending_factory"
+    # "vending_minter"
+    # "whitelist_immutable"
 )
 
 for contract in "${contracts[@]}"; do
