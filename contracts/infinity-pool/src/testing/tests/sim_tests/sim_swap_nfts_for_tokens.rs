@@ -3,11 +3,11 @@ use crate::state::{PoolQuote, PoolType};
 use crate::testing::setup::setup_accounts::setup_second_bidder_account;
 use crate::testing::setup::templates::standard_minter_template;
 use crate::testing::tests::sim_tests::helpers::{
-    check_nft_sale, deposit_nfts_and_tokens, get_sim_swap_nfts_for_tokens_msg, set_pool_active,
-    setup_swap_pool, DepositNftsResult, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup,
+    check_nft_sale, deposit_nfts, deposit_tokens, get_sim_swap_nfts_for_tokens_msg,
+    set_pool_active, setup_swap_pool, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup,
 };
+use cosmwasm_std::StdResult;
 use cosmwasm_std::Uint128;
-use cosmwasm_std::{Addr, StdResult};
 use std::vec;
 
 #[test]
@@ -18,7 +18,6 @@ fn can_swap_two_active_pools() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let minter = vt.collection_response_vec[0].minter.as_ref().unwrap();
     let user2 = setup_second_bidder_account(&mut router).unwrap();
     let creator = vt.accts.creator;
 
@@ -59,19 +58,24 @@ fn can_swap_two_active_pools() {
             infinity_pool.clone(),
         );
 
-        let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+        token_id_1 = deposit_nfts(
             &mut router,
-            spr.user1,
-            2000_u128,
-            Addr::unchecked(minter.to_string()),
-            Addr::unchecked(collection.to_string()),
-            infinity_pool.clone(),
+            spr.user1.clone(),
+            spr.minter.clone(),
+            spr.collection.clone(),
+            spr.infinity_pool.clone(),
             spr.pool.clone(),
-            creator.clone(),
+            spr.creator.clone(),
         )
-        .unwrap();
+        .token_id_1;
 
-        token_id_1 = dnr.token_id_1;
+        let _ = deposit_tokens(
+            &mut router,
+            20500_u128,
+            spr.infinity_pool.clone(),
+            spr.pool.clone(),
+            spr.creator.clone(),
+        );
     }
     let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_nfts_for_tokens_msg(
