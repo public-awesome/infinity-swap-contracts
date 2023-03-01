@@ -326,28 +326,34 @@ impl<'a> SwapProcessor<'a> {
 
         // Get the current pool
         let current = match &self.tx_type {
-            // For buys, the first pool will have the lowest quote
+            // For buys, the first pool will have the lowest quote which is the best quote
             TransactionType::Buy => self.pool_set.first(),
-            // For sells, the last pool will have the highest quote
+            // For sells, the last pool will have the highest quote which is the best quote
             TransactionType::Sell => self.pool_set.last(),
         };
 
         // If the pool is empty, or the front of the pool is the latest fetched, load the next pool
         // Note: if the front of the pool is not the latest fetched, that means the next pool won't have the best price
         if current.is_none() || Some(current.unwrap().pool.id) == self.latest {
-            let (pool_id, pool_quote) = self.pool_quote_iter.as_mut().unwrap().next().unwrap()?;
+            // Try and fetch next pool quote
+            let next_pool_quote = self.pool_quote_iter.as_mut().unwrap().next();
 
-            let pool = pools()
-                .load(storage, pool_id)
-                .map_err(|_| ContractError::InvalidPool("pool does not exist".to_string()))?;
+            // If next pool quote exists fetch and set PoolPair
+            if let Some(_next_pool_quote) = next_pool_quote {
+                let (pool_id, pool_quote) = _next_pool_quote?;
 
-            self.pool_set.insert(PoolPair {
-                // Recently fetched pools do not need saving yet
-                needs_saving: false,
-                quote_price: pool_quote.quote_price,
-                pool,
-            });
-            self.latest = Some(pool_id);
+                let pool = pools()
+                    .load(storage, pool_id)
+                    .map_err(|_| ContractError::InvalidPool("pool does not exist".to_string()))?;
+
+                self.pool_set.insert(PoolPair {
+                    // Recently fetched pools do not need saving yet
+                    needs_saving: false,
+                    quote_price: pool_quote.quote_price,
+                    pool,
+                });
+                self.latest = Some(pool_id);
+            }
         }
 
         Ok(match &self.tx_type {
