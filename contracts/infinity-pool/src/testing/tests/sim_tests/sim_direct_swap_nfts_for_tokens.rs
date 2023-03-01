@@ -5,8 +5,8 @@ use crate::msg::{NftSwap, SwapParams};
 use crate::state::PoolType;
 use crate::testing::setup::templates::{_minter_template_30_pct_fee, standard_minter_template};
 use crate::testing::tests::sim_tests::helpers::{
-    check_nft_sale, deposit_nfts_and_tokens, get_sim_swap_message, set_pool_active,
-    setup_swap_pool, DepositNftsResult, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup,
+    check_nft_sale, deposit_nfts, deposit_nfts_and_tokens, deposit_tokens, get_sim_swap_message,
+    set_pool_active, setup_swap_pool, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup,
 };
 use cosmwasm_std::StdError;
 use cosmwasm_std::StdError::GenericErr;
@@ -31,7 +31,7 @@ fn cant_swap_inactive_pool() {
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
-        pool_type: PoolType::Token,
+        pool_type: PoolType::Trade,
         spot_price,
         finders_fee_bps: None,
     }];
@@ -39,26 +39,28 @@ fn cant_swap_inactive_pool() {
         setup_swap_pool(vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+
+    let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1,
-        1000_u128,
+        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
+        1000_u128,
     )
-    .unwrap();
+    .token_id_1;
+
     set_pool_active(
         &mut router,
         false,
         spr.pool.clone(),
         spr.creator,
-        spr.infinity_pool,
+        spr.infinity_pool.clone(),
     );
-    let swap_msg = get_sim_swap_message(spr.pool, dnr.token_id_1, 1000, true, spr.user2, None);
-    let res: StdResult<SwapResponse> = router.wrap().query_wasm_smart(dnr.infinity_pool, &swap_msg);
+    let swap_msg = get_sim_swap_message(spr.pool, token_id_1, 1000, true, spr.user2, None);
+    let res: StdResult<SwapResponse> = router.wrap().query_wasm_smart(spr.infinity_pool, &swap_msg);
 
     let res = res.unwrap_err();
     assert_eq!(
@@ -101,21 +103,22 @@ fn can_swap_active_pool() {
         spr.infinity_pool.clone(),
     );
 
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+    let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1,
-        2000_u128,
+        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
+        1500_u128,
     )
-    .unwrap();
+    .token_id_1;
+
     let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
-        dnr.token_id_1,
+        token_id_1,
         sale_price,
         true,
         spr.user2.clone(),
@@ -144,7 +147,7 @@ fn can_swap_active_pool() {
         swaps,
         spr.creator,
         spr.user2,
-        dnr.token_id_1.to_string(),
+        token_id_1.to_string(),
     )
 }
 
@@ -171,16 +174,25 @@ fn invalid_nft_pool_can_not_deposit() {
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
-    let dnr = deposit_nfts_and_tokens(
+    let _ = deposit_nfts(
         &mut router,
-        spr.user1,
-        1000_u128,
-        spr.minter,
-        spr.collection,
+        spr.user1.clone(),
+        spr.minter.clone(),
+        spr.collection.clone(),
         spr.infinity_pool.clone(),
         spr.pool.clone(),
+        spr.creator.clone(),
+    )
+    .token_id_1;
+
+    let dnr = deposit_tokens(
+        &mut router,
+        1000_u128,
+        spr.infinity_pool,
+        spr.pool,
         spr.creator,
     );
+
     let error_res = dnr.err().unwrap();
     assert_eq!(
         error_res.root_cause().to_string(),
@@ -210,17 +222,19 @@ fn not_enough_deposit_no_swap() {
         setup_swap_pool(vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+
+    let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1,
-        500_u128,
+        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
+        500_u128,
     )
-    .unwrap();
+    .token_id_1;
+
     set_pool_active(
         &mut router,
         true,
@@ -231,7 +245,7 @@ fn not_enough_deposit_no_swap() {
     let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
-        dnr.token_id_1,
+        token_id_1,
         sale_price,
         false,
         spr.user2.clone(),
@@ -282,7 +296,7 @@ fn not_enough_deposit_no_swap() {
         swaps,
         spr.creator,
         spr.user2,
-        dnr.token_id_1.to_string(),
+        token_id_1.to_string(),
     )
 }
 
@@ -308,25 +322,20 @@ fn invalid_sale_price_below_min_expected() {
         setup_swap_pool(vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+
+    let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1,
-        1000_u128,
+        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
+        1000_u128,
     )
-    .unwrap();
-    let swap_msg = get_sim_swap_message(
-        spr.pool.clone(),
-        dnr.token_id_1,
-        1200,
-        false,
-        spr.user2,
-        None,
-    );
+    .token_id_1;
+
+    let swap_msg = get_sim_swap_message(spr.pool.clone(), token_id_1, 1200, false, spr.user2, None);
 
     set_pool_active(
         &mut router,
@@ -370,28 +379,29 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         setup_swap_pool(vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+
+    let tokens = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1,
-        2000_u128,
+        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
-    )
-    .unwrap();
+        2000_u128,
+    );
+    let (token_id_1, token_id_2) = (tokens.token_id_1, tokens.token_id_2);
     let sale_price_too_high = 1200_u128;
     let sale_price_valid = 900_u128;
     let swap_msg = SimDirectSwapNftsForTokens {
         pool_id: spr.pool.id,
         nfts_to_swap: vec![
             NftSwap {
-                nft_token_id: dnr.token_id_2.to_string(),
+                nft_token_id: token_id_2.to_string(),
                 token_amount: Uint128::new(sale_price_valid),
             },
             NftSwap {
-                nft_token_id: dnr.token_id_1.to_string(),
+                nft_token_id: token_id_1.to_string(),
                 token_amount: Uint128::new(sale_price_too_high), // won't swap bc price too high
             },
         ],
@@ -431,7 +441,7 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         swaps,
         spr.creator,
         spr.user2,
-        dnr.token_id_2.to_string(),
+        token_id_2.to_string(),
     )
 }
 
@@ -459,21 +469,22 @@ fn network_fee_is_applied_correctly() {
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+    let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1,
-        30000_u128,
+        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
+        20500_u128,
     )
-    .unwrap();
+    .token_id_1;
+
     let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
-        dnr.token_id_1,
+        token_id_1,
         sale_price,
         true,
         spr.user2.clone(),
@@ -510,7 +521,7 @@ fn network_fee_is_applied_correctly() {
         swaps,
         spr.creator,
         spr.user2,
-        dnr.token_id_1.to_string(),
+        token_id_1.to_string(),
     )
 }
 
@@ -538,21 +549,22 @@ fn royalty_fee_applied_correctly() {
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+    let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1,
-        25000_u128,
+        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
+        25000_u128,
     )
-    .unwrap();
+    .token_id_1;
+
     let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
-        dnr.token_id_1,
+        token_id_1,
         sale_price,
         true,
         spr.user2.clone(),
@@ -589,7 +601,7 @@ fn royalty_fee_applied_correctly() {
         swaps,
         spr.creator,
         spr.user2,
-        dnr.token_id_1.to_string(),
+        token_id_1.to_string(),
     )
 }
 
@@ -619,21 +631,22 @@ fn finders_fee_is_applied_correctly() {
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+    let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1,
-        25000_u128,
+        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
+        25000_u128,
     )
-    .unwrap();
+    .token_id_1;
+
     let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
-        dnr.token_id_1,
+        token_id_1,
         sale_price,
         true,
         spr.user2.clone(),
@@ -673,6 +686,6 @@ fn finders_fee_is_applied_correctly() {
         swaps,
         spr.creator,
         spr.user2,
-        dnr.token_id_1.to_string(),
+        token_id_1.to_string(),
     )
 }

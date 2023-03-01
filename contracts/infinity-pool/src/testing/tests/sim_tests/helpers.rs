@@ -108,7 +108,6 @@ pub fn setup_swap_pool(
     results
 }
 pub struct DepositNftsResult {
-    pub infinity_pool: Addr,
     pub token_id_1: u32,
     pub token_id_2: u32,
 }
@@ -116,13 +115,38 @@ pub struct DepositNftsResult {
 pub fn deposit_nfts_and_tokens(
     router: &mut StargazeApp,
     user1: Addr,
-    deposit_amount: u128,
     minter: Addr,
     collection: Addr,
     infinity_pool: Addr,
     pool: Pool,
     creator: Addr,
-) -> Result<DepositNftsResult, anyhow::Error> {
+    deposit_amount: u128,
+) -> DepositNftsResult {
+    let tokens = deposit_nfts(
+        router,
+        user1,
+        minter,
+        collection,
+        infinity_pool.clone(),
+        pool.clone(),
+        creator.clone(),
+    );
+    let _ = deposit_tokens(router, deposit_amount, infinity_pool, pool, creator);
+    DepositNftsResult {
+        token_id_1: tokens.token_id_1,
+        token_id_2: tokens.token_id_2,
+    }
+}
+
+pub fn deposit_nfts(
+    router: &mut StargazeApp,
+    user1: Addr,
+    minter: Addr,
+    collection: Addr,
+    infinity_pool: Addr,
+    pool: Pool,
+    creator: Addr,
+) -> DepositNftsResult {
     let token_id_1 = mint(router, &user1, &minter);
     approve(router, &user1, &collection, &infinity_pool, token_id_1);
     let token_id_2 = mint(router, &user1, &minter);
@@ -132,23 +156,33 @@ pub fn deposit_nfts_and_tokens(
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
     println!("res from deposit tokens is {:?}", res);
+
+    DepositNftsResult {
+        token_id_1,
+        token_id_2,
+    }
+}
+
+pub fn deposit_tokens(
+    router: &mut StargazeApp,
+    deposit_amount: u128,
+    infinity_pool: Addr,
+    pool: Pool,
+    creator: Addr,
+) -> Result<(), anyhow::Error> {
     // Owner can deposit tokens
     let deposit_amount_1 = deposit_amount;
     let msg = ExecuteMsg::DepositTokens { pool_id: pool.id };
     let res = router.execute_contract(
         creator,
-        infinity_pool.clone(),
+        infinity_pool,
         &msg,
         &coins(deposit_amount_1, NATIVE_DENOM),
     );
     match res {
-        Ok(_) => Ok(DepositNftsResult {
-            infinity_pool,
-            token_id_1,
-            token_id_2,
-        }),
+        Ok(_) => Ok(()),
         Err(err) => Err(err),
     }
 }
@@ -223,22 +257,19 @@ pub fn check_nft_sale(
     user2: Addr,
     token_id: String,
 ) {
+    println!("full swaps is {:?}", swaps);
     assert_eq!(swaps[0].spot_price.u128(), expected_spot_price);
     let expected_nft_payment = Some(NftPayment {
         nft_token_id: token_id,
         address: ASSET_ACCOUNT.to_string(),
     });
     assert_eq!(swaps[0].nft_payment, expected_nft_payment);
-    let expected_royalty_payment = Some(TokenPayment {
-        amount: Uint128::new(expected_royalty_price),
-        address: creator.to_string(),
-    });
-    assert_eq!(swaps[0].royalty_payment, expected_royalty_payment);
+
     let network_fee = swaps[0].network_fee.u128();
 
     assert_eq!(network_fee, expected_network_fee);
     let mut expected_price = expected_spot_price - network_fee;
-    expected_price -= expected_royalty_payment.unwrap().amount.u128();
+    expected_price -= expected_royalty_price;
     expected_price -= expected_finders_fee;
 
     let expected_seller_payment = Some(TokenPayment {
@@ -246,4 +277,19 @@ pub fn check_nft_sale(
         address: user2.to_string(),
     });
     assert_eq!(swaps[0].seller_payment, expected_seller_payment);
+
+    let expected_finder_payment = match expected_finders_fee {
+        0 => None,
+        _ => Some(TokenPayment {
+            amount: Uint128::from(expected_finders_fee),
+            address: user2.to_string(),
+        }),
+    };
+    assert_eq!(swaps[0].finder_payment, expected_finder_payment);
+
+    let expected_royalty_payment = Some(TokenPayment {
+        amount: Uint128::new(expected_royalty_price),
+        address: creator.to_string(),
+    });
+    assert_eq!(swaps[0].royalty_payment, expected_royalty_payment);
 }
