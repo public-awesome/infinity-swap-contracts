@@ -4,4 +4,627 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 
-import { Addr, ConfigResponse, Config, InstantiateMsg, Uint128, NftSwap, BondingCurve, Decimal, PoolType, PoolInfo, PoolNftSwap, PoolQuoteResponse, PoolQuote, PoolsByIdResponse, Pool, PoolsResponse, QueryOptionsForTupleOfUint128AndUint64, QueryOptionsForUint64, Timestamp, Uint64, SwapParams, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+import { Coin } from "@cosmjs/amino";
+import { MsgExecuteContractEncodeObject } from "cosmwasm";
+import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
+import { toUtf8 } from "@cosmjs/encoding";
+import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, PoolType, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, Decimal, PoolInfo, PoolQuoteResponse, PoolQuote, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+export interface InfinityPoolMessage {
+  contractAddress: string;
+  sender: string;
+  createPool: ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
+    poolType,
+    reinvestNfts,
+    reinvestTokens,
+    spotPrice,
+    swapFeeBps
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    poolType: PoolType;
+    reinvestNfts: boolean;
+    reinvestTokens: boolean;
+    spotPrice: Uint128;
+    swapFeeBps: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  depositTokens: ({
+    poolId
+  }: {
+    poolId: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  depositNfts: ({
+    collection,
+    nftTokenIds,
+    poolId
+  }: {
+    collection: string;
+    nftTokenIds: string[];
+    poolId: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  withdrawTokens: ({
+    amount,
+    assetRecipient,
+    poolId
+  }: {
+    amount: Uint128;
+    assetRecipient?: string;
+    poolId: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  withdrawAllTokens: ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  withdrawNfts: ({
+    assetRecipient,
+    nftTokenIds,
+    poolId
+  }: {
+    assetRecipient?: string;
+    nftTokenIds: string[];
+    poolId: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  withdrawAllNfts: ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  updatePoolConfig: ({
+    assetRecipient,
+    delta,
+    findersFeeBps,
+    poolId,
+    reinvestNfts,
+    reinvestTokens,
+    spotPrice,
+    swapFeeBps
+  }: {
+    assetRecipient?: string;
+    delta?: Uint128;
+    findersFeeBps?: number;
+    poolId: number;
+    reinvestNfts?: boolean;
+    reinvestTokens?: boolean;
+    spotPrice?: Uint128;
+    swapFeeBps?: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  setActivePool: ({
+    isActive,
+    poolId
+  }: {
+    isActive: boolean;
+    poolId: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  removePool: ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  directSwapNftsForTokens: ({
+    finder,
+    nftsToSwap,
+    poolId,
+    swapParams,
+    tokenRecipient
+  }: {
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+    tokenRecipient?: string;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  swapNftsForTokens: ({
+    collection,
+    finder,
+    nftsToSwap,
+    swapParams,
+    tokenRecipient
+  }: {
+    collection: string;
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    swapParams: SwapParams;
+    tokenRecipient?: string;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  directSwapTokensForSpecificNfts: ({
+    finder,
+    nftRecipient,
+    nftsToSwapFor,
+    poolId,
+    swapParams
+  }: {
+    finder?: string;
+    nftRecipient?: string;
+    nftsToSwapFor: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  swapTokensForSpecificNfts: ({
+    collection,
+    finder,
+    nftRecipient,
+    poolNftsToSwapFor,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    nftRecipient?: string;
+    poolNftsToSwapFor: PoolNftSwap[];
+    swapParams: SwapParams;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  swapTokensForAnyNfts: ({
+    collection,
+    finder,
+    maxExpectedTokenInput,
+    nftRecipient,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    maxExpectedTokenInput: Uint128[];
+    nftRecipient?: string;
+    swapParams: SwapParams;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+}
+export class InfinityPoolMessageComposer implements InfinityPoolMessage {
+  sender: string;
+  contractAddress: string;
+
+  constructor(sender: string, contractAddress: string) {
+    this.sender = sender;
+    this.contractAddress = contractAddress;
+    this.createPool = this.createPool.bind(this);
+    this.depositTokens = this.depositTokens.bind(this);
+    this.depositNfts = this.depositNfts.bind(this);
+    this.withdrawTokens = this.withdrawTokens.bind(this);
+    this.withdrawAllTokens = this.withdrawAllTokens.bind(this);
+    this.withdrawNfts = this.withdrawNfts.bind(this);
+    this.withdrawAllNfts = this.withdrawAllNfts.bind(this);
+    this.updatePoolConfig = this.updatePoolConfig.bind(this);
+    this.setActivePool = this.setActivePool.bind(this);
+    this.removePool = this.removePool.bind(this);
+    this.directSwapNftsForTokens = this.directSwapNftsForTokens.bind(this);
+    this.swapNftsForTokens = this.swapNftsForTokens.bind(this);
+    this.directSwapTokensForSpecificNfts = this.directSwapTokensForSpecificNfts.bind(this);
+    this.swapTokensForSpecificNfts = this.swapTokensForSpecificNfts.bind(this);
+    this.swapTokensForAnyNfts = this.swapTokensForAnyNfts.bind(this);
+  }
+
+  createPool = ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
+    poolType,
+    reinvestNfts,
+    reinvestTokens,
+    spotPrice,
+    swapFeeBps
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    poolType: PoolType;
+    reinvestNfts: boolean;
+    reinvestTokens: boolean;
+    spotPrice: Uint128;
+    swapFeeBps: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          create_pool: {
+            asset_recipient: assetRecipient,
+            bonding_curve: bondingCurve,
+            collection,
+            delta,
+            finders_fee_bps: findersFeeBps,
+            pool_type: poolType,
+            reinvest_nfts: reinvestNfts,
+            reinvest_tokens: reinvestTokens,
+            spot_price: spotPrice,
+            swap_fee_bps: swapFeeBps
+          }
+        })),
+        funds
+      })
+    };
+  };
+  depositTokens = ({
+    poolId
+  }: {
+    poolId: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          deposit_tokens: {
+            pool_id: poolId
+          }
+        })),
+        funds
+      })
+    };
+  };
+  depositNfts = ({
+    collection,
+    nftTokenIds,
+    poolId
+  }: {
+    collection: string;
+    nftTokenIds: string[];
+    poolId: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          deposit_nfts: {
+            collection,
+            nft_token_ids: nftTokenIds,
+            pool_id: poolId
+          }
+        })),
+        funds
+      })
+    };
+  };
+  withdrawTokens = ({
+    amount,
+    assetRecipient,
+    poolId
+  }: {
+    amount: Uint128;
+    assetRecipient?: string;
+    poolId: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          withdraw_tokens: {
+            amount,
+            asset_recipient: assetRecipient,
+            pool_id: poolId
+          }
+        })),
+        funds
+      })
+    };
+  };
+  withdrawAllTokens = ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          withdraw_all_tokens: {
+            asset_recipient: assetRecipient,
+            pool_id: poolId
+          }
+        })),
+        funds
+      })
+    };
+  };
+  withdrawNfts = ({
+    assetRecipient,
+    nftTokenIds,
+    poolId
+  }: {
+    assetRecipient?: string;
+    nftTokenIds: string[];
+    poolId: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          withdraw_nfts: {
+            asset_recipient: assetRecipient,
+            nft_token_ids: nftTokenIds,
+            pool_id: poolId
+          }
+        })),
+        funds
+      })
+    };
+  };
+  withdrawAllNfts = ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          withdraw_all_nfts: {
+            asset_recipient: assetRecipient,
+            pool_id: poolId
+          }
+        })),
+        funds
+      })
+    };
+  };
+  updatePoolConfig = ({
+    assetRecipient,
+    delta,
+    findersFeeBps,
+    poolId,
+    reinvestNfts,
+    reinvestTokens,
+    spotPrice,
+    swapFeeBps
+  }: {
+    assetRecipient?: string;
+    delta?: Uint128;
+    findersFeeBps?: number;
+    poolId: number;
+    reinvestNfts?: boolean;
+    reinvestTokens?: boolean;
+    spotPrice?: Uint128;
+    swapFeeBps?: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          update_pool_config: {
+            asset_recipient: assetRecipient,
+            delta,
+            finders_fee_bps: findersFeeBps,
+            pool_id: poolId,
+            reinvest_nfts: reinvestNfts,
+            reinvest_tokens: reinvestTokens,
+            spot_price: spotPrice,
+            swap_fee_bps: swapFeeBps
+          }
+        })),
+        funds
+      })
+    };
+  };
+  setActivePool = ({
+    isActive,
+    poolId
+  }: {
+    isActive: boolean;
+    poolId: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          set_active_pool: {
+            is_active: isActive,
+            pool_id: poolId
+          }
+        })),
+        funds
+      })
+    };
+  };
+  removePool = ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          remove_pool: {
+            asset_recipient: assetRecipient,
+            pool_id: poolId
+          }
+        })),
+        funds
+      })
+    };
+  };
+  directSwapNftsForTokens = ({
+    finder,
+    nftsToSwap,
+    poolId,
+    swapParams,
+    tokenRecipient
+  }: {
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+    tokenRecipient?: string;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          direct_swap_nfts_for_tokens: {
+            finder,
+            nfts_to_swap: nftsToSwap,
+            pool_id: poolId,
+            swap_params: swapParams,
+            token_recipient: tokenRecipient
+          }
+        })),
+        funds
+      })
+    };
+  };
+  swapNftsForTokens = ({
+    collection,
+    finder,
+    nftsToSwap,
+    swapParams,
+    tokenRecipient
+  }: {
+    collection: string;
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    swapParams: SwapParams;
+    tokenRecipient?: string;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          swap_nfts_for_tokens: {
+            collection,
+            finder,
+            nfts_to_swap: nftsToSwap,
+            swap_params: swapParams,
+            token_recipient: tokenRecipient
+          }
+        })),
+        funds
+      })
+    };
+  };
+  directSwapTokensForSpecificNfts = ({
+    finder,
+    nftRecipient,
+    nftsToSwapFor,
+    poolId,
+    swapParams
+  }: {
+    finder?: string;
+    nftRecipient?: string;
+    nftsToSwapFor: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          direct_swap_tokens_for_specific_nfts: {
+            finder,
+            nft_recipient: nftRecipient,
+            nfts_to_swap_for: nftsToSwapFor,
+            pool_id: poolId,
+            swap_params: swapParams
+          }
+        })),
+        funds
+      })
+    };
+  };
+  swapTokensForSpecificNfts = ({
+    collection,
+    finder,
+    nftRecipient,
+    poolNftsToSwapFor,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    nftRecipient?: string;
+    poolNftsToSwapFor: PoolNftSwap[];
+    swapParams: SwapParams;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          swap_tokens_for_specific_nfts: {
+            collection,
+            finder,
+            nft_recipient: nftRecipient,
+            pool_nfts_to_swap_for: poolNftsToSwapFor,
+            swap_params: swapParams
+          }
+        })),
+        funds
+      })
+    };
+  };
+  swapTokensForAnyNfts = ({
+    collection,
+    finder,
+    maxExpectedTokenInput,
+    nftRecipient,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    maxExpectedTokenInput: Uint128[];
+    nftRecipient?: string;
+    swapParams: SwapParams;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          swap_tokens_for_any_nfts: {
+            collection,
+            finder,
+            max_expected_token_input: maxExpectedTokenInput,
+            nft_recipient: nftRecipient,
+            swap_params: swapParams
+          }
+        })),
+        funds
+      })
+    };
+  };
+}
