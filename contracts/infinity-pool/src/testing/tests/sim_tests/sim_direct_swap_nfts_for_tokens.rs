@@ -314,7 +314,7 @@ fn invalid_sale_price_below_min_expected() {
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
-        pool_type: PoolType::Token,
+        pool_type: PoolType::Trade,
         spot_price,
         finders_fee_bps: None,
     }];
@@ -331,7 +331,7 @@ fn invalid_sale_price_below_min_expected() {
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
-        1000_u128,
+        1400_u128,
     )
     .token_id_1;
 
