@@ -9,7 +9,6 @@ use crate::state::PoolType;
 use crate::swap_processor::{NftPayment, Swap, TokenPayment};
 use crate::testing::helpers::nft_functions::{approve, mint};
 use crate::testing::helpers::pool_functions::create_pool;
-use crate::testing::setup::msg::MarketAccounts;
 use crate::testing::setup::setup_accounts::setup_second_bidder_account;
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
 use crate::testing::setup::setup_marketplace::setup_marketplace_trading_fee;
@@ -18,13 +17,11 @@ use cosmwasm_std::{coins, Addr, Uint128};
 use cw_multi_test::Executor;
 use sg_multi_test::StargazeApp;
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
-use test_suite::common_setup::msg::VendingTemplateResponse;
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
 const ASSET_ACCOUNT: &str = "asset";
 
 pub struct SwapPoolResult {
-    pub router: StargazeApp,
     pub user1: Addr,
     pub user2: Addr,
     pub creator: Addr,
@@ -34,61 +31,79 @@ pub struct SwapPoolResult {
     pub pool: Pool,
 }
 
+pub struct SwapPoolSetup {
+    pub pool_type: PoolType,
+    pub spot_price: u128,
+    pub finders_fee_bps: Option<u64>,
+}
+
+pub struct VendingTemplateSetup<'a> {
+    pub router: &'a mut StargazeApp,
+    pub minter: &'a Addr,
+    pub collection: &'a Addr,
+    pub creator: Addr,
+    pub user1: Addr,
+}
+
 pub fn setup_swap_pool(
-    vt: VendingTemplateResponse<MarketAccounts>,
-    pool_type: PoolType,
-    spot_price: u128,
+    vts: VendingTemplateSetup,
+    swap_pool_configs: Vec<SwapPoolSetup>,
     trading_fee: Option<u64>,
-    finders_fee_bps: Option<u64>,
-) -> Result<SwapPoolResult, anyhow::Error> {
-    let (mut router, minter, creator, user1) = (
-        vt.router,
-        vt.collection_response_vec[0].minter.as_ref().unwrap(),
-        vt.accts.creator,
-        vt.accts.bidder,
-    );
+) -> Vec<Result<SwapPoolResult, anyhow::Error>> {
+    let (router, minter, creator, user1) = (vts.router, vts.minter, vts.creator, vts.user1);
     let minter = minter.to_owned();
-    let collection = vt.collection_response_vec[0].collection.clone().unwrap();
+    let collection = vts.collection;
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_second_bidder_account(router).unwrap();
 
-    let marketplace =
-        setup_marketplace_trading_fee(&mut router, creator.clone(), trading_fee).unwrap();
-    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
+    let marketplace = setup_marketplace_trading_fee(router, creator.clone(), trading_fee).unwrap();
 
-    setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
-    // Can create a Linear Nft Pool
-    let pool_result = create_pool(
-        &mut router,
-        infinity_pool.clone(),
-        creator.clone(),
-        ExecuteMsg::CreatePool {
-            collection: collection.to_string(),
-            asset_recipient: Some(asset_account.to_string()),
-            pool_type,
-            bonding_curve: BondingCurve::Linear,
-            spot_price: Uint128::from(spot_price),
-            delta: Uint128::from(100u64),
-            finders_fee_bps: finders_fee_bps.unwrap_or(0),
-            swap_fee_bps: 0,
-            reinvest_tokens: false,
-            reinvest_nfts: false,
-        },
-    );
+    setup_block_time(router, GENESIS_MINT_START_TIME, None);
+    let infinity_pool = setup_infinity_pool(router, creator.clone(), marketplace).unwrap();
 
-    match pool_result {
-        Ok(result) => Ok(SwapPoolResult {
+    let mut results: Vec<Result<SwapPoolResult, anyhow::Error>> = vec![];
+
+    for swap_pool_config in swap_pool_configs {
+        let infinity_pool = infinity_pool.clone();
+        let creator = creator.clone();
+        let user1 = user1.clone();
+        let user2 = user2.clone();
+        let minter = minter.clone();
+        let collection = collection.clone();
+
+        // Can create a Linear Nft Pool
+        let pool_result = create_pool(
             router,
-            user1,
-            user2,
-            creator,
-            minter,
-            collection,
-            infinity_pool,
-            pool: result,
-        }),
-        Err(err) => Err(err),
+            infinity_pool.clone(),
+            creator.clone(),
+            ExecuteMsg::CreatePool {
+                collection: collection.to_string(),
+                asset_recipient: Some(asset_account.to_string()),
+                pool_type: swap_pool_config.pool_type,
+                bonding_curve: BondingCurve::Linear,
+                spot_price: Uint128::from(swap_pool_config.spot_price),
+                delta: Uint128::from(100u64),
+                finders_fee_bps: swap_pool_config.finders_fee_bps.unwrap_or(0),
+                swap_fee_bps: 0,
+                reinvest_tokens: false,
+                reinvest_nfts: false,
+            },
+        );
+        let result = match pool_result {
+            Ok(result) => Ok(SwapPoolResult {
+                user1,
+                user2,
+                creator,
+                minter,
+                collection,
+                infinity_pool,
+                pool: result,
+            }),
+            Err(err) => Err(err),
+        };
+        results.push(result);
     }
+    results
 }
 pub struct DepositNftsResult {
     pub infinity_pool: Addr,

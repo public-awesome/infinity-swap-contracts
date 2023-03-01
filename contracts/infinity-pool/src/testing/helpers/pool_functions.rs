@@ -13,6 +13,7 @@ pub fn create_pool(
     msg: ExecuteMsg,
 ) -> Result<Pool, Error> {
     let res = router.execute_contract(creator, infinity_pool.clone(), &msg, &[]);
+    println!("res is {:?}", res);
     assert!(res.is_ok());
     let pool_id = res.unwrap().events[1].attributes[1]
         .value
