@@ -24,7 +24,7 @@ pub struct PoolPair {
 
 impl Ord for PoolPair {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.quote_price.cmp(&other.quote_price)
+        (self.quote_price, self.pool.id).cmp(&(other.quote_price, other.pool.id))
     }
 }
 
@@ -36,7 +36,7 @@ impl PartialOrd for PoolPair {
 
 impl PartialEq for PoolPair {
     fn eq(&self, other: &Self) -> bool {
-        self.quote_price == other.quote_price
+        (self.quote_price, self.pool.id) == (other.quote_price, other.pool.id)
     }
 }
 
