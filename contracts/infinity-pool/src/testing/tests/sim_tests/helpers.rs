@@ -1,6 +1,7 @@
 use std::vec;
 
 use crate::msg::QueryMsg::SimDirectSwapNftsForTokens;
+use crate::msg::QueryMsg::SimSwapNftsForTokens;
 use crate::msg::{self, ExecuteMsg};
 use crate::msg::{NftSwap, SwapParams};
 use crate::state::BondingCurve;
@@ -9,7 +10,6 @@ use crate::state::PoolType;
 use crate::swap_processor::{NftPayment, Swap, TokenPayment};
 use crate::testing::helpers::nft_functions::{approve, mint};
 use crate::testing::helpers::pool_functions::create_pool;
-use crate::testing::setup::setup_accounts::setup_second_bidder_account;
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
 use crate::testing::setup::setup_marketplace::setup_marketplace_trading_fee;
 use cosmwasm_std::Timestamp;
@@ -43,6 +43,7 @@ pub struct VendingTemplateSetup<'a> {
     pub collection: &'a Addr,
     pub creator: Addr,
     pub user1: Addr,
+    pub user2: Addr,
 }
 
 pub fn setup_swap_pool(
@@ -50,11 +51,12 @@ pub fn setup_swap_pool(
     swap_pool_configs: Vec<SwapPoolSetup>,
     trading_fee: Option<u64>,
 ) -> Vec<Result<SwapPoolResult, anyhow::Error>> {
-    let (router, minter, creator, user1) = (vts.router, vts.minter, vts.creator, vts.user1);
+    let (router, minter, creator, user1, user2) =
+        (vts.router, vts.minter, vts.creator, vts.user1, vts.user2);
     let minter = minter.to_owned();
+
     let collection = vts.collection;
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
-    let user2 = setup_second_bidder_account(router).unwrap();
 
     let marketplace = setup_marketplace_trading_fee(router, creator.clone(), trading_fee).unwrap();
 
@@ -130,8 +132,8 @@ pub fn deposit_nfts_and_tokens(
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };
-    let _ = router.execute_contract(user1.clone(), infinity_pool.clone(), &msg, &[]);
-
+    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    println!("res from deposit tokens is {:?}", res);
     // Owner can deposit tokens
     let deposit_amount_1 = deposit_amount;
     let msg = ExecuteMsg::DepositTokens { pool_id: pool.id };
@@ -174,6 +176,29 @@ pub fn get_sim_swap_message(
     }
 }
 
+pub fn get_sim_swap_nfts_for_tokens_msg(
+    collection: &Addr,
+    token_id_1: u32,
+    token_amount: u128,
+    robust: bool,
+    user2: Addr,
+    finder: Option<String>,
+) -> msg::QueryMsg {
+    SimSwapNftsForTokens {
+        collection: collection.to_string(),
+        nfts_to_swap: vec![NftSwap {
+            nft_token_id: token_id_1.to_string(),
+            token_amount: Uint128::new(token_amount),
+        }],
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust,
+        },
+        token_recipient: user2.to_string(),
+        finder,
+    }
+}
+
 pub fn set_pool_active(
     router: &mut StargazeApp,
     is_active: bool,
@@ -194,15 +219,11 @@ pub fn check_nft_sale(
     expected_network_fee: u128,
     expected_finders_fee: u128,
     swaps: Vec<Swap>,
-    pool: Pool,
     creator: Addr,
     user2: Addr,
     token_id: String,
 ) {
-    assert_eq!(swaps[0].pool_id, pool.id);
     assert_eq!(swaps[0].spot_price.u128(), expected_spot_price);
-    println!("swaps is {:?}", swaps);
-
     let expected_nft_payment = Some(NftPayment {
         nft_token_id: token_id,
         address: ASSET_ACCOUNT.to_string(),
@@ -214,24 +235,15 @@ pub fn check_nft_sale(
     });
     assert_eq!(swaps[0].royalty_payment, expected_royalty_payment);
     let network_fee = swaps[0].network_fee.u128();
-    println!(
-        "network fee: {:?} expected_network_fee: {}",
-        network_fee, expected_network_fee
-    );
+
     assert_eq!(network_fee, expected_network_fee);
     let mut expected_price = expected_spot_price - network_fee;
     expected_price -= expected_royalty_payment.unwrap().amount.u128();
-    println!(
-        "expected price {:?} expected finders fee {:?}",
-        expected_price, expected_finders_fee
-    );
     expected_price -= expected_finders_fee;
 
     let expected_seller_payment = Some(TokenPayment {
         amount: Uint128::new(expected_price),
         address: user2.to_string(),
     });
-    println!("expected seller payment {:?}", expected_seller_payment);
-    println!("actual seller payment {:?}", swaps[0].seller_payment);
     assert_eq!(swaps[0].seller_payment, expected_seller_payment);
 }

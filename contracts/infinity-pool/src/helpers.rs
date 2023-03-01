@@ -88,7 +88,6 @@ pub fn update_sell_pool_quotes(
         return Ok(());
     }
     let sell_pool_quote = pool.get_sell_quote()?;
-
     // If the pool quote is less than the minimum price, remove it from the index
     if sell_pool_quote.is_none() || sell_pool_quote.unwrap() < min_price {
         sell_pool_quotes().remove(store, pool.id)?;

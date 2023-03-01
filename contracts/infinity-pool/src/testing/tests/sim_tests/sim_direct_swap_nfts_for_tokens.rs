@@ -1,5 +1,3 @@
-use std::vec;
-
 use crate::msg::ExecuteMsg;
 use crate::msg::QueryMsg::SimDirectSwapNftsForTokens;
 use crate::msg::SwapResponse;
@@ -17,6 +15,7 @@ use cosmwasm_std::Timestamp;
 use cosmwasm_std::{coins, Uint128};
 use cw_multi_test::Executor;
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
+use std::vec;
 
 #[test]
 fn cant_swap_inactive_pool() {
@@ -28,6 +27,7 @@ fn cant_swap_inactive_pool() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
@@ -80,10 +80,11 @@ fn can_swap_active_pool() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
-        pool_type: PoolType::Token,
+        pool_type: PoolType::Trade,
         spot_price,
         finders_fee_bps: None,
     }];
@@ -91,26 +92,6 @@ fn can_swap_active_pool() {
         setup_swap_pool(vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
-    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
-        &mut router,
-        spr.user1,
-        1000_u128,
-        spr.minter,
-        spr.collection,
-        spr.infinity_pool.clone(),
-        spr.pool.clone(),
-        spr.creator.clone(),
-    )
-    .unwrap();
-    let (sale_price, royalty_price) = (1000_u128, 100_u128);
-    let swap_msg = get_sim_swap_message(
-        spr.pool.clone(),
-        dnr.token_id_1,
-        sale_price,
-        true,
-        spr.user2.clone(),
-        None,
-    );
 
     set_pool_active(
         &mut router,
@@ -120,22 +101,47 @@ fn can_swap_active_pool() {
         spr.infinity_pool.clone(),
     );
 
+    let dnr: DepositNftsResult = deposit_nfts_and_tokens(
+        &mut router,
+        spr.user1,
+        2000_u128,
+        spr.minter,
+        spr.collection,
+        spr.infinity_pool.clone(),
+        spr.pool.clone(),
+        spr.creator.clone(),
+    )
+    .unwrap();
+    let sale_price = 1000_u128;
+    let swap_msg = get_sim_swap_message(
+        spr.pool.clone(),
+        dnr.token_id_1,
+        sale_price,
+        true,
+        spr.user2.clone(),
+        None,
+    );
+
     let res: StdResult<SwapResponse> = router
         .wrap()
         .query_wasm_smart(spr.infinity_pool.clone(), &swap_msg);
     assert!(res.is_ok());
     let swaps = res.unwrap().swaps;
-    let expected_network_fee = Uint128::from(spot_price)
+    let swap_price_plus_delta = spot_price + 100;
+    let expected_royalty_fee = Uint128::from(swap_price_plus_delta)
+        .checked_multiply_ratio(10_u128, 100_u128)
+        .unwrap()
+        .u128();
+    let expected_network_fee = Uint128::from(spot_price + 100)
         .checked_multiply_ratio(2_u128, 100_u128)
         .unwrap()
         .u128();
     check_nft_sale(
-        spot_price,
-        royalty_price,
+        spot_price + 100,
+        expected_royalty_fee,
         expected_network_fee,
         0,
         swaps,
-        spr.pool,
         spr.creator,
         spr.user2,
         dnr.token_id_1.to_string(),
@@ -152,6 +158,7 @@ fn invalid_nft_pool_can_not_deposit() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
@@ -191,10 +198,11 @@ fn not_enough_deposit_no_swap() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
-        pool_type: PoolType::Token,
+        pool_type: PoolType::Trade,
         spot_price,
         finders_fee_bps: None,
     }];
@@ -220,7 +228,7 @@ fn not_enough_deposit_no_swap() {
         spr.creator.clone(),
         spr.infinity_pool.clone(),
     );
-    let (sale_price, royalty_price) = (1000_u128, 100_u128);
+    let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
         dnr.token_id_1,
@@ -257,17 +265,21 @@ fn not_enough_deposit_no_swap() {
         .wrap()
         .query_wasm_smart(spr.infinity_pool.clone(), &swap_msg);
     let swaps = res.unwrap().swaps;
-    let expected_network_fee = Uint128::from(spot_price)
+    let spot_price_plus_delta = spot_price + 100;
+    let expected_royalty_fee = Uint128::from(spot_price_plus_delta)
+        .checked_multiply_ratio(10_u128, 100_u128)
+        .unwrap()
+        .u128();
+    let expected_network_fee = Uint128::from(spot_price_plus_delta)
         .checked_multiply_ratio(2_u128, 100_u128)
         .unwrap()
         .u128();
     check_nft_sale(
-        spot_price,
-        royalty_price,
+        spot_price_plus_delta,
+        expected_royalty_fee,
         expected_network_fee,
         0,
         swaps,
-        spr.pool,
         spr.creator,
         spr.user2,
         dnr.token_id_1.to_string(),
@@ -284,6 +296,7 @@ fn invalid_sale_price_below_min_expected() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
@@ -345,10 +358,11 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
-        pool_type: PoolType::Token,
+        pool_type: PoolType::Trade,
         spot_price,
         finders_fee_bps: None,
     }];
@@ -368,7 +382,6 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
     )
     .unwrap();
     let sale_price_too_high = 1200_u128;
-    let royalty_price = 100_u128;
     let sale_price_valid = 900_u128;
     let swap_msg = SimDirectSwapNftsForTokens {
         pool_id: spr.pool.id,
@@ -401,17 +414,21 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
     let res: StdResult<SwapResponse> = router.wrap().query_wasm_smart(spr.infinity_pool, &swap_msg);
     assert!(res.is_ok());
     let swaps = res.unwrap().swaps;
-    let expected_network_fee = Uint128::from(spot_price)
+    let spot_price_plus_delta = spot_price + 100_u128;
+    let expected_royalty_fee = Uint128::from(spot_price_plus_delta)
+        .checked_multiply_ratio(10_u128, 100_u128)
+        .unwrap()
+        .u128();
+    let expected_network_fee = Uint128::from(spot_price_plus_delta)
         .checked_multiply_ratio(2_u128, 100_u128)
         .unwrap()
         .u128();
     check_nft_sale(
-        spot_price,
-        royalty_price,
+        spot_price_plus_delta,
+        expected_royalty_fee,
         expected_network_fee,
         0,
         swaps,
-        spr.pool,
         spr.creator,
         spr.user2,
         dnr.token_id_2.to_string(),
@@ -429,10 +446,11 @@ fn network_fee_is_applied_correctly() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
-        pool_type: PoolType::Token,
+        pool_type: PoolType::Trade,
         spot_price,
         finders_fee_bps: None,
     }];
@@ -444,7 +462,7 @@ fn network_fee_is_applied_correctly() {
     let dnr: DepositNftsResult = deposit_nfts_and_tokens(
         &mut router,
         spr.user1,
-        20000_u128,
+        30000_u128,
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -452,7 +470,7 @@ fn network_fee_is_applied_correctly() {
         spr.creator.clone(),
     )
     .unwrap();
-    let (sale_price, royalty_price) = (1000_u128, 2000_u128);
+    let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
         dnr.token_id_1,
@@ -475,17 +493,21 @@ fn network_fee_is_applied_correctly() {
         .query_wasm_smart(spr.infinity_pool.clone(), &swap_msg);
     assert!(res.is_ok());
     let swaps = res.unwrap().swaps;
-    let expected_network_fee = Uint128::from(spot_price)
+    let spot_price_plus_delta = spot_price + 100_u128;
+    let expected_network_fee = Uint128::from(spot_price_plus_delta)
         .checked_multiply_ratio(5_u128, 100_u128)
         .unwrap()
         .u128();
+    let expected_royalty_fee = Uint128::from(spot_price_plus_delta)
+        .checked_multiply_ratio(10_u128, 100_u128)
+        .unwrap()
+        .u128();
     check_nft_sale(
-        spot_price,
-        royalty_price,
+        spot_price_plus_delta,
+        expected_royalty_fee,
         expected_network_fee,
         0,
         swaps,
-        spr.pool,
         spr.creator,
         spr.user2,
         dnr.token_id_1.to_string(),
@@ -503,10 +525,11 @@ fn royalty_fee_applied_correctly() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
-        pool_type: PoolType::Token,
+        pool_type: PoolType::Trade,
         spot_price,
         finders_fee_bps: None,
     }];
@@ -518,7 +541,7 @@ fn royalty_fee_applied_correctly() {
     let dnr: DepositNftsResult = deposit_nfts_and_tokens(
         &mut router,
         spr.user1,
-        20000_u128,
+        25000_u128,
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -526,7 +549,7 @@ fn royalty_fee_applied_correctly() {
         spr.creator.clone(),
     )
     .unwrap();
-    let (sale_price, royalty_price) = (1000_u128, 6000_u128);
+    let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
         dnr.token_id_1,
@@ -549,17 +572,21 @@ fn royalty_fee_applied_correctly() {
         .query_wasm_smart(spr.infinity_pool.clone(), &swap_msg);
     assert!(res.is_ok());
     let swaps = res.unwrap().swaps;
-    let expected_network_fee = Uint128::from(spot_price)
+    let spot_price_plus_delta = spot_price + 100;
+    let expected_network_fee = Uint128::from(spot_price_plus_delta)
         .checked_multiply_ratio(2_u128, 100_u128)
         .unwrap()
         .u128();
+    let expected_royalty_fee = Uint128::from(spot_price_plus_delta)
+        .checked_multiply_ratio(30_u128, 100_u128)
+        .unwrap()
+        .u128();
     check_nft_sale(
-        spot_price,
-        royalty_price,
+        spot_price_plus_delta,
+        expected_royalty_fee,
         expected_network_fee,
         0,
         swaps,
-        spr.pool,
         spr.creator,
         spr.user2,
         dnr.token_id_1.to_string(),
@@ -570,9 +597,7 @@ fn royalty_fee_applied_correctly() {
 fn finders_fee_is_applied_correctly() {
     let finders_fee_bps = 2_u128;
     let spot_price = 20000_u128;
-    let expected_finders_fee = Uint128::from(spot_price)
-        .checked_multiply_ratio(finders_fee_bps, Uint128::new(100).u128())
-        .unwrap();
+
     let vt = standard_minter_template(5000);
 
     let mut router = vt.router;
@@ -581,10 +606,11 @@ fn finders_fee_is_applied_correctly() {
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
+        user2: vt.accts.owner,
         collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
     };
     let swap_pool_configs = vec![SwapPoolSetup {
-        pool_type: PoolType::Token,
+        pool_type: PoolType::Trade,
         spot_price,
         finders_fee_bps: Some(finders_fee_bps.try_into().unwrap()),
     }];
@@ -596,7 +622,7 @@ fn finders_fee_is_applied_correctly() {
     let dnr: DepositNftsResult = deposit_nfts_and_tokens(
         &mut router,
         spr.user1,
-        20000_u128,
+        25000_u128,
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -604,7 +630,7 @@ fn finders_fee_is_applied_correctly() {
         spr.creator.clone(),
     )
     .unwrap();
-    let (sale_price, royalty_price) = (1000_u128, 2000_u128);
+    let sale_price = 1000_u128;
     let swap_msg = get_sim_swap_message(
         spr.pool.clone(),
         dnr.token_id_1,
@@ -627,17 +653,24 @@ fn finders_fee_is_applied_correctly() {
         .query_wasm_smart(spr.infinity_pool.clone(), &swap_msg);
     assert!(res.is_ok());
     let swaps = res.unwrap().swaps;
-    let expected_network_fee = Uint128::from(spot_price)
+    let spot_price_plus_delta = spot_price + 100;
+    let expected_network_fee = Uint128::from(spot_price_plus_delta)
         .checked_multiply_ratio(2_u128, 100_u128)
         .unwrap()
         .u128();
+    let expected_royalty_fee = Uint128::from(spot_price_plus_delta)
+        .checked_multiply_ratio(10_u128, 100_u128)
+        .unwrap()
+        .u128();
+    let expected_finders_fee = Uint128::from(spot_price_plus_delta)
+        .checked_multiply_ratio(finders_fee_bps, Uint128::new(100).u128())
+        .unwrap();
     check_nft_sale(
-        spot_price,
-        royalty_price,
+        spot_price_plus_delta,
+        expected_royalty_fee,
         expected_network_fee,
         expected_finders_fee.u128(),
         swaps,
-        spr.pool,
         spr.creator,
         spr.user2,
         dnr.token_id_1.to_string(),
