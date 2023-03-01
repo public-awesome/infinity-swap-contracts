@@ -4,4 +4,813 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 
-import { Addr, ConfigResponse, Config, InstantiateMsg, Uint128, NftSwap, BondingCurve, Decimal, PoolType, PoolInfo, PoolNftSwap, PoolQuoteResponse, PoolQuote, PoolsByIdResponse, Pool, PoolsResponse, QueryOptionsForTupleOfUint128AndUint64, QueryOptionsForUint64, Timestamp, Uint64, SwapParams, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
+import { Coin, StdFee } from "@cosmjs/amino";
+import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, PoolType, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, Decimal, PoolInfo, PoolQuoteResponse, PoolQuote, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+export interface InfinityPoolReadOnlyInterface {
+  contractAddress: string;
+  config: () => Promise<ConfigResponse>;
+  pools: ({
+    queryOptions
+  }: {
+    queryOptions: QueryOptions_for_uint64;
+  }) => Promise<PoolsResponse>;
+  poolsById: ({
+    poolIds
+  }: {
+    poolIds: number[];
+  }) => Promise<PoolsByIdResponse>;
+  poolsByOwner: ({
+    owner,
+    queryOptions
+  }: {
+    owner: string;
+    queryOptions: QueryOptions_for_uint64;
+  }) => Promise<PoolsByOwnerResponse>;
+  poolQuotesBuy: ({
+    collection,
+    queryOptions
+  }: {
+    collection: string;
+    queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
+  }) => Promise<PoolQuotesBuyResponse>;
+  poolQuotesSell: ({
+    collection,
+    queryOptions
+  }: {
+    collection: string;
+    queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
+  }) => Promise<PoolQuotesSellResponse>;
+  simDirectSwapNftsForTokens: ({
+    finder,
+    nftsToSwap,
+    poolId,
+    swapParams,
+    tokenRecipient
+  }: {
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+    tokenRecipient: string;
+  }) => Promise<SimDirectSwapNftsForTokensResponse>;
+  simSwapNftsForTokens: ({
+    collection,
+    finder,
+    nftsToSwap,
+    swapParams,
+    tokenRecipient
+  }: {
+    collection: string;
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    swapParams: SwapParams;
+    tokenRecipient: string;
+  }) => Promise<SimSwapNftsForTokensResponse>;
+  simDirectSwapTokensforSpecificNfts: ({
+    finder,
+    nftRecipient,
+    nftsToSwapFor,
+    poolId,
+    swapParams
+  }: {
+    finder?: string;
+    nftRecipient: string;
+    nftsToSwapFor: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+  }) => Promise<SimDirectSwapTokensforSpecificNftsResponse>;
+  simSwapTokensForSpecificNfts: ({
+    collection,
+    finder,
+    nftRecipient,
+    poolNftsToSwapFor,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    nftRecipient: string;
+    poolNftsToSwapFor: PoolNftSwap[];
+    swapParams: SwapParams;
+  }) => Promise<SimSwapTokensForSpecificNftsResponse>;
+  simSwapTokensForAnyNfts: ({
+    collection,
+    finder,
+    maxExpectedTokenInput,
+    nftRecipient,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    maxExpectedTokenInput: Uint128[];
+    nftRecipient: string;
+    swapParams: SwapParams;
+  }) => Promise<SimSwapTokensForAnyNftsResponse>;
+}
+export class InfinityPoolQueryClient implements InfinityPoolReadOnlyInterface {
+  client: CosmWasmClient;
+  contractAddress: string;
+
+  constructor(client: CosmWasmClient, contractAddress: string) {
+    this.client = client;
+    this.contractAddress = contractAddress;
+    this.config = this.config.bind(this);
+    this.pools = this.pools.bind(this);
+    this.poolsById = this.poolsById.bind(this);
+    this.poolsByOwner = this.poolsByOwner.bind(this);
+    this.poolQuotesBuy = this.poolQuotesBuy.bind(this);
+    this.poolQuotesSell = this.poolQuotesSell.bind(this);
+    this.simDirectSwapNftsForTokens = this.simDirectSwapNftsForTokens.bind(this);
+    this.simSwapNftsForTokens = this.simSwapNftsForTokens.bind(this);
+    this.simDirectSwapTokensforSpecificNfts = this.simDirectSwapTokensforSpecificNfts.bind(this);
+    this.simSwapTokensForSpecificNfts = this.simSwapTokensForSpecificNfts.bind(this);
+    this.simSwapTokensForAnyNfts = this.simSwapTokensForAnyNfts.bind(this);
+  }
+
+  config = async (): Promise<ConfigResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      config: {}
+    });
+  };
+  pools = async ({
+    queryOptions
+  }: {
+    queryOptions: QueryOptions_for_uint64;
+  }): Promise<PoolsResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      pools: {
+        query_options: queryOptions
+      }
+    });
+  };
+  poolsById = async ({
+    poolIds
+  }: {
+    poolIds: number[];
+  }): Promise<PoolsByIdResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      pools_by_id: {
+        pool_ids: poolIds
+      }
+    });
+  };
+  poolsByOwner = async ({
+    owner,
+    queryOptions
+  }: {
+    owner: string;
+    queryOptions: QueryOptions_for_uint64;
+  }): Promise<PoolsByOwnerResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      pools_by_owner: {
+        owner,
+        query_options: queryOptions
+      }
+    });
+  };
+  poolQuotesBuy = async ({
+    collection,
+    queryOptions
+  }: {
+    collection: string;
+    queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
+  }): Promise<PoolQuotesBuyResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      pool_quotes_buy: {
+        collection,
+        query_options: queryOptions
+      }
+    });
+  };
+  poolQuotesSell = async ({
+    collection,
+    queryOptions
+  }: {
+    collection: string;
+    queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
+  }): Promise<PoolQuotesSellResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      pool_quotes_sell: {
+        collection,
+        query_options: queryOptions
+      }
+    });
+  };
+  simDirectSwapNftsForTokens = async ({
+    finder,
+    nftsToSwap,
+    poolId,
+    swapParams,
+    tokenRecipient
+  }: {
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+    tokenRecipient: string;
+  }): Promise<SimDirectSwapNftsForTokensResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_direct_swap_nfts_for_tokens: {
+        finder,
+        nfts_to_swap: nftsToSwap,
+        pool_id: poolId,
+        swap_params: swapParams,
+        token_recipient: tokenRecipient
+      }
+    });
+  };
+  simSwapNftsForTokens = async ({
+    collection,
+    finder,
+    nftsToSwap,
+    swapParams,
+    tokenRecipient
+  }: {
+    collection: string;
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    swapParams: SwapParams;
+    tokenRecipient: string;
+  }): Promise<SimSwapNftsForTokensResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_swap_nfts_for_tokens: {
+        collection,
+        finder,
+        nfts_to_swap: nftsToSwap,
+        swap_params: swapParams,
+        token_recipient: tokenRecipient
+      }
+    });
+  };
+  simDirectSwapTokensforSpecificNfts = async ({
+    finder,
+    nftRecipient,
+    nftsToSwapFor,
+    poolId,
+    swapParams
+  }: {
+    finder?: string;
+    nftRecipient: string;
+    nftsToSwapFor: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+  }): Promise<SimDirectSwapTokensforSpecificNftsResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_direct_swap_tokensfor_specific_nfts: {
+        finder,
+        nft_recipient: nftRecipient,
+        nfts_to_swap_for: nftsToSwapFor,
+        pool_id: poolId,
+        swap_params: swapParams
+      }
+    });
+  };
+  simSwapTokensForSpecificNfts = async ({
+    collection,
+    finder,
+    nftRecipient,
+    poolNftsToSwapFor,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    nftRecipient: string;
+    poolNftsToSwapFor: PoolNftSwap[];
+    swapParams: SwapParams;
+  }): Promise<SimSwapTokensForSpecificNftsResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_swap_tokens_for_specific_nfts: {
+        collection,
+        finder,
+        nft_recipient: nftRecipient,
+        pool_nfts_to_swap_for: poolNftsToSwapFor,
+        swap_params: swapParams
+      }
+    });
+  };
+  simSwapTokensForAnyNfts = async ({
+    collection,
+    finder,
+    maxExpectedTokenInput,
+    nftRecipient,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    maxExpectedTokenInput: Uint128[];
+    nftRecipient: string;
+    swapParams: SwapParams;
+  }): Promise<SimSwapTokensForAnyNftsResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_swap_tokens_for_any_nfts: {
+        collection,
+        finder,
+        max_expected_token_input: maxExpectedTokenInput,
+        nft_recipient: nftRecipient,
+        swap_params: swapParams
+      }
+    });
+  };
+}
+export interface InfinityPoolInterface extends InfinityPoolReadOnlyInterface {
+  contractAddress: string;
+  sender: string;
+  createPool: ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
+    poolType,
+    reinvestNfts,
+    reinvestTokens,
+    spotPrice,
+    swapFeeBps
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    poolType: PoolType;
+    reinvestNfts: boolean;
+    reinvestTokens: boolean;
+    spotPrice: Uint128;
+    swapFeeBps: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  depositTokens: ({
+    poolId
+  }: {
+    poolId: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  depositNfts: ({
+    collection,
+    nftTokenIds,
+    poolId
+  }: {
+    collection: string;
+    nftTokenIds: string[];
+    poolId: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  withdrawTokens: ({
+    amount,
+    assetRecipient,
+    poolId
+  }: {
+    amount: Uint128;
+    assetRecipient?: string;
+    poolId: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  withdrawAllTokens: ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  withdrawNfts: ({
+    assetRecipient,
+    nftTokenIds,
+    poolId
+  }: {
+    assetRecipient?: string;
+    nftTokenIds: string[];
+    poolId: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  withdrawAllNfts: ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  updatePoolConfig: ({
+    assetRecipient,
+    delta,
+    findersFeeBps,
+    poolId,
+    reinvestNfts,
+    reinvestTokens,
+    spotPrice,
+    swapFeeBps
+  }: {
+    assetRecipient?: string;
+    delta?: Uint128;
+    findersFeeBps?: number;
+    poolId: number;
+    reinvestNfts?: boolean;
+    reinvestTokens?: boolean;
+    spotPrice?: Uint128;
+    swapFeeBps?: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  setActivePool: ({
+    isActive,
+    poolId
+  }: {
+    isActive: boolean;
+    poolId: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  removePool: ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  directSwapNftsForTokens: ({
+    finder,
+    nftsToSwap,
+    poolId,
+    swapParams,
+    tokenRecipient
+  }: {
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+    tokenRecipient?: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  swapNftsForTokens: ({
+    collection,
+    finder,
+    nftsToSwap,
+    swapParams,
+    tokenRecipient
+  }: {
+    collection: string;
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    swapParams: SwapParams;
+    tokenRecipient?: string;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  directSwapTokensForSpecificNfts: ({
+    finder,
+    nftRecipient,
+    nftsToSwapFor,
+    poolId,
+    swapParams
+  }: {
+    finder?: string;
+    nftRecipient?: string;
+    nftsToSwapFor: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  swapTokensForSpecificNfts: ({
+    collection,
+    finder,
+    nftRecipient,
+    poolNftsToSwapFor,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    nftRecipient?: string;
+    poolNftsToSwapFor: PoolNftSwap[];
+    swapParams: SwapParams;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  swapTokensForAnyNfts: ({
+    collection,
+    finder,
+    maxExpectedTokenInput,
+    nftRecipient,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    maxExpectedTokenInput: Uint128[];
+    nftRecipient?: string;
+    swapParams: SwapParams;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+}
+export class InfinityPoolClient extends InfinityPoolQueryClient implements InfinityPoolInterface {
+  client: SigningCosmWasmClient;
+  sender: string;
+  contractAddress: string;
+
+  constructor(client: SigningCosmWasmClient, sender: string, contractAddress: string) {
+    super(client, contractAddress);
+    this.client = client;
+    this.sender = sender;
+    this.contractAddress = contractAddress;
+    this.createPool = this.createPool.bind(this);
+    this.depositTokens = this.depositTokens.bind(this);
+    this.depositNfts = this.depositNfts.bind(this);
+    this.withdrawTokens = this.withdrawTokens.bind(this);
+    this.withdrawAllTokens = this.withdrawAllTokens.bind(this);
+    this.withdrawNfts = this.withdrawNfts.bind(this);
+    this.withdrawAllNfts = this.withdrawAllNfts.bind(this);
+    this.updatePoolConfig = this.updatePoolConfig.bind(this);
+    this.setActivePool = this.setActivePool.bind(this);
+    this.removePool = this.removePool.bind(this);
+    this.directSwapNftsForTokens = this.directSwapNftsForTokens.bind(this);
+    this.swapNftsForTokens = this.swapNftsForTokens.bind(this);
+    this.directSwapTokensForSpecificNfts = this.directSwapTokensForSpecificNfts.bind(this);
+    this.swapTokensForSpecificNfts = this.swapTokensForSpecificNfts.bind(this);
+    this.swapTokensForAnyNfts = this.swapTokensForAnyNfts.bind(this);
+  }
+
+  createPool = async ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
+    poolType,
+    reinvestNfts,
+    reinvestTokens,
+    spotPrice,
+    swapFeeBps
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    poolType: PoolType;
+    reinvestNfts: boolean;
+    reinvestTokens: boolean;
+    spotPrice: Uint128;
+    swapFeeBps: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      create_pool: {
+        asset_recipient: assetRecipient,
+        bonding_curve: bondingCurve,
+        collection,
+        delta,
+        finders_fee_bps: findersFeeBps,
+        pool_type: poolType,
+        reinvest_nfts: reinvestNfts,
+        reinvest_tokens: reinvestTokens,
+        spot_price: spotPrice,
+        swap_fee_bps: swapFeeBps
+      }
+    }, fee, memo, funds);
+  };
+  depositTokens = async ({
+    poolId
+  }: {
+    poolId: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      deposit_tokens: {
+        pool_id: poolId
+      }
+    }, fee, memo, funds);
+  };
+  depositNfts = async ({
+    collection,
+    nftTokenIds,
+    poolId
+  }: {
+    collection: string;
+    nftTokenIds: string[];
+    poolId: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      deposit_nfts: {
+        collection,
+        nft_token_ids: nftTokenIds,
+        pool_id: poolId
+      }
+    }, fee, memo, funds);
+  };
+  withdrawTokens = async ({
+    amount,
+    assetRecipient,
+    poolId
+  }: {
+    amount: Uint128;
+    assetRecipient?: string;
+    poolId: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      withdraw_tokens: {
+        amount,
+        asset_recipient: assetRecipient,
+        pool_id: poolId
+      }
+    }, fee, memo, funds);
+  };
+  withdrawAllTokens = async ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      withdraw_all_tokens: {
+        asset_recipient: assetRecipient,
+        pool_id: poolId
+      }
+    }, fee, memo, funds);
+  };
+  withdrawNfts = async ({
+    assetRecipient,
+    nftTokenIds,
+    poolId
+  }: {
+    assetRecipient?: string;
+    nftTokenIds: string[];
+    poolId: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      withdraw_nfts: {
+        asset_recipient: assetRecipient,
+        nft_token_ids: nftTokenIds,
+        pool_id: poolId
+      }
+    }, fee, memo, funds);
+  };
+  withdrawAllNfts = async ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      withdraw_all_nfts: {
+        asset_recipient: assetRecipient,
+        pool_id: poolId
+      }
+    }, fee, memo, funds);
+  };
+  updatePoolConfig = async ({
+    assetRecipient,
+    delta,
+    findersFeeBps,
+    poolId,
+    reinvestNfts,
+    reinvestTokens,
+    spotPrice,
+    swapFeeBps
+  }: {
+    assetRecipient?: string;
+    delta?: Uint128;
+    findersFeeBps?: number;
+    poolId: number;
+    reinvestNfts?: boolean;
+    reinvestTokens?: boolean;
+    spotPrice?: Uint128;
+    swapFeeBps?: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      update_pool_config: {
+        asset_recipient: assetRecipient,
+        delta,
+        finders_fee_bps: findersFeeBps,
+        pool_id: poolId,
+        reinvest_nfts: reinvestNfts,
+        reinvest_tokens: reinvestTokens,
+        spot_price: spotPrice,
+        swap_fee_bps: swapFeeBps
+      }
+    }, fee, memo, funds);
+  };
+  setActivePool = async ({
+    isActive,
+    poolId
+  }: {
+    isActive: boolean;
+    poolId: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      set_active_pool: {
+        is_active: isActive,
+        pool_id: poolId
+      }
+    }, fee, memo, funds);
+  };
+  removePool = async ({
+    assetRecipient,
+    poolId
+  }: {
+    assetRecipient?: string;
+    poolId: number;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      remove_pool: {
+        asset_recipient: assetRecipient,
+        pool_id: poolId
+      }
+    }, fee, memo, funds);
+  };
+  directSwapNftsForTokens = async ({
+    finder,
+    nftsToSwap,
+    poolId,
+    swapParams,
+    tokenRecipient
+  }: {
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+    tokenRecipient?: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      direct_swap_nfts_for_tokens: {
+        finder,
+        nfts_to_swap: nftsToSwap,
+        pool_id: poolId,
+        swap_params: swapParams,
+        token_recipient: tokenRecipient
+      }
+    }, fee, memo, funds);
+  };
+  swapNftsForTokens = async ({
+    collection,
+    finder,
+    nftsToSwap,
+    swapParams,
+    tokenRecipient
+  }: {
+    collection: string;
+    finder?: string;
+    nftsToSwap: NftSwap[];
+    swapParams: SwapParams;
+    tokenRecipient?: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      swap_nfts_for_tokens: {
+        collection,
+        finder,
+        nfts_to_swap: nftsToSwap,
+        swap_params: swapParams,
+        token_recipient: tokenRecipient
+      }
+    }, fee, memo, funds);
+  };
+  directSwapTokensForSpecificNfts = async ({
+    finder,
+    nftRecipient,
+    nftsToSwapFor,
+    poolId,
+    swapParams
+  }: {
+    finder?: string;
+    nftRecipient?: string;
+    nftsToSwapFor: NftSwap[];
+    poolId: number;
+    swapParams: SwapParams;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      direct_swap_tokens_for_specific_nfts: {
+        finder,
+        nft_recipient: nftRecipient,
+        nfts_to_swap_for: nftsToSwapFor,
+        pool_id: poolId,
+        swap_params: swapParams
+      }
+    }, fee, memo, funds);
+  };
+  swapTokensForSpecificNfts = async ({
+    collection,
+    finder,
+    nftRecipient,
+    poolNftsToSwapFor,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    nftRecipient?: string;
+    poolNftsToSwapFor: PoolNftSwap[];
+    swapParams: SwapParams;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      swap_tokens_for_specific_nfts: {
+        collection,
+        finder,
+        nft_recipient: nftRecipient,
+        pool_nfts_to_swap_for: poolNftsToSwapFor,
+        swap_params: swapParams
+      }
+    }, fee, memo, funds);
+  };
+  swapTokensForAnyNfts = async ({
+    collection,
+    finder,
+    maxExpectedTokenInput,
+    nftRecipient,
+    swapParams
+  }: {
+    collection: string;
+    finder?: string;
+    maxExpectedTokenInput: Uint128[];
+    nftRecipient?: string;
+    swapParams: SwapParams;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      swap_tokens_for_any_nfts: {
+        collection,
+        finder,
+        max_expected_token_input: maxExpectedTokenInput,
+        nft_recipient: nftRecipient,
+        swap_params: swapParams
+      }
+    }, fee, memo, funds);
+  };
+}
