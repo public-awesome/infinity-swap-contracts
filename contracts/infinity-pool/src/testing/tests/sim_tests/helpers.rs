@@ -257,7 +257,6 @@ pub fn check_nft_sale(
     user2: Addr,
     token_id: String,
 ) {
-    println!("full swaps is {:?}", swaps);
     assert_eq!(swaps[0].spot_price.u128(), expected_spot_price);
     let expected_nft_payment = Some(NftPayment {
         nft_token_id: token_id,
