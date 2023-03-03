@@ -372,7 +372,6 @@ impl<'a> SwapProcessor<'a> {
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
         // Load the only pool that will be needed
-        println!("nfts to swap are {:?}", nfts_to_swap);
         let mut pool = pool;
         {
             for nft_swap in nfts_to_swap {
@@ -408,11 +407,9 @@ impl<'a> SwapProcessor<'a> {
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
-        println!("nfts to swap are {:?}", nfts_to_swap);
         for nft_swap in nfts_to_swap {
             // Load best priced pool
             let pool_pair_option = self.load_next_pool(storage)?;
-            println!("pool pair option is some{:?}", pool_pair_option.is_some());
 
             // No pools found, so return empty
             if pool_pair_option.is_none() {
