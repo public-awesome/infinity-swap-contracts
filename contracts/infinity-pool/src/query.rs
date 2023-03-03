@@ -296,7 +296,7 @@ pub fn sim_swap_nfts_for_tokens(
     );
     processor
         .swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)
-        .map_err(|_| StdError::generic_err("swap_nfts_for_tokens err"))?;
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     Ok(SwapResponse {
         swaps: processor.swaps,
