@@ -21,6 +21,7 @@ use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
 const ASSET_ACCOUNT: &str = "asset";
 
+#[derive(Debug)]
 pub struct SwapPoolResult {
     pub user1: Addr,
     pub user2: Addr,
@@ -156,8 +157,7 @@ pub fn deposit_nfts(
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };
-    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
-    println!("res from deposit tokens is {:?}", res);
+    let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
 
     DepositNftsResult {
         token_id_1,

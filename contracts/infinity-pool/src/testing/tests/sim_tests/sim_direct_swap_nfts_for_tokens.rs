@@ -201,7 +201,7 @@ fn invalid_nft_pool_can_not_deposit() {
 }
 
 #[test]
-fn not_enough_deposit_no_swap() {
+fn insufficient_tokens_error() {
     let spot_price = 1000_u128;
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
