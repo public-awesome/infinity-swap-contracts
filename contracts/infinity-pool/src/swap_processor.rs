@@ -410,7 +410,6 @@ impl<'a> SwapProcessor<'a> {
         for nft_swap in nfts_to_swap {
             // Load best priced pool
             let pool_pair_option = self.load_next_pool(storage)?;
-
             // No pools found, so return empty
             if pool_pair_option.is_none() {
                 return Ok(());
