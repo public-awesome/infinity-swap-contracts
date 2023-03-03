@@ -446,7 +446,7 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
 }
 
 #[test]
-fn network_fee_is_applied_correctly() {
+fn trading_fee_is_applied_correctly() {
     let spot_price = 20000_u128;
     let trading_fee = 500_u64;
     let vt = standard_minter_template(5000);
