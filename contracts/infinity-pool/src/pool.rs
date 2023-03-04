@@ -2,7 +2,7 @@ use crate::msg::NftSwap;
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::swap_processor::TransactionType;
 use crate::ContractError;
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Decimal, StdError, Uint128};
 use sg_marketplace::msg::ParamsResponse;
 use std::collections::BTreeSet;
 
@@ -325,28 +325,50 @@ impl Pool {
     }
 
     /// Updates the spot price of the pool depending on the transaction type
-    pub fn update_spot_price(&mut self, tx_type: &TransactionType) {
-        self.spot_price = match tx_type {
+    pub fn update_spot_price(&mut self, tx_type: &TransactionType) -> Result<Uint128, StdError> {
+        match tx_type {
             TransactionType::Buy => match self.bonding_curve {
-                BondingCurve::Linear => self.spot_price + self.delta,
+                BondingCurve::Linear => self
+                    .spot_price
+                    .checked_add(self.delta)
+                    .map_err(|e| StdError::Overflow { source: e }),
                 BondingCurve::Exponential => {
+                    let product = self
+                        .spot_price
+                        .checked_mul(self.delta)
+                        .map_err(|e| StdError::Overflow { source: e })?
+                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
+                        .map_err(|e| StdError::DivideByZero { source: e })?;
                     self.spot_price
-                        * Decimal::percent((MAX_BASIS_POINTS + self.delta.u128()) as u64)
+                        .checked_add(product)
+                        .map_err(|e| StdError::Overflow { source: e })
                 }
-                BondingCurve::ConstantProduct => {
-                    self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
-                }
+                BondingCurve::ConstantProduct => self
+                    .total_tokens
+                    .checked_div(Uint128::from(self.nft_token_ids.len() as u64))
+                    .map_err(|e| StdError::DivideByZero { source: e }),
             },
             TransactionType::Sell => match self.bonding_curve {
-                BondingCurve::Linear => self.spot_price - self.delta,
+                BondingCurve::Linear => self
+                    .spot_price
+                    .checked_sub(self.delta)
+                    .map_err(|e| StdError::Overflow { source: e }),
                 BondingCurve::Exponential => {
+                    let product = self
+                        .spot_price
+                        .checked_mul(self.delta)
+                        .map_err(|e| StdError::Overflow { source: e })?
+                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
+                        .map_err(|e| StdError::DivideByZero { source: e })?;
                     self.spot_price
-                        * Decimal::percent((MAX_BASIS_POINTS - self.delta.u128()) as u64)
+                        .checked_sub(product)
+                        .map_err(|e| StdError::Overflow { source: e })
                 }
-                BondingCurve::ConstantProduct => {
-                    self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128)
-                }
+                BondingCurve::ConstantProduct => self
+                    .total_tokens
+                    .checked_div(Uint128::from(self.nft_token_ids.len() as u64))
+                    .map_err(|e| StdError::DivideByZero { source: e }),
             },
-        };
+        }
     }
 }
