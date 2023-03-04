@@ -341,11 +341,18 @@ pub fn sim_swap_tokens_for_specific_nfts(
     let collection_royalties = load_collection_royalties(deps, &collection)
         .map_err(|_| StdError::generic_err("Collection not found"))?;
 
+    let mut spend_amount = 0_u128;
+    for pool in pool_nfts_to_swap_for.iter() {
+        for nft_swap in pool.nft_swaps.iter() {
+            spend_amount += nft_swap.token_amount.u128();
+        }
+    }
+
     let mut processor = SwapProcessor::new(
         TransactionType::Buy,
         collection,
         nft_recipient.clone(),
-        Uint128::zero(),
+        spend_amount.into(),
         nft_recipient,
         marketplace_params.params.trading_fee_percent,
         collection_royalties,

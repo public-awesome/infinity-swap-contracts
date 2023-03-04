@@ -1,6 +1,7 @@
 use std::vec;
 
 use crate::msg::QueryMsg::SimDirectSwapNftsForTokens;
+use crate::msg::QueryMsg::SimDirectSwapTokensforSpecificNfts;
 use crate::msg::QueryMsg::SimSwapNftsForTokens;
 use crate::msg::{self, ExecuteMsg};
 use crate::msg::{NftSwap, SwapParams};
@@ -19,7 +20,7 @@ use sg_multi_test::StargazeApp;
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
-const ASSET_ACCOUNT: &str = "asset";
+pub const ASSET_ACCOUNT: &str = "asset";
 
 #[derive(Debug)]
 pub struct SwapPoolResult {
@@ -45,6 +46,19 @@ pub struct VendingTemplateSetup<'a> {
     pub creator: Addr,
     pub user1: Addr,
     pub user2: Addr,
+}
+
+pub struct NftSaleCheckParams {
+    pub expected_spot_price: u128,
+    pub expected_royalty_price: u128,
+    pub expected_network_fee: u128,
+    pub expected_finders_fee: u128,
+    pub swaps: Vec<Swap>,
+    pub creator: Addr,
+    pub expected_seller: Addr,
+    pub token_id: String,
+    pub expected_nft_payer: Addr,
+    pub expected_finder: Addr,
 }
 
 pub fn setup_swap_pool(
@@ -233,6 +247,35 @@ pub fn get_sim_swap_nfts_for_tokens_msg(
     }
 }
 
+// pool_id: u64,
+// nfts_to_swap_for: Vec<NftSwap>,
+// swap_params: SwapParams,
+// nft_recipient: String,
+// finder: Option<String>,
+
+pub fn get_sim_direct_swap_tokens_for_specific_nfts_msg(
+    pool: Pool,
+    token_id_1: u32,
+    token_amount: u128,
+    robust: bool,
+    user2: Addr,
+    finder: Option<String>,
+) -> msg::QueryMsg {
+    SimDirectSwapTokensforSpecificNfts {
+        pool_id: pool.id,
+        nfts_to_swap_for: vec![NftSwap {
+            nft_token_id: token_id_1.to_string(),
+            token_amount: Uint128::new(token_amount),
+        }],
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust,
+        },
+        nft_recipient: user2.to_string(),
+        finder,
+    }
+}
+
 pub fn set_pool_active(
     router: &mut StargazeApp,
     is_active: bool,
@@ -247,48 +290,39 @@ pub fn set_pool_active(
     let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
 }
 
-pub fn check_nft_sale(
-    expected_spot_price: u128,
-    expected_royalty_price: u128,
-    expected_network_fee: u128,
-    expected_finders_fee: u128,
-    swaps: Vec<Swap>,
-    creator: Addr,
-    user2: Addr,
-    token_id: String,
-) {
-    assert_eq!(swaps[0].spot_price.u128(), expected_spot_price);
+pub fn check_nft_sale(scp: NftSaleCheckParams) {
+    assert_eq!(scp.swaps[0].spot_price.u128(), scp.expected_spot_price);
     let expected_nft_payment = Some(NftPayment {
-        nft_token_id: token_id,
-        address: ASSET_ACCOUNT.to_string(),
+        nft_token_id: scp.token_id,
+        address: scp.expected_nft_payer.to_string(),
     });
-    assert_eq!(swaps[0].nft_payment, expected_nft_payment);
+    assert_eq!(scp.swaps[0].nft_payment, expected_nft_payment);
 
-    let network_fee = swaps[0].network_fee.u128();
+    let network_fee = scp.swaps[0].network_fee.u128();
 
-    assert_eq!(network_fee, expected_network_fee);
-    let mut expected_price = expected_spot_price - network_fee;
-    expected_price -= expected_royalty_price;
-    expected_price -= expected_finders_fee;
+    assert_eq!(network_fee, scp.expected_network_fee);
+    let mut expected_price = scp.expected_spot_price - network_fee;
+    expected_price -= scp.expected_royalty_price;
+    expected_price -= scp.expected_finders_fee;
 
     let expected_seller_payment = Some(TokenPayment {
         amount: Uint128::new(expected_price),
-        address: user2.to_string(),
+        address: scp.expected_seller.to_string(),
     });
-    assert_eq!(swaps[0].seller_payment, expected_seller_payment);
+    assert_eq!(scp.swaps[0].seller_payment, expected_seller_payment);
 
-    let expected_finder_payment = match expected_finders_fee {
+    let expected_finder_payment = match scp.expected_finders_fee {
         0 => None,
         _ => Some(TokenPayment {
-            amount: Uint128::from(expected_finders_fee),
-            address: user2.to_string(),
+            amount: Uint128::from(scp.expected_finders_fee),
+            address: scp.expected_finder.to_string(),
         }),
     };
-    assert_eq!(swaps[0].finder_payment, expected_finder_payment);
+    assert_eq!(scp.swaps[0].finder_payment, expected_finder_payment);
 
     let expected_royalty_payment = Some(TokenPayment {
-        amount: Uint128::new(expected_royalty_price),
-        address: creator.to_string(),
+        amount: Uint128::new(scp.expected_royalty_price),
+        address: scp.creator.to_string(),
     });
-    assert_eq!(swaps[0].royalty_payment, expected_royalty_payment);
+    assert_eq!(scp.swaps[0].royalty_payment, expected_royalty_payment);
 }
