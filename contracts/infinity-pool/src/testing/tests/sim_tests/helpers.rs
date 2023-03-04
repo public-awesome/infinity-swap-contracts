@@ -171,7 +171,8 @@ pub fn deposit_nfts(
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };
-    let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    println!("response from deposit nfts is {:?}", res);
 
     DepositNftsResult {
         token_id_1,
