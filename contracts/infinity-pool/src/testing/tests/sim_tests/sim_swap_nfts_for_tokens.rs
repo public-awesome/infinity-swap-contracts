@@ -4,7 +4,8 @@ use crate::testing::setup::setup_accounts::setup_second_bidder_account;
 use crate::testing::setup::templates::{_minter_template_30_pct_fee, standard_minter_template};
 use crate::testing::tests::sim_tests::helpers::{
     check_nft_sale, deposit_nfts, deposit_tokens, get_sim_swap_nfts_for_tokens_msg,
-    set_pool_active, setup_swap_pool, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup,
+    set_pool_active, setup_swap_pool, NftSaleCheckParams, SwapPoolResult, SwapPoolSetup,
+    VendingTemplateSetup,
 };
 use crate::testing::tests::sim_tests::sim_swap_nfts_for_tokens::QueryMsg::SimSwapNftsForTokens;
 use cosmwasm_std::StdError::GenericErr;
@@ -13,6 +14,8 @@ use cosmwasm_std::Uint128;
 use cosmwasm_std::{Addr, Timestamp};
 use sg_std::GENESIS_MINT_START_TIME;
 use std::vec;
+
+use crate::testing::tests::sim_tests::helpers::ASSET_ACCOUNT;
 
 #[test]
 fn cant_swap_two_inactive_pools() {
@@ -231,16 +234,19 @@ fn can_swap_two_active_pools() {
         .unwrap()
         .u128();
 
-    check_nft_sale(
-        highest_seller_price,
-        expected_royalty_fee,
+    let nft_sale_check_params = NftSaleCheckParams {
+        expected_spot_price: highest_seller_price,
+        expected_royalty_price: expected_royalty_fee,
         expected_network_fee,
-        0,
+        expected_finders_fee: 0,
         swaps,
         creator,
-        user2,
-        token_id_1.to_string(),
-    )
+        expected_seller: user2.clone(),
+        token_id: token_id_1.to_string(),
+        expected_nft_payer: Addr::unchecked(ASSET_ACCOUNT),
+        expected_finder: user2,
+    };
+    check_nft_sale(nft_sale_check_params);
 }
 
 #[test]
@@ -610,7 +616,6 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         .wrap()
         .query_wasm_smart(infinity_pool.clone(), &swap_msg);
     assert!(res.is_ok());
-    println!("res is {:?}", res);
     let swaps = res.unwrap().swaps;
     let highest_seller_price = spot_price_2 + Uint128::from(100u64).u128();
     let spot_price_plus_delta = spot_price_2 + 100_u128;
@@ -623,16 +628,19 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         .unwrap()
         .u128();
 
-    check_nft_sale(
-        highest_seller_price,
-        expected_royalty_fee,
+    let nft_sale_check_params = NftSaleCheckParams {
+        expected_spot_price: highest_seller_price,
+        expected_royalty_price: expected_royalty_fee,
         expected_network_fee,
-        0,
+        expected_finders_fee: 0,
         swaps,
         creator,
-        user2,
-        token_id_2.to_string(),
-    )
+        expected_seller: user2.clone(),
+        token_id: token_id_2.to_string(),
+        expected_nft_payer: Addr::unchecked(ASSET_ACCOUNT),
+        expected_finder: user2,
+    };
+    check_nft_sale(nft_sale_check_params)
 }
 
 #[test]
@@ -756,16 +764,21 @@ fn trading_fee_is_applied_correctly() {
         .checked_multiply_ratio(10_u128, 100_u128)
         .unwrap()
         .u128();
-    check_nft_sale(
-        spot_price_plus_delta,
-        expected_royalty_fee,
+
+    let nft_sale_check_params = NftSaleCheckParams {
+        expected_spot_price: spot_price_plus_delta,
+        expected_royalty_price: expected_royalty_fee,
         expected_network_fee,
-        0,
+        expected_finders_fee: 0,
         swaps,
         creator,
-        user2,
-        token_id_1.to_string(),
-    )
+        expected_seller: user2.clone(),
+        token_id: token_id_1.to_string(),
+        expected_nft_payer: Addr::unchecked(ASSET_ACCOUNT),
+        expected_finder: user2,
+    };
+
+    check_nft_sale(nft_sale_check_params);
 }
 
 #[test]
@@ -887,16 +900,21 @@ fn royalty_fee_applied_correctly() {
         .checked_multiply_ratio(30_u128, 100_u128)
         .unwrap()
         .u128();
-    check_nft_sale(
-        spot_price_plus_delta,
-        expected_royalty_fee,
+
+    let nft_sale_check_params = NftSaleCheckParams {
+        expected_spot_price: spot_price_plus_delta,
+        expected_royalty_price: expected_royalty_fee,
         expected_network_fee,
-        0,
+        expected_finders_fee: 0,
         swaps,
         creator,
-        user2,
-        token_id_1.to_string(),
-    )
+        expected_seller: user2.clone(),
+        token_id: token_id_1.to_string(),
+        expected_nft_payer: Addr::unchecked(ASSET_ACCOUNT),
+        expected_finder: user2,
+    };
+
+    check_nft_sale(nft_sale_check_params);
 }
 
 #[test]
@@ -1023,14 +1041,18 @@ fn finders_fee_is_applied_correctly() {
         .checked_multiply_ratio(finders_fee_bps, Uint128::new(100).u128())
         .unwrap();
 
-    check_nft_sale(
-        spot_price_plus_delta,
-        expected_royalty_fee,
+    let nft_sale_check_params = NftSaleCheckParams {
+        expected_spot_price: spot_price_plus_delta,
+        expected_royalty_price: expected_royalty_fee,
         expected_network_fee,
-        expected_finders_fee.u128(),
+        expected_finders_fee: expected_finders_fee.u128(),
         swaps,
         creator,
-        user2,
-        token_id_1.to_string(),
-    )
+        expected_seller: user2.clone(),
+        token_id: token_id_1.to_string(),
+        expected_nft_payer: Addr::unchecked(ASSET_ACCOUNT),
+        expected_finder: user2,
+    };
+
+    check_nft_sale(nft_sale_check_params);
 }
