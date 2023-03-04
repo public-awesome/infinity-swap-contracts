@@ -247,12 +247,6 @@ pub fn get_sim_swap_nfts_for_tokens_msg(
     }
 }
 
-// pool_id: u64,
-// nfts_to_swap_for: Vec<NftSwap>,
-// swap_params: SwapParams,
-// nft_recipient: String,
-// finder: Option<String>,
-
 pub fn get_sim_direct_swap_tokens_for_specific_nfts_msg(
     pool: Pool,
     token_id_1: u32,
