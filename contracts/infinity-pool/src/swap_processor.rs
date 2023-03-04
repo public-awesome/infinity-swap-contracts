@@ -461,6 +461,7 @@ impl<'a> SwapProcessor<'a> {
                 return Err(ContractError::InvalidPool("pool not found".to_string()));
             }
             let mut pool = pool_option.unwrap();
+
             // Iterate for all NFTs selected for the given
             for nft_swap in pool_nfts.nft_swaps {
                 let result = self.process_swap(&mut pool, nft_swap, TransactionType::Buy);
