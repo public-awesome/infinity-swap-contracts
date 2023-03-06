@@ -609,6 +609,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
     }
 
     let mut response = Response::new();
+    let pools_to_save: Vec<Pool>;
     {
         let mut processor = SwapProcessor::new(
             TransactionType::Sell,
@@ -622,16 +623,10 @@ pub fn execute_direct_swap_nfts_for_tokens(
             config.developer,
         );
         processor.direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)?;
-        processor.commit_messages(&mut response)?;
-        pool = processor
-            .pool_set
-            .into_iter()
-            .filter(|p| p.needs_saving)
-            .map(|p| p.pool)
-            .next()
-            .unwrap();
+        processor.finalize_transaction(&mut response)?;
+        pools_to_save = processor.pools_to_save;
     }
-    save_pool(deps.storage, &pool, &marketplace_params)?;
+    save_pools(deps.storage, pools_to_save, &marketplace_params)?;
 
     Ok(response)
 }
@@ -676,13 +671,8 @@ pub fn execute_swap_nfts_for_tokens(
             config.developer,
         );
         processor.swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)?;
-        processor.commit_messages(&mut response)?;
-        pools_to_save = processor
-            .pool_set
-            .into_iter()
-            .filter(|p| p.needs_saving)
-            .map(|p| p.pool)
-            .collect();
+        processor.finalize_transaction(&mut response)?;
+        pools_to_save = processor.pools_to_save;
     }
     save_pools(deps.storage, pools_to_save, &marketplace_params)?;
 
@@ -772,13 +762,8 @@ pub fn execute_swap_tokens_for_specific_nfts(
             config.developer,
         );
         processor.swap_tokens_for_specific_nfts(deps.storage, nfts_to_swap_for, swap_params)?;
-        processor.commit_messages(&mut response)?;
-        pools_to_save = processor
-            .pool_set
-            .into_iter()
-            .filter(|p| p.needs_saving)
-            .map(|p| p.pool)
-            .collect();
+        processor.finalize_transaction(&mut response)?;
+        pools_to_save = processor.pools_to_save;
     }
     save_pools(deps.storage, pools_to_save, &marketplace_params)?;
 
@@ -833,13 +818,8 @@ pub fn execute_swap_tokens_for_any_nfts(
             config.developer,
         );
         processor.swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)?;
-        processor.commit_messages(&mut response)?;
-        pools_to_save = processor
-            .pool_set
-            .into_iter()
-            .filter(|p| p.needs_saving)
-            .map(|p| p.pool)
-            .collect();
+        processor.finalize_transaction(&mut response)?;
+        pools_to_save = processor.pools_to_save;
     }
     save_pools(deps.storage, pools_to_save, &marketplace_params)?;
 
