@@ -406,12 +406,6 @@
             "swap_params"
           ],
           "properties": {
-            "finder": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "nfts_to_swap": {
               "type": "array",
               "items": {
@@ -425,12 +419,6 @@
             },
             "swap_params": {
               "$ref": "#/definitions/SwapParams"
-            },
-            "token_recipient": {
-              "type": [
-                "string",
-                "null"
-              ]
             }
           },
           "additionalProperties": false
@@ -456,12 +444,6 @@
             "collection": {
               "type": "string"
             },
-            "finder": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "nfts_to_swap": {
               "type": "array",
               "items": {
@@ -470,12 +452,6 @@
             },
             "swap_params": {
               "$ref": "#/definitions/SwapParams"
-            },
-            "token_recipient": {
-              "type": [
-                "string",
-                "null"
-              ]
             }
           },
           "additionalProperties": false
@@ -498,18 +474,6 @@
             "swap_params"
           ],
           "properties": {
-            "finder": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "nft_recipient": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "nfts_to_swap_for": {
               "type": "array",
               "items": {
@@ -548,18 +512,6 @@
             "collection": {
               "type": "string"
             },
-            "finder": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "nft_recipient": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "pool_nfts_to_swap_for": {
               "type": "array",
               "items": {
@@ -593,23 +545,11 @@
             "collection": {
               "type": "string"
             },
-            "finder": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
             "max_expected_token_input": {
               "type": "array",
               "items": {
                 "$ref": "#/definitions/Uint128"
               }
-            },
-            "nft_recipient": {
-              "type": [
-                "string",
-                "null"
-              ]
             },
             "swap_params": {
               "$ref": "#/definitions/SwapParams"
@@ -695,12 +635,26 @@
         "robust"
       ],
       "properties": {
+        "asset_recipient": {
+          "description": "The address to receive the assets from the swap, if not specified is set to sender",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "deadline": {
           "description": "The deadline after which the swap will be rejected",
           "allOf": [
             {
               "$ref": "#/definitions/Timestamp"
             }
+          ]
+        },
+        "finder": {
+          "description": "The address of the finder, will receive a portion of the fees equal to percentage set by the pool",
+          "type": [
+            "string",
+            "null"
           ]
         },
         "robust": {
