@@ -45,7 +45,6 @@ fn cant_swap_inactive_pool() {
 
     let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -69,7 +68,7 @@ fn cant_swap_inactive_pool() {
     assert_eq!(
         res,
         StdError::GenericErr {
-            msg: "Querier contract error: Generic error: Invalid pool: pool is not active"
+            msg: "Querier contract error: Generic error: Invalid pool: pool cannot offer quote"
                 .to_string()
         }
     );
@@ -108,7 +107,6 @@ fn can_swap_active_pool() {
 
     let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -183,7 +181,6 @@ fn invalid_nft_pool_can_not_deposit() {
 
     let _ = deposit_nfts(
         &mut router,
-        spr.user1.clone(),
         spr.minter.clone(),
         spr.collection.clone(),
         spr.infinity_pool.clone(),
@@ -232,7 +229,6 @@ fn insufficient_tokens_error() {
 
     let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -266,7 +262,7 @@ fn insufficient_tokens_error() {
 
     let expected_error = GenericErr {
         msg: "Querier contract error: \
-        Generic error: Swap error: pool cannot offer quote"
+        Generic error: Invalid pool: pool cannot offer quote"
             .to_string(),
     };
     assert_eq!(error_msg, expected_error);
@@ -336,7 +332,6 @@ fn invalid_sale_price_below_min_expected() {
 
     let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -393,7 +388,6 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
 
     let tokens = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -416,12 +410,13 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
                 token_amount: Uint128::new(sale_price_too_high), // won't swap bc price too high
             },
         ],
+        sender: spr.user2.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust: true,
+            asset_recipient: None,
+            finder: None,
         },
-        token_recipient: spr.user2.to_string(),
-        finder: None,
     };
 
     set_pool_active(
@@ -486,7 +481,6 @@ fn trading_fee_is_applied_correctly() {
 
     let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -570,7 +564,6 @@ fn royalty_fee_applied_correctly() {
 
     let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -656,7 +649,6 @@ fn finders_fee_is_applied_correctly() {
 
     let token_id_1 = deposit_nfts_and_tokens(
         &mut router,
-        spr.user1.clone(),
         spr.minter,
         spr.collection,
         spr.infinity_pool.clone(),
@@ -673,7 +665,7 @@ fn finders_fee_is_applied_correctly() {
         sale_price,
         true,
         spr.user2.clone(),
-        Some(spr.user2.to_string()),
+        Some(spr.user1.to_string()),
     );
 
     set_pool_active(
@@ -712,7 +704,7 @@ fn finders_fee_is_applied_correctly() {
         expected_seller: spr.user2.clone(),
         token_id: token_id_1.to_string(),
         expected_nft_payer: Addr::unchecked(ASSET_ACCOUNT),
-        expected_finder: spr.user2,
+        expected_finder: spr.user1,
     };
     check_nft_sale(nft_sale_check_params);
 }

@@ -129,7 +129,6 @@ pub struct DepositNftsResult {
 
 pub fn deposit_nfts_and_tokens(
     router: &mut StargazeApp,
-    user1: Addr,
     minter: Addr,
     collection: Addr,
     infinity_pool: Addr,
@@ -139,7 +138,6 @@ pub fn deposit_nfts_and_tokens(
 ) -> DepositNftsResult {
     let tokens = deposit_nfts(
         router,
-        user1,
         minter,
         collection,
         infinity_pool.clone(),
@@ -155,17 +153,16 @@ pub fn deposit_nfts_and_tokens(
 
 pub fn deposit_nfts(
     router: &mut StargazeApp,
-    user1: Addr,
     minter: Addr,
     collection: Addr,
     infinity_pool: Addr,
     pool: Pool,
     creator: Addr,
 ) -> DepositNftsResult {
-    let token_id_1 = mint(router, &user1, &minter);
-    approve(router, &user1, &collection, &infinity_pool, token_id_1);
-    let token_id_2 = mint(router, &user1, &minter);
-    approve(router, &user1, &collection, &infinity_pool, token_id_2);
+    let token_id_1 = mint(router, &creator, &minter);
+    approve(router, &creator, &collection, &infinity_pool, token_id_1);
+    let token_id_2 = mint(router, &creator, &minter);
+    approve(router, &creator, &collection, &infinity_pool, token_id_2);
     let msg = ExecuteMsg::DepositNfts {
         pool_id: pool.id,
         collection: collection.to_string(),
@@ -216,12 +213,13 @@ pub fn get_sim_swap_message(
             nft_token_id: token_id_1.to_string(),
             token_amount: Uint128::new(token_amount),
         }],
+        sender: user2.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust,
+            asset_recipient: None,
+            finder,
         },
-        token_recipient: user2.to_string(),
-        finder,
     }
 }
 
@@ -239,12 +237,13 @@ pub fn get_sim_swap_nfts_for_tokens_msg(
             nft_token_id: token_id_1.to_string(),
             token_amount: Uint128::new(token_amount),
         }],
+        sender: user2.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust,
+            asset_recipient: None,
+            finder,
         },
-        token_recipient: user2.to_string(),
-        finder,
     }
 }
 
@@ -262,12 +261,13 @@ pub fn get_sim_direct_swap_tokens_for_specific_nfts_msg(
             nft_token_id: token_id_1.to_string(),
             token_amount: Uint128::new(token_amount),
         }],
+        sender: user2.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust,
+            asset_recipient: None,
+            finder,
         },
-        nft_recipient: user2.to_string(),
-        finder,
     }
 }
 

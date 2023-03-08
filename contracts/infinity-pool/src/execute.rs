@@ -1,8 +1,8 @@
 use crate::error::ContractError;
 use crate::helpers::{
-    get_next_pool_counter, get_pool_attributes, load_marketplace_params, only_owner, prep_for_swap,
-    remove_pool, save_pool, save_pools, transfer_nft, transfer_token, validate_nft_swaps_for_buy,
-    validate_nft_swaps_for_sell,
+    get_next_pool_counter, get_pool_attributes, load_marketplace_params, only_nft_owner,
+    only_owner, prep_for_swap, remove_pool, save_pool, save_pools, transfer_nft, transfer_token,
+    validate_nft_swaps_for_buy, validate_nft_swaps_for_sell,
 };
 use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, SwapParams, TransactionType};
 use crate::state::{pools, BondingCurve, Pool, PoolType, CONFIG};
@@ -293,6 +293,7 @@ pub fn execute_deposit_nfts(
     // Push the NFT transfer messages
     let mut response = Response::new();
     for nft_token_id in &nft_token_ids {
+        only_nft_owner(deps.as_ref(), &info, &collection, &nft_token_id)?;
         transfer_nft(
             nft_token_id,
             env.contract.address.as_ref(),

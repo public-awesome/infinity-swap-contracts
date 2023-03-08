@@ -177,7 +177,7 @@ pub fn query_pool_quotes_by_buy_price(
         .start_after
         .as_ref()
         .map(|offset| Bound::exclusive((offset.0.u128(), offset.1)));
-    let order = option_bool_to_order(query_options.descending, Order::Ascending);
+    let order = option_bool_to_order(query_options.descending, Order::Descending);
 
     let pool_quotes: Vec<PoolQuote> = buy_pool_quotes()
         .idx
@@ -204,7 +204,7 @@ pub fn query_pool_quotes_by_sell_price(
         .start_after
         .as_ref()
         .map(|offset| Bound::exclusive((offset.0.u128(), offset.1)));
-    let order = option_bool_to_order(query_options.descending, Order::Descending);
+    let order = option_bool_to_order(query_options.descending, Order::Ascending);
 
     let pool_quotes: Vec<PoolQuote> = sell_pool_quotes()
         .idx
