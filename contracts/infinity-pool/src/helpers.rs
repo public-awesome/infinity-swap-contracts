@@ -337,23 +337,23 @@ pub fn prep_for_swap(
     let finder = maybe_addr(deps.api, swap_params.finder.clone())?;
     let asset_recipient = maybe_addr(deps.api, swap_params.asset_recipient.clone())?;
 
-    validate_finder(&finder, &sender, &asset_recipient)?;
+    validate_finder(&finder, sender, &asset_recipient)?;
 
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)?;
 
-    let collection_royalties = load_collection_royalties(deps, &collection)?;
+    let collection_royalties = load_collection_royalties(deps, collection)?;
 
     let seller_recipient = asset_recipient.unwrap_or_else(|| sender.clone());
 
-    return Ok(SwapPrepResult {
+    Ok(SwapPrepResult {
         denom: config.denom.clone(),
         marketplace_params,
         collection_royalties,
         asset_recipient: seller_recipient,
         finder,
         developer: config.developer,
-    });
+    })
 }
 
 /// Validate NftSwap vector token amounts, and NFT ownership
@@ -361,10 +361,10 @@ pub fn validate_nft_swaps_for_sell(
     deps: Deps,
     info: &MessageInfo,
     collection: &Addr,
-    nft_swaps: &Vec<NftSwap>,
+    nft_swaps: &[NftSwap],
 ) -> Result<(), ContractError> {
     for (idx, nft_swap) in nft_swaps.iter().enumerate() {
-        only_nft_owner(deps, &info, &collection, &nft_swap.nft_token_id)?;
+        only_nft_owner(deps, info, collection, &nft_swap.nft_token_id)?;
 
         if idx == 0 {
             continue;
