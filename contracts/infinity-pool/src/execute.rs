@@ -1,12 +1,12 @@
 use crate::error::ContractError;
 use crate::helpers::{
-    check_deadline, get_next_pool_counter, get_pool_attributes, load_collection_royalties,
-    load_marketplace_params, only_nft_owner, only_owner, remove_pool, save_pool, save_pools,
-    transfer_nft, transfer_token, validate_finder,
+    get_next_pool_counter, get_pool_attributes, load_marketplace_params, only_owner, prep_for_swap,
+    remove_pool, save_pool, save_pools, transfer_nft, transfer_token, validate_nft_swaps_for_buy,
+    validate_nft_swaps_for_sell,
 };
-use crate::msg::{ExecuteMsg, NftSwap, PoolInfo, PoolNftSwap, SwapParams};
-use crate::state::{pools, Pool, CONFIG};
-use crate::swap_processor::{SwapProcessor, TransactionType};
+use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, SwapParams, TransactionType};
+use crate::state::{pools, BondingCurve, Pool, PoolType, CONFIG};
+use crate::swap_processor::SwapProcessor;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -14,6 +14,20 @@ use cosmwasm_std::{coin, Addr, Decimal, DepsMut, Env, Event, MessageInfo, Uint12
 use cw_utils::{may_pay, maybe_addr, must_pay, nonpayable};
 use sg1::fair_burn;
 use sg_std::{Response, NATIVE_DENOM};
+
+/// A convenience struct for creating Pools
+pub struct PoolInfo {
+    pub collection: Addr,
+    pub asset_recipient: Option<Addr>,
+    pub pool_type: PoolType,
+    pub bonding_curve: BondingCurve,
+    pub spot_price: Uint128,
+    pub delta: Uint128,
+    pub finders_fee_percent: Decimal,
+    pub swap_fee_percent: Decimal,
+    pub reinvest_tokens: bool,
+    pub reinvest_nfts: bool,
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
@@ -127,24 +141,13 @@ pub fn execute(
             pool_id,
             nfts_to_swap,
             swap_params,
-            token_recipient,
-            finder,
-        } => execute_direct_swap_nfts_for_tokens(
-            deps,
-            info,
-            env,
-            pool_id,
-            nfts_to_swap,
-            swap_params,
-            maybe_addr(api, token_recipient)?,
-            maybe_addr(api, finder)?,
-        ),
+        } => {
+            execute_direct_swap_nfts_for_tokens(deps, info, env, pool_id, nfts_to_swap, swap_params)
+        }
         ExecuteMsg::SwapNftsForTokens {
             collection,
             nfts_to_swap,
             swap_params,
-            token_recipient,
-            finder,
         } => execute_swap_nfts_for_tokens(
             deps,
             info,
@@ -152,15 +155,11 @@ pub fn execute(
             api.addr_validate(&collection)?,
             nfts_to_swap,
             swap_params,
-            maybe_addr(api, token_recipient)?,
-            maybe_addr(api, finder)?,
         ),
         ExecuteMsg::DirectSwapTokensForSpecificNfts {
             pool_id,
             nfts_to_swap_for,
             swap_params,
-            nft_recipient,
-            finder,
         } => execute_direct_swap_tokens_for_specific_nfts(
             deps,
             info,
@@ -168,15 +167,11 @@ pub fn execute(
             pool_id,
             nfts_to_swap_for,
             swap_params,
-            maybe_addr(api, nft_recipient)?,
-            maybe_addr(api, finder)?,
         ),
         ExecuteMsg::SwapTokensForSpecificNfts {
             collection,
             pool_nfts_to_swap_for,
             swap_params,
-            nft_recipient,
-            finder,
         } => execute_swap_tokens_for_specific_nfts(
             deps,
             info,
@@ -184,15 +179,11 @@ pub fn execute(
             api.addr_validate(&collection)?,
             pool_nfts_to_swap_for,
             swap_params,
-            maybe_addr(api, nft_recipient)?,
-            maybe_addr(api, finder)?,
         ),
         ExecuteMsg::SwapTokensForAnyNfts {
             collection,
             max_expected_token_input,
             swap_params,
-            nft_recipient,
-            finder,
         } => execute_swap_tokens_for_any_nfts(
             deps,
             info,
@@ -200,8 +191,6 @@ pub fn execute(
             api.addr_validate(&collection)?,
             max_expected_token_input,
             swap_params,
-            maybe_addr(api, nft_recipient)?,
-            maybe_addr(api, finder)?,
         ),
     }
 }
@@ -585,48 +574,49 @@ pub fn execute_direct_swap_nfts_for_tokens(
     pool_id: u64,
     nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
-    asset_recipient: Option<Addr>,
-    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
-    check_deadline(&env.block, swap_params.deadline)?;
-    validate_finder(&finder, &info.sender, &asset_recipient)?;
 
-    let config = CONFIG.load(deps.storage)?;
-    let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
+    let pool = pools().load(deps.storage, pool_id)?;
 
-    let mut pool = pools().load(deps.storage, pool_id)?;
-    let seller_recipient = asset_recipient.unwrap_or_else(|| info.sender.clone());
-    let collection_royalties = load_collection_royalties(deps.as_ref(), &pool.collection)?;
+    let swap_prep_result = prep_for_swap(
+        deps.as_ref(),
+        &Some(env.block),
+        &info.sender,
+        &pool.collection,
+        &swap_params,
+    )?;
 
-    for nft_swap in nfts_to_swap.iter() {
-        only_nft_owner(
-            deps.as_ref(),
-            &info,
-            &pool.collection,
-            &nft_swap.nft_token_id,
-        )?;
-    }
+    validate_nft_swaps_for_sell(deps.as_ref(), &info, &pool.collection, &nfts_to_swap)?;
 
     let mut response = Response::new();
     let pools_to_save: Vec<Pool>;
+
     {
         let mut processor = SwapProcessor::new(
             TransactionType::Sell,
             pool.collection.clone(),
             info.sender,
             Uint128::zero(),
-            seller_recipient,
-            marketplace_params.params.trading_fee_percent,
-            collection_royalties,
-            finder,
-            config.developer,
+            swap_prep_result.asset_recipient,
+            swap_prep_result
+                .marketplace_params
+                .params
+                .trading_fee_percent,
+            swap_prep_result.collection_royalties,
+            swap_prep_result.finder,
+            swap_prep_result.developer,
         );
         processor.direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)?;
         processor.finalize_transaction(&mut response)?;
-        pools_to_save = processor.pools_to_save;
+        pools_to_save = processor.pools_to_save.into_values().collect();
     }
-    save_pools(deps.storage, pools_to_save, &marketplace_params)?;
+
+    save_pools(
+        deps.storage,
+        pools_to_save,
+        &swap_prep_result.marketplace_params,
+    )?;
 
     Ok(response)
 }
@@ -639,42 +629,47 @@ pub fn execute_swap_nfts_for_tokens(
     collection: Addr,
     nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
-    asset_recipient: Option<Addr>,
-    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
-    check_deadline(&env.block, swap_params.deadline)?;
-    validate_finder(&finder, &info.sender, &asset_recipient)?;
 
-    let config = CONFIG.load(deps.storage)?;
-    let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
+    let swap_prep_result = prep_for_swap(
+        deps.as_ref(),
+        &Some(env.block),
+        &info.sender,
+        &collection,
+        &swap_params,
+    )?;
 
-    let seller_recipient = asset_recipient.unwrap_or_else(|| info.sender.clone());
-    let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
+    validate_nft_swaps_for_sell(deps.as_ref(), &info, &collection, &nfts_to_swap)?;
 
-    for nft_swap in nfts_to_swap.iter() {
-        only_nft_owner(deps.as_ref(), &info, &collection, &nft_swap.nft_token_id)?;
-    }
-
-    let pools_to_save: Vec<Pool>;
     let mut response = Response::new();
+    let pools_to_save: Vec<Pool>;
+
     {
         let mut processor = SwapProcessor::new(
             TransactionType::Sell,
             collection,
             info.sender,
             Uint128::zero(),
-            seller_recipient,
-            marketplace_params.params.trading_fee_percent,
-            collection_royalties,
-            finder,
-            config.developer,
+            swap_prep_result.asset_recipient,
+            swap_prep_result
+                .marketplace_params
+                .params
+                .trading_fee_percent,
+            swap_prep_result.collection_royalties,
+            swap_prep_result.finder,
+            swap_prep_result.developer,
         );
-        processor.swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)?;
+        processor.swap_nfts_for_tokens(deps.as_ref().storage, nfts_to_swap, swap_params)?;
         processor.finalize_transaction(&mut response)?;
-        pools_to_save = processor.pools_to_save;
+        pools_to_save = processor.pools_to_save.into_values().collect();
     }
-    save_pools(deps.storage, pools_to_save, &marketplace_params)?;
+
+    save_pools(
+        deps.storage,
+        pools_to_save,
+        &swap_prep_result.marketplace_params,
+    )?;
 
     Ok(response)
 }
@@ -687,12 +682,7 @@ pub fn execute_direct_swap_tokens_for_specific_nfts(
     pool_id: u64,
     nfts_to_swap_for: Vec<NftSwap>,
     swap_params: SwapParams,
-    asset_recipient: Option<Addr>,
-    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
-    check_deadline(&env.block, swap_params.deadline)?;
-    validate_finder(&finder, &info.sender, &asset_recipient)?;
-
     let pool = pools().load(deps.storage, pool_id)?;
     execute_swap_tokens_for_specific_nfts(
         deps,
@@ -704,8 +694,6 @@ pub fn execute_direct_swap_tokens_for_specific_nfts(
             nft_swaps: nfts_to_swap_for,
         }],
         swap_params,
-        asset_recipient,
-        finder,
     )
 }
 
@@ -717,55 +705,46 @@ pub fn execute_swap_tokens_for_specific_nfts(
     collection: Addr,
     nfts_to_swap_for: Vec<PoolNftSwap>,
     swap_params: SwapParams,
-    asset_recipient: Option<Addr>,
-    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
-    check_deadline(&env.block, swap_params.deadline)?;
-    validate_finder(&finder, &info.sender, &asset_recipient)?;
+    let swap_prep_result = prep_for_swap(
+        deps.as_ref(),
+        &Some(env.block),
+        &info.sender,
+        &collection,
+        &swap_params,
+    )?;
 
-    // User must send enough tokens to cover the swap
-    // Should be the sum of all the token amounts in the nft_swaps
-    let received_amount = must_pay(&info, NATIVE_DENOM)?;
-    let expected_amount = nfts_to_swap_for
-        .iter()
-        .fold(Uint128::zero(), |acc, nft_swap| {
-            acc + nft_swap
-                .nft_swaps
-                .iter()
-                .fold(Uint128::zero(), |acc, nft| acc + nft.token_amount)
-        });
-    if received_amount < expected_amount {
-        return Err(ContractError::InsufficientFunds(format!(
-            "expected {} but received {}",
-            expected_amount, received_amount
-        )));
-    }
+    let received_amount =
+        validate_nft_swaps_for_buy(&info, &swap_prep_result.denom, &nfts_to_swap_for)?;
 
-    let config = CONFIG.load(deps.storage)?;
-    let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
-
-    let seller_recipient = asset_recipient.unwrap_or_else(|| info.sender.clone());
-    let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
-
-    let pools_to_save: Vec<Pool>;
     let mut response = Response::new();
+    let pools_to_save: Vec<Pool>;
+
     {
         let mut processor = SwapProcessor::new(
             TransactionType::Buy,
             collection,
             info.sender,
             received_amount,
-            seller_recipient,
-            marketplace_params.params.trading_fee_percent,
-            collection_royalties,
-            finder,
-            config.developer,
+            swap_prep_result.asset_recipient,
+            swap_prep_result
+                .marketplace_params
+                .params
+                .trading_fee_percent,
+            swap_prep_result.collection_royalties,
+            swap_prep_result.finder,
+            swap_prep_result.developer,
         );
         processor.swap_tokens_for_specific_nfts(deps.storage, nfts_to_swap_for, swap_params)?;
         processor.finalize_transaction(&mut response)?;
-        pools_to_save = processor.pools_to_save;
+        pools_to_save = processor.pools_to_save.into_values().collect();
     }
-    save_pools(deps.storage, pools_to_save, &marketplace_params)?;
+
+    save_pools(
+        deps.storage,
+        pools_to_save,
+        &swap_prep_result.marketplace_params,
+    )?;
 
     Ok(response)
 }
@@ -778,11 +757,14 @@ pub fn execute_swap_tokens_for_any_nfts(
     collection: Addr,
     max_expected_token_input: Vec<Uint128>,
     swap_params: SwapParams,
-    asset_recipient: Option<Addr>,
-    finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
-    check_deadline(&env.block, swap_params.deadline)?;
-    validate_finder(&finder, &info.sender, &asset_recipient)?;
+    let swap_prep_result = prep_for_swap(
+        deps.as_ref(),
+        &Some(env.block),
+        &info.sender,
+        &collection,
+        &swap_params,
+    )?;
 
     // User must send enough tokens to cover the swap
     // Should be the sum of all the token amounts in max_expected_token_input
@@ -797,31 +779,34 @@ pub fn execute_swap_tokens_for_any_nfts(
         )));
     }
 
-    let config = CONFIG.load(deps.storage)?;
-    let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
-
-    let seller_recipient = asset_recipient.unwrap_or_else(|| info.sender.clone());
-    let collection_royalties = load_collection_royalties(deps.as_ref(), &collection)?;
-
-    let pools_to_save: Vec<Pool>;
     let mut response = Response::new();
+    let pools_to_save: Vec<Pool>;
+
     {
         let mut processor = SwapProcessor::new(
             TransactionType::Buy,
             collection,
             info.sender,
             received_amount,
-            seller_recipient,
-            marketplace_params.params.trading_fee_percent,
-            collection_royalties,
-            finder,
-            config.developer,
+            swap_prep_result.asset_recipient,
+            swap_prep_result
+                .marketplace_params
+                .params
+                .trading_fee_percent,
+            swap_prep_result.collection_royalties,
+            swap_prep_result.finder,
+            swap_prep_result.developer,
         );
         processor.swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)?;
         processor.finalize_transaction(&mut response)?;
-        pools_to_save = processor.pools_to_save;
+        pools_to_save = processor.pools_to_save.into_values().collect();
     }
-    save_pools(deps.storage, pools_to_save, &marketplace_params)?;
+
+    save_pools(
+        deps.storage,
+        pools_to_save,
+        &swap_prep_result.marketplace_params,
+    )?;
 
     Ok(response)
 }

@@ -1,6 +1,6 @@
 use crate::error::ContractError;
 use crate::helpers::{transfer_nft, transfer_token};
-use crate::msg::{NftSwap, PoolNftSwap, SwapParams};
+use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType};
 
 use core::cmp::Ordering;
@@ -41,13 +41,6 @@ impl PartialEq for PoolPair {
 }
 
 impl Eq for PoolPair {}
-
-/// Defines whether the end user is buying or selling NFTs
-#[cw_serde]
-pub enum TransactionType {
-    Sell,
-    Buy,
-}
 
 /// A token payment that needs to be executed at the end of a transaction
 #[cw_serde]
@@ -101,7 +94,7 @@ pub struct SwapProcessor<'a> {
     /// A set of in memory pools that are involved in the transaction
     pub pool_queue: BTreeSet<PoolPair>,
     /// A set of in memory pools that should be saved at the end of the transaction
-    pub pools_to_save: Vec<Pool>,
+    pub pools_to_save: BTreeMap<u64, Pool>,
     /// The latest pool that was retrieved
     pub latest: Option<u64>,
     /// An iterator for retrieving sorted pool quotes
@@ -134,7 +127,7 @@ impl<'a> SwapProcessor<'a> {
             finder,
             developer,
             pool_queue: BTreeSet::new(),
-            pools_to_save: vec![],
+            pools_to_save: BTreeMap::new(),
             latest: None,
             pool_quote_iter: None,
             swaps: vec![],
@@ -207,34 +200,55 @@ impl<'a> SwapProcessor<'a> {
     /// Process a swap
     pub fn process_swap(
         &mut self,
-        pool: &mut Pool,
+        pool_pair: PoolPair,
         nft_swap: NftSwap,
-    ) -> Result<(), ContractError> {
-        // Retrieve the transaction price from the pool
-        let sale_price = match self.tx_type {
-            TransactionType::Buy => pool.buy_nft_from_pool(&nft_swap)?,
-            TransactionType::Sell => pool.sell_nft_to_pool(&nft_swap)?,
+    ) -> Result<(PoolPair, bool), ContractError> {
+        let mut pool_pair = pool_pair;
+        // Withdraw assets from the pool
+        match self.tx_type {
+            TransactionType::Buy => pool_pair
+                .pool
+                .buy_nft_from_pool(&nft_swap, pool_pair.quote_price)?,
+            TransactionType::Sell => pool_pair
+                .pool
+                .sell_nft_to_pool(&nft_swap, pool_pair.quote_price)?,
         };
+
         // Set the resulting swap with fees included
-        let mut swap = self.create_swap(pool, sale_price, nft_swap.nft_token_id);
+        let mut swap = self.create_swap(
+            &pool_pair.pool,
+            pool_pair.quote_price,
+            nft_swap.nft_token_id,
+        );
 
         // Reinvest tokens or NFTs if applicable
-        if pool.pool_type == PoolType::Trade {
-            if self.tx_type == TransactionType::Buy && pool.reinvest_tokens {
+        if pool_pair.pool.pool_type == PoolType::Trade {
+            if self.tx_type == TransactionType::Buy && pool_pair.pool.reinvest_tokens {
                 let reinvest_amount = swap.seller_payment.unwrap().amount;
                 swap.seller_payment = None;
-                pool.deposit_tokens(reinvest_amount)?;
-            } else if self.tx_type == TransactionType::Sell && pool.reinvest_nfts {
+                pool_pair.pool.deposit_tokens(reinvest_amount)?;
+            } else if self.tx_type == TransactionType::Sell && pool_pair.pool.reinvest_nfts {
                 let reinvest_nft_token_id = swap.nft_payment.unwrap().nft_token_id;
                 swap.nft_payment = None;
-                pool.deposit_nfts(&vec![reinvest_nft_token_id])?;
+                pool_pair.pool.deposit_nfts(&vec![reinvest_nft_token_id])?;
             }
         }
-        // Update the pool spot price
-        pool.update_spot_price(&self.tx_type);
-
         self.swaps.push(swap);
-        Ok(())
+
+        // Update the pool spot price
+        let result = pool_pair.pool.update_spot_price(&self.tx_type);
+        if result.is_ok() {
+            let next_pool_quote = match self.tx_type {
+                TransactionType::Buy => pool_pair.pool.get_buy_quote(),
+                TransactionType::Sell => pool_pair.pool.get_sell_quote(),
+            }?;
+            if next_pool_quote.is_some() {
+                pool_pair.quote_price = next_pool_quote.unwrap();
+                return Ok((pool_pair, true));
+            }
+        }
+        pool_pair.needs_saving = true;
+        return Ok((pool_pair, false));
     }
 
     /// Push asset transfer messages to the response
@@ -310,7 +324,8 @@ impl<'a> SwapProcessor<'a> {
         let mut pool_pair = self.pool_queue.pop_first();
         while let Some(_pool_pair) = pool_pair {
             if _pool_pair.needs_saving {
-                self.pools_to_save.push(_pool_pair.pool);
+                self.pools_to_save
+                    .insert(_pool_pair.pool.id, _pool_pair.pool);
             }
             pool_pair = self.pool_queue.pop_first();
         }
@@ -391,32 +406,40 @@ impl<'a> SwapProcessor<'a> {
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
-        // Load the only pool that will be needed
-        let mut pool = pool;
-        {
-            for nft_swap in nfts_to_swap {
-                let result = self.process_swap(&mut pool, nft_swap);
-                match result {
-                    Ok(_) => {}
-                    Err(ContractError::SwapError(_err)) => {
-                        // If the swap is robust, break out of the loop and save the pool
-                        if swap_params.robust {
-                            break;
-                        } else {
-                            // If the swap is not robust, throw an error
-                            return Err(ContractError::SwapError(_err));
-                        }
-                    }
-                    Err(_err) => return Err(_err),
-                }
-            }
+        let quote_price = pool.get_sell_quote()?;
+        if quote_price.is_none() {
+            return Err(ContractError::InvalidPool(
+                "pool does not have a quote".to_string(),
+            ));
         }
-        // Queue the only pool for saving
-        self.pool_queue.insert(PoolPair {
-            needs_saving: true,
-            quote_price: Uint128::zero(),
+
+        let mut pool_pair = PoolPair {
+            needs_saving: false,
+            quote_price: quote_price.unwrap(),
             pool,
-        });
+        };
+
+        for nft_swap in nfts_to_swap {
+            match self.process_swap(pool_pair, nft_swap) {
+                Ok((_pool_pair, _updated)) => {
+                    pool_pair = _pool_pair;
+                    if !_updated {
+                        // If the swap was ok, but the quote price was not updated, break out of loop
+                        break;
+                    }
+                }
+                Err(ContractError::SwapError(_err)) => {
+                    if swap_params.robust {
+                        // If the swap is robust, break out of loop
+                        break;
+                    } else {
+                        // otherwise throw the error
+                        return Err(ContractError::SwapError(_err));
+                    }
+                }
+                Err(err) => return Err(err),
+            };
+        }
         Ok(())
     }
 
@@ -434,26 +457,30 @@ impl<'a> SwapProcessor<'a> {
             if pool_pair_option.is_none() {
                 return Ok(());
             }
-            let mut pool_pair = pool_pair_option.unwrap();
-            {
-                let result = self.process_swap(&mut pool_pair.pool, nft_swap);
-                match result {
-                    Ok(_) => {}
-                    Err(ContractError::SwapError(_err)) => {
-                        // If the swap is robust, break out of function
-                        if swap_params.robust {
-                            return Ok(());
-                        } else {
-                            // If the swap is not robust, throw an error
-                            return Err(ContractError::SwapError(_err));
-                        }
+            let pool_pair = pool_pair_option.unwrap();
+            match self.process_swap(pool_pair, nft_swap) {
+                Ok((_pool_pair, _updated)) => {
+                    if _updated {
+                        // If the swap was ok, and the quote price was updated, save into pool_queue
+                        self.pool_queue.insert(_pool_pair);
+                    } else {
+                        // If the swap was ok, but the quote price was not updated,
+                        // withdraw from circulation by inserting into pools_to_save
+                        self.pools_to_save
+                            .insert(_pool_pair.pool.id, _pool_pair.pool);
                     }
-                    Err(_err) => return Err(_err),
                 }
-            }
-            // Queue the pool for saving
-            pool_pair.needs_saving = true;
-            self.pool_queue.insert(pool_pair);
+                Err(ContractError::SwapError(_err)) => {
+                    if swap_params.robust {
+                        // If the swap is robust, break out of loop to shortcut the transaction
+                        break;
+                    } else {
+                        // otherwise throw the error
+                        return Err(ContractError::SwapError(_err));
+                    }
+                }
+                Err(err) => return Err(err),
+            };
         }
         Ok(())
     }
@@ -465,49 +492,71 @@ impl<'a> SwapProcessor<'a> {
         nfts_to_swap_for: Vec<PoolNftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
-        // Create a pool map for tracking swap pools
-        let mut pool_map: BTreeMap<u64, Pool> = BTreeMap::new();
+        // Create a pool pair map for tracking swap pools
+        let mut pool_pair_map: BTreeMap<u64, PoolPair> = BTreeMap::new();
 
         for pool_nfts in nfts_to_swap_for {
+            // Check if pool is in pools_to_save map, indicating it cannot be involved in further swaps
+            if self.pools_to_save.contains_key(&pool_nfts.pool_id) {
+                continue;
+            }
             // Retrieve pool from pool_map
-            let mut pool_option = pool_map.remove(&pool_nfts.pool_id);
+            let is_pool_in_map = pool_pair_map.contains_key(&pool_nfts.pool_id);
             // If pool is not in pool_map, load it from storage
-            if pool_option.is_none() {
-                pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
+            if !is_pool_in_map {
+                let pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
+                // If pool is not found, return error
+                if pool_option.is_none() {
+                    return Err(ContractError::InvalidPool("pool not found".to_string()));
+                }
+                // Create PoolPair and insert into pool_pair_map
+                let pool = pool_option.unwrap();
+                let quote_price = pool.get_sell_quote()?;
+                if quote_price.is_none() {
+                    return Err(ContractError::SwapError(
+                        "pool cannot offer a quote".to_string(),
+                    ));
+                }
+                pool_pair_map.insert(
+                    pool.id,
+                    PoolPair {
+                        needs_saving: false,
+                        quote_price: quote_price.unwrap(),
+                        pool,
+                    },
+                );
             }
-            // If pool is still not found, return error
-            if pool_option.is_none() {
-                return Err(ContractError::InvalidPool("pool not found".to_string()));
-            }
-            let mut pool = pool_option.unwrap();
 
-            // Iterate for all NFTs selected for the given
+            // Iterate over all NFTs selected for the given pool
             for nft_swap in pool_nfts.nft_swaps {
-                let result = self.process_swap(&mut pool, nft_swap);
-                match result {
-                    Ok(_) => {}
+                let pool_pair = pool_pair_map.remove(&pool_nfts.pool_id).unwrap();
+                match self.process_swap(pool_pair, nft_swap) {
+                    Ok((_pool_pair, _updated)) => {
+                        if _updated {
+                            // If the swap was ok, and the quote price was updated, save into pool_pair_map
+                            pool_pair_map.insert(_pool_pair.pool.id, _pool_pair);
+                            continue;
+                        } else {
+                            // If the swap was ok, but the quote price was not updated,
+                            // withdraw from circulation by inserting into pools_to_save,
+                            // and break out of loop
+                            self.pools_to_save
+                                .insert(_pool_pair.pool.id, _pool_pair.pool);
+                            break;
+                        }
+                    }
                     Err(ContractError::SwapError(_err)) => {
-                        // If the swap is robust, break out of loop and continue processing other pools
                         if swap_params.robust {
+                            // If the swap is robust, break out of loop and continue processing other pools
                             break;
                         } else {
-                            // If the swap is not robust, throw an error
+                            // otherwise throw the error
                             return Err(ContractError::SwapError(_err));
                         }
                     }
-                    Err(_err) => return Err(_err),
-                }
+                    Err(err) => return Err(err),
+                };
             }
-            // Put pool back in map
-            pool_map.insert(pool.id, pool);
-        }
-        // Queue all pools for saving
-        for (_, pool) in pool_map {
-            self.pool_queue.insert(PoolPair {
-                needs_saving: true,
-                quote_price: Uint128::zero(),
-                pool,
-            });
         }
         Ok(())
     }
@@ -526,34 +575,39 @@ impl<'a> SwapProcessor<'a> {
             if pool_pair_option.is_none() {
                 return Ok(());
             }
-            let mut pool_pair = pool_pair_option.unwrap();
+            let pool_pair = pool_pair_option.unwrap();
             {
                 // Grab first NFT from the pool
                 let nft_token_id = pool_pair.pool.nft_token_ids.first().unwrap().to_string();
-                let result = self.process_swap(
-                    &mut pool_pair.pool,
+                match self.process_swap(
+                    pool_pair,
                     NftSwap {
                         nft_token_id,
                         token_amount,
                     },
-                );
-                match result {
-                    Ok(_) => {}
-                    Err(ContractError::SwapError(_err)) => {
-                        // If the swap is robust, break out of function
-                        if swap_params.robust {
-                            return Ok(());
+                ) {
+                    Ok((pool_pair, updated)) => {
+                        if updated {
+                            // If the swap was ok, and the quote price was updated, save into pool_queue
+                            self.pool_queue.insert(pool_pair);
                         } else {
-                            // If the swap is not robust, throw an error
+                            // If the swap was ok, but the quote price was not updated,
+                            // withdraw from circulation by inserting into pools_to_save
+                            self.pools_to_save.insert(pool_pair.pool.id, pool_pair.pool);
+                        }
+                    }
+                    Err(ContractError::SwapError(_err)) => {
+                        if swap_params.robust {
+                            // If the swap is robust, break out of loop and continue processing other pools
+                            break;
+                        } else {
+                            // otherwise throw the error
                             return Err(ContractError::SwapError(_err));
                         }
                     }
-                    Err(_err) => return Err(_err),
-                }
+                    Err(err) => return Err(err),
+                };
             }
-            // Queue the pool for saving
-            pool_pair.needs_saving = true;
-            self.pool_queue.insert(pool_pair);
         }
         Ok(())
     }
