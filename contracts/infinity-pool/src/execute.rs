@@ -293,7 +293,7 @@ pub fn execute_deposit_nfts(
     // Push the NFT transfer messages
     let mut response = Response::new();
     for nft_token_id in &nft_token_ids {
-        only_nft_owner(deps.as_ref(), &info, &collection, &nft_token_id)?;
+        only_nft_owner(deps.as_ref(), &info, &collection, nft_token_id)?;
         transfer_nft(
             nft_token_id,
             env.contract.address.as_ref(),

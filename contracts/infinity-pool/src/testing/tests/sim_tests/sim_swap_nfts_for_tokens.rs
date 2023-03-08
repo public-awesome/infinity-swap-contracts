@@ -1043,7 +1043,7 @@ fn finders_fee_is_applied_correctly() {
         expected_finders_fee: expected_finders_fee.u128(),
         swaps,
         creator,
-        expected_seller: user2.clone(),
+        expected_seller: user2,
         token_id: token_id_1.to_string(),
         expected_nft_payer: Addr::unchecked(ASSET_ACCOUNT),
         expected_finder: user1,

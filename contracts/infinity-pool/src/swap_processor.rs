@@ -243,12 +243,12 @@ impl<'a> SwapProcessor<'a> {
                 TransactionType::Buy => pool_pair.pool.get_sell_quote(),
                 TransactionType::Sell => pool_pair.pool.get_buy_quote(),
             }?;
-            if next_pool_quote.is_some() {
-                pool_pair.quote_price = next_pool_quote.unwrap();
+            if let Some(_next_pool_quote) = next_pool_quote {
+                pool_pair.quote_price = _next_pool_quote;
                 return Ok((pool_pair, true));
             }
         }
-        return Ok((pool_pair, false));
+        Ok((pool_pair, false))
     }
 
     /// Push asset transfer messages to the response
