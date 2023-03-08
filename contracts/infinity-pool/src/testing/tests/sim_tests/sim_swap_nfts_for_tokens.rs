@@ -8,7 +8,6 @@ use crate::testing::tests::sim_tests::helpers::{
     VendingTemplateSetup,
 };
 use crate::testing::tests::sim_tests::sim_swap_nfts_for_tokens::QueryMsg::SimSwapNftsForTokens;
-use cosmwasm_std::StdError::GenericErr;
 use cosmwasm_std::StdResult;
 use cosmwasm_std::Uint128;
 use cosmwasm_std::{Addr, Timestamp};
@@ -67,7 +66,6 @@ fn cant_swap_two_inactive_pools() {
 
         token_id_1 = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -163,7 +161,6 @@ fn can_swap_two_active_pools() {
 
         token_id_1 = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -189,7 +186,7 @@ fn can_swap_two_active_pools() {
         user2.clone(),
         None,
     );
-    let query_msg = QueryMsg::PoolQuotesSell {
+    let query_msg = QueryMsg::PoolQuotesBuy {
         collection: collection.to_string(),
         query_options: QueryOptions {
             /// Whether to sort items in ascending or descending order
@@ -207,12 +204,12 @@ fn can_swap_two_active_pools() {
             PoolQuote {
                 id: 2,
                 collection: collection.clone(),
-                quote_price: spot_price_2.into(),
+                quote_price: (spot_price_2 + 100u128).into(),
             },
             PoolQuote {
                 id: 1,
                 collection: collection.clone(),
-                quote_price: spot_price_1.into(),
+                quote_price: (spot_price_1 + 100u128).into(),
             },
         ],
     };
@@ -223,19 +220,18 @@ fn can_swap_two_active_pools() {
         .query_wasm_smart(infinity_pool.clone(), &swap_msg);
     assert!(res.is_ok());
     let swaps = res.unwrap().swaps;
-    let highest_seller_price = spot_price_2 + Uint128::from(100u64).u128();
-    let spot_price_plus_delta = spot_price_2 + 100_u128;
-    let expected_royalty_fee = Uint128::from(spot_price_plus_delta)
+    let expected_spot_price = spot_price_2 + 100u128;
+    let expected_royalty_fee = Uint128::from(expected_spot_price)
         .checked_multiply_ratio(10_u128, 100_u128)
         .unwrap()
         .u128();
-    let expected_network_fee = Uint128::from(spot_price_plus_delta)
+    let expected_network_fee = Uint128::from(expected_spot_price)
         .checked_multiply_ratio(2_u128, 100_u128)
         .unwrap()
         .u128();
 
     let nft_sale_check_params = NftSaleCheckParams {
-        expected_spot_price: highest_seller_price,
+        expected_spot_price,
         expected_royalty_price: expected_royalty_fee,
         expected_network_fee,
         expected_finders_fee: 0,
@@ -299,7 +295,6 @@ fn pool_type_can_not_be_nft_error() {
 
         token_id_1 = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -323,13 +318,7 @@ fn pool_type_can_not_be_nft_error() {
     let res: StdResult<SwapResponse> = router
         .wrap()
         .query_wasm_smart(infinity_pool.clone(), &swap_msg);
-    assert_eq!(
-        res,
-        Err(GenericErr {
-            msg: "Querier contract error: Generic error: Invalid pool: pool does not buy NFTs"
-                .to_string()
-        })
-    );
+    assert_eq!(res.unwrap(), SwapResponse { swaps: vec![] });
 }
 
 #[test]
@@ -382,7 +371,6 @@ fn insufficient_tokens_error() {
 
         token_id_1 = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -399,6 +387,22 @@ fn insufficient_tokens_error() {
             spr.creator.clone(),
         );
     }
+
+    let query_msg = QueryMsg::PoolQuotesBuy {
+        collection: collection.to_string(),
+        query_options: QueryOptions {
+            /// Whether to sort items in ascending or descending order
+            descending: None,
+            /// The key to start the query after
+            start_after: None,
+            // The number of items that will be returned
+            limit: Some(5),
+        },
+    };
+    let res: StdResult<PoolQuoteResponse> =
+        router.wrap().query_wasm_smart(infinity_pool, &query_msg);
+    assert!(res.unwrap().pool_quotes.is_empty());
+
     let sale_price = 1000_u128;
     let swap_msg =
         get_sim_swap_nfts_for_tokens_msg(collection, token_id_1, sale_price, false, user2, None);
@@ -406,13 +410,7 @@ fn insufficient_tokens_error() {
     let res: StdResult<SwapResponse> = router
         .wrap()
         .query_wasm_smart(infinity_pool.clone(), &swap_msg);
-    assert_eq!(
-        res,
-        Err(GenericErr {
-            msg: "Querier contract error: Generic error: Swap error: pool cannot offer quote"
-                .to_string(),
-        })
-    );
+    assert_eq!(res.unwrap(), SwapResponse { swaps: vec![] });
 }
 
 #[test]
@@ -465,7 +463,6 @@ fn invalid_sale_price_below_min_expected() {
 
         token_id_1 = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -484,7 +481,7 @@ fn invalid_sale_price_below_min_expected() {
     }
     let sale_price = 2000_u128;
 
-    let query_msg = QueryMsg::PoolQuotesSell {
+    let query_msg = QueryMsg::PoolQuotesBuy {
         collection: collection.to_string(),
         query_options: QueryOptions {
             /// Whether to sort items in ascending or descending order
@@ -503,12 +500,12 @@ fn invalid_sale_price_below_min_expected() {
             PoolQuote {
                 id: 2,
                 collection: Addr::unchecked(collection.to_string()),
-                quote_price: Uint128::new(spot_price_2),
+                quote_price: Uint128::new(spot_price_2 + 100u128),
             },
             PoolQuote {
                 id: 1,
                 collection: Addr::unchecked(collection.to_string()),
-                quote_price: Uint128::new(spot_price_1),
+                quote_price: Uint128::new(spot_price_1 + 100u128),
             },
         ],
     };
@@ -573,7 +570,6 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
 
         let tokens = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -603,12 +599,13 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
                 token_amount: Uint128::new(20000_u128), // won't swap bc price too high
             },
         ],
+        sender: user2.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust: true,
+            asset_recipient: None,
+            finder: None,
         },
-        token_recipient: user2.to_string(),
-        finder: None,
         collection: collection.to_string(),
     };
 
@@ -695,7 +692,6 @@ fn trading_fee_is_applied_correctly() {
 
         token_id_1 = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -721,7 +717,7 @@ fn trading_fee_is_applied_correctly() {
         user2.clone(),
         None,
     );
-    let query_msg = QueryMsg::PoolQuotesSell {
+    let query_msg = QueryMsg::PoolQuotesBuy {
         collection: collection.to_string(),
         query_options: QueryOptions {
             /// Whether to sort items in ascending or descending order
@@ -739,12 +735,12 @@ fn trading_fee_is_applied_correctly() {
             PoolQuote {
                 id: 2,
                 collection: collection.clone(),
-                quote_price: spot_price_2.into(),
+                quote_price: (spot_price_2 + 100u128).into(),
             },
             PoolQuote {
                 id: 1,
                 collection: collection.clone(),
-                quote_price: spot_price_1.into(),
+                quote_price: (spot_price_1 + 100u128).into(),
             },
         ],
     };
@@ -831,7 +827,6 @@ fn royalty_fee_applied_correctly() {
 
         token_id_1 = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -857,7 +852,7 @@ fn royalty_fee_applied_correctly() {
         user2.clone(),
         None,
     );
-    let query_msg = QueryMsg::PoolQuotesSell {
+    let query_msg = QueryMsg::PoolQuotesBuy {
         collection: collection.to_string(),
         query_options: QueryOptions {
             /// Whether to sort items in ascending or descending order
@@ -875,12 +870,12 @@ fn royalty_fee_applied_correctly() {
             PoolQuote {
                 id: 2,
                 collection: collection.clone(),
-                quote_price: spot_price_2.into(),
+                quote_price: (spot_price_2 + 100u128).into(),
             },
             PoolQuote {
                 id: 1,
                 collection: collection.clone(),
-                quote_price: spot_price_1.into(),
+                quote_price: (spot_price_1 + 100u128).into(),
             },
         ],
     };
@@ -926,6 +921,7 @@ fn finders_fee_is_applied_correctly() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
+    let user1 = vt.accts.bidder.clone();
     let user2 = setup_second_bidder_account(&mut router).unwrap();
     let creator = vt.accts.creator;
 
@@ -968,7 +964,6 @@ fn finders_fee_is_applied_correctly() {
 
         let tokens = deposit_nfts(
             &mut router,
-            spr.user1.clone(),
             spr.minter.clone(),
             spr.collection.clone(),
             spr.infinity_pool.clone(),
@@ -992,9 +987,9 @@ fn finders_fee_is_applied_correctly() {
         sale_price,
         true,
         user2.clone(),
-        Some(user2.to_string()),
+        Some(user1.to_string()),
     );
-    let query_msg = QueryMsg::PoolQuotesSell {
+    let query_msg = QueryMsg::PoolQuotesBuy {
         collection: collection.to_string(),
         query_options: QueryOptions {
             /// Whether to sort items in ascending or descending order
@@ -1012,12 +1007,12 @@ fn finders_fee_is_applied_correctly() {
             PoolQuote {
                 id: 2,
                 collection: collection.clone(),
-                quote_price: spot_price_2.into(),
+                quote_price: (spot_price_2 + 100u128).into(),
             },
             PoolQuote {
                 id: 1,
                 collection: collection.clone(),
-                quote_price: spot_price_1.into(),
+                quote_price: (spot_price_1 + 100u128).into(),
             },
         ],
     };
@@ -1051,7 +1046,7 @@ fn finders_fee_is_applied_correctly() {
         expected_seller: user2.clone(),
         token_id: token_id_1.to_string(),
         expected_nft_payer: Addr::unchecked(ASSET_ACCOUNT),
-        expected_finder: user2,
+        expected_finder: user1,
     };
 
     check_nft_sale(nft_sale_check_params);

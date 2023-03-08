@@ -236,18 +236,18 @@ impl<'a> SwapProcessor<'a> {
         self.swaps.push(swap);
 
         // Update the pool spot price
+        pool_pair.needs_saving = true;
         let result = pool_pair.pool.update_spot_price(&self.tx_type);
         if result.is_ok() {
             let next_pool_quote = match self.tx_type {
-                TransactionType::Buy => pool_pair.pool.get_buy_quote(),
-                TransactionType::Sell => pool_pair.pool.get_sell_quote(),
+                TransactionType::Buy => pool_pair.pool.get_sell_quote(),
+                TransactionType::Sell => pool_pair.pool.get_buy_quote(),
             }?;
             if next_pool_quote.is_some() {
                 pool_pair.quote_price = next_pool_quote.unwrap();
                 return Ok((pool_pair, true));
             }
         }
-        pool_pair.needs_saving = true;
         return Ok((pool_pair, false));
     }
 
@@ -346,14 +346,14 @@ impl<'a> SwapProcessor<'a> {
         // Init iter
         if self.pool_quote_iter.is_none() {
             self.pool_quote_iter = Some(match &self.tx_type {
-                TransactionType::Buy => buy_pool_quotes()
-                    .idx
-                    .collection_buy_price
-                    .sub_prefix(self.collection.clone())
-                    .range(storage, None, None, Order::Ascending),
-                TransactionType::Sell => sell_pool_quotes()
+                TransactionType::Buy => sell_pool_quotes()
                     .idx
                     .collection_sell_price
+                    .sub_prefix(self.collection.clone())
+                    .range(storage, None, None, Order::Ascending),
+                TransactionType::Sell => buy_pool_quotes()
+                    .idx
+                    .collection_buy_price
                     .sub_prefix(self.collection.clone())
                     .range(storage, None, None, Order::Descending),
             })
@@ -406,10 +406,10 @@ impl<'a> SwapProcessor<'a> {
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
-        let quote_price = pool.get_sell_quote()?;
+        let quote_price = pool.get_buy_quote()?;
         if quote_price.is_none() {
             return Err(ContractError::InvalidPool(
-                "pool does not have a quote".to_string(),
+                "pool cannot offer quote".to_string(),
             ));
         }
 
@@ -498,12 +498,16 @@ impl<'a> SwapProcessor<'a> {
         for pool_nfts in nfts_to_swap_for {
             // Check if pool is in pools_to_save map, indicating it cannot be involved in further swaps
             if self.pools_to_save.contains_key(&pool_nfts.pool_id) {
-                continue;
+                if swap_params.robust {
+                    continue;
+                } else {
+                    return Err(ContractError::InvalidPool(
+                        "pool cannot be involved in further swaps".to_string(),
+                    ));
+                }
             }
-            // Retrieve pool from pool_map
-            let is_pool_in_map = pool_pair_map.contains_key(&pool_nfts.pool_id);
             // If pool is not in pool_map, load it from storage
-            if !is_pool_in_map {
+            if !pool_pair_map.contains_key(&pool_nfts.pool_id) {
                 let pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
                 // If pool is not found, return error
                 if pool_option.is_none() {
@@ -513,9 +517,13 @@ impl<'a> SwapProcessor<'a> {
                 let pool = pool_option.unwrap();
                 let quote_price = pool.get_sell_quote()?;
                 if quote_price.is_none() {
-                    return Err(ContractError::SwapError(
-                        "pool cannot offer a quote".to_string(),
-                    ));
+                    if swap_params.robust {
+                        continue;
+                    } else {
+                        return Err(ContractError::InvalidPool(
+                            "pool cannot offer quote".to_string(),
+                        ));
+                    }
                 }
                 pool_pair_map.insert(
                     pool.id,
