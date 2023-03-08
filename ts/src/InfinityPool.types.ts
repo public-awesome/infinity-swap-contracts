@@ -81,24 +81,18 @@ export type ExecuteMsg = {
   };
 } | {
   direct_swap_nfts_for_tokens: {
-    finder?: string | null;
     nfts_to_swap: NftSwap[];
     pool_id: number;
     swap_params: SwapParams;
-    token_recipient?: string | null;
   };
 } | {
   swap_nfts_for_tokens: {
     collection: string;
-    finder?: string | null;
     nfts_to_swap: NftSwap[];
     swap_params: SwapParams;
-    token_recipient?: string | null;
   };
 } | {
   direct_swap_tokens_for_specific_nfts: {
-    finder?: string | null;
-    nft_recipient?: string | null;
     nfts_to_swap_for: NftSwap[];
     pool_id: number;
     swap_params: SwapParams;
@@ -106,17 +100,13 @@ export type ExecuteMsg = {
 } | {
   swap_tokens_for_specific_nfts: {
     collection: string;
-    finder?: string | null;
-    nft_recipient?: string | null;
     pool_nfts_to_swap_for: PoolNftSwap[];
     swap_params: SwapParams;
   };
 } | {
   swap_tokens_for_any_nfts: {
     collection: string;
-    finder?: string | null;
     max_expected_token_input: Uint128[];
-    nft_recipient?: string | null;
     swap_params: SwapParams;
   };
 };
@@ -130,7 +120,9 @@ export interface NftSwap {
   token_amount: Uint128;
 }
 export interface SwapParams {
+  asset_recipient?: string | null;
   deadline: Timestamp;
+  finder?: string | null;
   robust: boolean;
 }
 export interface PoolNftSwap {
@@ -142,19 +134,6 @@ export interface InstantiateMsg {
   developer?: string | null;
   marketplace_addr: string;
 }
-export type Decimal = string;
-export interface PoolInfo {
-  asset_recipient?: Addr | null;
-  bonding_curve: BondingCurve;
-  collection: Addr;
-  delta: Uint128;
-  finders_fee_percent: Decimal;
-  pool_type: PoolType;
-  reinvest_nfts: boolean;
-  reinvest_tokens: boolean;
-  spot_price: Uint128;
-  swap_fee_percent: Decimal;
-}
 export interface PoolQuoteResponse {
   pool_quotes: PoolQuote[];
 }
@@ -163,6 +142,7 @@ export interface PoolQuote {
   id: number;
   quote_price: Uint128;
 }
+export type Decimal = string;
 export interface PoolsByIdResponse {
   pools: [number, Pool | null][];
 }
@@ -213,42 +193,37 @@ export type QueryMsg = {
   };
 } | {
   sim_direct_swap_nfts_for_tokens: {
-    finder?: string | null;
     nfts_to_swap: NftSwap[];
     pool_id: number;
+    sender: string;
     swap_params: SwapParams;
-    token_recipient: string;
   };
 } | {
   sim_swap_nfts_for_tokens: {
     collection: string;
-    finder?: string | null;
     nfts_to_swap: NftSwap[];
+    sender: string;
     swap_params: SwapParams;
-    token_recipient: string;
   };
 } | {
   sim_direct_swap_tokensfor_specific_nfts: {
-    finder?: string | null;
-    nft_recipient: string;
     nfts_to_swap_for: NftSwap[];
     pool_id: number;
+    sender: string;
     swap_params: SwapParams;
   };
 } | {
   sim_swap_tokens_for_specific_nfts: {
     collection: string;
-    finder?: string | null;
-    nft_recipient: string;
     pool_nfts_to_swap_for: PoolNftSwap[];
+    sender: string;
     swap_params: SwapParams;
   };
 } | {
   sim_swap_tokens_for_any_nfts: {
     collection: string;
-    finder?: string | null;
     max_expected_token_input: Uint128[];
-    nft_recipient: string;
+    sender: string;
     swap_params: SwapParams;
   };
 };

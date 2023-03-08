@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, PoolType, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, Decimal, PoolInfo, PoolQuoteResponse, PoolQuote, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, PoolType, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
 export interface InfinityPoolReadOnlyInterface {
   contractAddress: string;
   config: () => Promise<ConfigResponse>;
@@ -42,68 +42,58 @@ export interface InfinityPoolReadOnlyInterface {
     queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
   }) => Promise<PoolQuotesSellResponse>;
   simDirectSwapNftsForTokens: ({
-    finder,
     nftsToSwap,
     poolId,
-    swapParams,
-    tokenRecipient
+    sender,
+    swapParams
   }: {
-    finder?: string;
     nftsToSwap: NftSwap[];
     poolId: number;
+    sender: string;
     swapParams: SwapParams;
-    tokenRecipient: string;
   }) => Promise<SimDirectSwapNftsForTokensResponse>;
   simSwapNftsForTokens: ({
     collection,
-    finder,
     nftsToSwap,
-    swapParams,
-    tokenRecipient
-  }: {
-    collection: string;
-    finder?: string;
-    nftsToSwap: NftSwap[];
-    swapParams: SwapParams;
-    tokenRecipient: string;
-  }) => Promise<SimSwapNftsForTokensResponse>;
-  simDirectSwapTokensforSpecificNfts: ({
-    finder,
-    nftRecipient,
-    nftsToSwapFor,
-    poolId,
+    sender,
     swapParams
   }: {
-    finder?: string;
-    nftRecipient: string;
+    collection: string;
+    nftsToSwap: NftSwap[];
+    sender: string;
+    swapParams: SwapParams;
+  }) => Promise<SimSwapNftsForTokensResponse>;
+  simDirectSwapTokensforSpecificNfts: ({
+    nftsToSwapFor,
+    poolId,
+    sender,
+    swapParams
+  }: {
     nftsToSwapFor: NftSwap[];
     poolId: number;
+    sender: string;
     swapParams: SwapParams;
   }) => Promise<SimDirectSwapTokensforSpecificNftsResponse>;
   simSwapTokensForSpecificNfts: ({
     collection,
-    finder,
-    nftRecipient,
     poolNftsToSwapFor,
+    sender,
     swapParams
   }: {
     collection: string;
-    finder?: string;
-    nftRecipient: string;
     poolNftsToSwapFor: PoolNftSwap[];
+    sender: string;
     swapParams: SwapParams;
   }) => Promise<SimSwapTokensForSpecificNftsResponse>;
   simSwapTokensForAnyNfts: ({
     collection,
-    finder,
     maxExpectedTokenInput,
-    nftRecipient,
+    sender,
     swapParams
   }: {
     collection: string;
-    finder?: string;
     maxExpectedTokenInput: Uint128[];
-    nftRecipient: string;
+    sender: string;
     swapParams: SwapParams;
   }) => Promise<SimSwapTokensForAnyNftsResponse>;
 }
@@ -197,116 +187,101 @@ export class InfinityPoolQueryClient implements InfinityPoolReadOnlyInterface {
     });
   };
   simDirectSwapNftsForTokens = async ({
-    finder,
     nftsToSwap,
     poolId,
-    swapParams,
-    tokenRecipient
+    sender,
+    swapParams
   }: {
-    finder?: string;
     nftsToSwap: NftSwap[];
     poolId: number;
+    sender: string;
     swapParams: SwapParams;
-    tokenRecipient: string;
   }): Promise<SimDirectSwapNftsForTokensResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       sim_direct_swap_nfts_for_tokens: {
-        finder,
         nfts_to_swap: nftsToSwap,
         pool_id: poolId,
-        swap_params: swapParams,
-        token_recipient: tokenRecipient
+        sender,
+        swap_params: swapParams
       }
     });
   };
   simSwapNftsForTokens = async ({
     collection,
-    finder,
     nftsToSwap,
-    swapParams,
-    tokenRecipient
+    sender,
+    swapParams
   }: {
     collection: string;
-    finder?: string;
     nftsToSwap: NftSwap[];
+    sender: string;
     swapParams: SwapParams;
-    tokenRecipient: string;
   }): Promise<SimSwapNftsForTokensResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       sim_swap_nfts_for_tokens: {
         collection,
-        finder,
         nfts_to_swap: nftsToSwap,
-        swap_params: swapParams,
-        token_recipient: tokenRecipient
+        sender,
+        swap_params: swapParams
       }
     });
   };
   simDirectSwapTokensforSpecificNfts = async ({
-    finder,
-    nftRecipient,
     nftsToSwapFor,
     poolId,
+    sender,
     swapParams
   }: {
-    finder?: string;
-    nftRecipient: string;
     nftsToSwapFor: NftSwap[];
     poolId: number;
+    sender: string;
     swapParams: SwapParams;
   }): Promise<SimDirectSwapTokensforSpecificNftsResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       sim_direct_swap_tokensfor_specific_nfts: {
-        finder,
-        nft_recipient: nftRecipient,
         nfts_to_swap_for: nftsToSwapFor,
         pool_id: poolId,
+        sender,
         swap_params: swapParams
       }
     });
   };
   simSwapTokensForSpecificNfts = async ({
     collection,
-    finder,
-    nftRecipient,
     poolNftsToSwapFor,
+    sender,
     swapParams
   }: {
     collection: string;
-    finder?: string;
-    nftRecipient: string;
     poolNftsToSwapFor: PoolNftSwap[];
+    sender: string;
     swapParams: SwapParams;
   }): Promise<SimSwapTokensForSpecificNftsResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       sim_swap_tokens_for_specific_nfts: {
         collection,
-        finder,
-        nft_recipient: nftRecipient,
         pool_nfts_to_swap_for: poolNftsToSwapFor,
+        sender,
         swap_params: swapParams
       }
     });
   };
   simSwapTokensForAnyNfts = async ({
     collection,
-    finder,
     maxExpectedTokenInput,
-    nftRecipient,
+    sender,
     swapParams
   }: {
     collection: string;
-    finder?: string;
     maxExpectedTokenInput: Uint128[];
-    nftRecipient: string;
+    sender: string;
     swapParams: SwapParams;
   }): Promise<SimSwapTokensForAnyNftsResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
       sim_swap_tokens_for_any_nfts: {
         collection,
-        finder,
         max_expected_token_input: maxExpectedTokenInput,
-        nft_recipient: nftRecipient,
+        sender,
         swap_params: swapParams
       }
     });
@@ -418,68 +393,48 @@ export interface InfinityPoolInterface extends InfinityPoolReadOnlyInterface {
     poolId: number;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   directSwapNftsForTokens: ({
-    finder,
     nftsToSwap,
     poolId,
-    swapParams,
-    tokenRecipient
+    swapParams
   }: {
-    finder?: string;
     nftsToSwap: NftSwap[];
     poolId: number;
     swapParams: SwapParams;
-    tokenRecipient?: string;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   swapNftsForTokens: ({
     collection,
-    finder,
     nftsToSwap,
-    swapParams,
-    tokenRecipient
+    swapParams
   }: {
     collection: string;
-    finder?: string;
     nftsToSwap: NftSwap[];
     swapParams: SwapParams;
-    tokenRecipient?: string;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   directSwapTokensForSpecificNfts: ({
-    finder,
-    nftRecipient,
     nftsToSwapFor,
     poolId,
     swapParams
   }: {
-    finder?: string;
-    nftRecipient?: string;
     nftsToSwapFor: NftSwap[];
     poolId: number;
     swapParams: SwapParams;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   swapTokensForSpecificNfts: ({
     collection,
-    finder,
-    nftRecipient,
     poolNftsToSwapFor,
     swapParams
   }: {
     collection: string;
-    finder?: string;
-    nftRecipient?: string;
     poolNftsToSwapFor: PoolNftSwap[];
     swapParams: SwapParams;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
   swapTokensForAnyNfts: ({
     collection,
-    finder,
     maxExpectedTokenInput,
-    nftRecipient,
     swapParams
   }: {
     collection: string;
-    finder?: string;
     maxExpectedTokenInput: Uint128[];
-    nftRecipient?: string;
     swapParams: SwapParams;
   }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
 }
@@ -699,68 +654,50 @@ export class InfinityPoolClient extends InfinityPoolQueryClient implements Infin
     }, fee, memo, funds);
   };
   directSwapNftsForTokens = async ({
-    finder,
     nftsToSwap,
     poolId,
-    swapParams,
-    tokenRecipient
+    swapParams
   }: {
-    finder?: string;
     nftsToSwap: NftSwap[];
     poolId: number;
     swapParams: SwapParams;
-    tokenRecipient?: string;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       direct_swap_nfts_for_tokens: {
-        finder,
         nfts_to_swap: nftsToSwap,
         pool_id: poolId,
-        swap_params: swapParams,
-        token_recipient: tokenRecipient
+        swap_params: swapParams
       }
     }, fee, memo, funds);
   };
   swapNftsForTokens = async ({
     collection,
-    finder,
     nftsToSwap,
-    swapParams,
-    tokenRecipient
+    swapParams
   }: {
     collection: string;
-    finder?: string;
     nftsToSwap: NftSwap[];
     swapParams: SwapParams;
-    tokenRecipient?: string;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       swap_nfts_for_tokens: {
         collection,
-        finder,
         nfts_to_swap: nftsToSwap,
-        swap_params: swapParams,
-        token_recipient: tokenRecipient
+        swap_params: swapParams
       }
     }, fee, memo, funds);
   };
   directSwapTokensForSpecificNfts = async ({
-    finder,
-    nftRecipient,
     nftsToSwapFor,
     poolId,
     swapParams
   }: {
-    finder?: string;
-    nftRecipient?: string;
     nftsToSwapFor: NftSwap[];
     poolId: number;
     swapParams: SwapParams;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       direct_swap_tokens_for_specific_nfts: {
-        finder,
-        nft_recipient: nftRecipient,
         nfts_to_swap_for: nftsToSwapFor,
         pool_id: poolId,
         swap_params: swapParams
@@ -769,22 +706,16 @@ export class InfinityPoolClient extends InfinityPoolQueryClient implements Infin
   };
   swapTokensForSpecificNfts = async ({
     collection,
-    finder,
-    nftRecipient,
     poolNftsToSwapFor,
     swapParams
   }: {
     collection: string;
-    finder?: string;
-    nftRecipient?: string;
     poolNftsToSwapFor: PoolNftSwap[];
     swapParams: SwapParams;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       swap_tokens_for_specific_nfts: {
         collection,
-        finder,
-        nft_recipient: nftRecipient,
         pool_nfts_to_swap_for: poolNftsToSwapFor,
         swap_params: swapParams
       }
@@ -792,23 +723,17 @@ export class InfinityPoolClient extends InfinityPoolQueryClient implements Infin
   };
   swapTokensForAnyNfts = async ({
     collection,
-    finder,
     maxExpectedTokenInput,
-    nftRecipient,
     swapParams
   }: {
     collection: string;
-    finder?: string;
     maxExpectedTokenInput: Uint128[];
-    nftRecipient?: string;
     swapParams: SwapParams;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       swap_tokens_for_any_nfts: {
         collection,
-        finder,
         max_expected_token_input: maxExpectedTokenInput,
-        nft_recipient: nftRecipient,
         swap_params: swapParams
       }
     }, fee, memo, funds);

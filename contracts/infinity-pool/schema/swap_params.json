@@ -8,12 +8,26 @@
     "robust"
   ],
   "properties": {
+    "asset_recipient": {
+      "description": "The address to receive the assets from the swap, if not specified is set to sender",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "deadline": {
       "description": "The deadline after which the swap will be rejected",
       "allOf": [
         {
           "$ref": "#/definitions/Timestamp"
         }
+      ]
+    },
+    "finder": {
+      "description": "The address of the finder, will receive a portion of the fees equal to percentage set by the pool",
+      "type": [
+        "string",
+        "null"
       ]
     },
     "robust": {

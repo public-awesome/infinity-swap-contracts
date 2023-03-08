@@ -8,7 +8,7 @@ import { Coin } from "@cosmjs/amino";
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, PoolType, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, Decimal, PoolInfo, PoolQuoteResponse, PoolQuote, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, PoolType, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
 export interface InfinityPoolMessage {
   contractAddress: string;
   sender: string;
@@ -115,68 +115,48 @@ export interface InfinityPoolMessage {
     poolId: number;
   }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
   directSwapNftsForTokens: ({
-    finder,
     nftsToSwap,
     poolId,
-    swapParams,
-    tokenRecipient
+    swapParams
   }: {
-    finder?: string;
     nftsToSwap: NftSwap[];
     poolId: number;
     swapParams: SwapParams;
-    tokenRecipient?: string;
   }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
   swapNftsForTokens: ({
     collection,
-    finder,
     nftsToSwap,
-    swapParams,
-    tokenRecipient
+    swapParams
   }: {
     collection: string;
-    finder?: string;
     nftsToSwap: NftSwap[];
     swapParams: SwapParams;
-    tokenRecipient?: string;
   }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
   directSwapTokensForSpecificNfts: ({
-    finder,
-    nftRecipient,
     nftsToSwapFor,
     poolId,
     swapParams
   }: {
-    finder?: string;
-    nftRecipient?: string;
     nftsToSwapFor: NftSwap[];
     poolId: number;
     swapParams: SwapParams;
   }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
   swapTokensForSpecificNfts: ({
     collection,
-    finder,
-    nftRecipient,
     poolNftsToSwapFor,
     swapParams
   }: {
     collection: string;
-    finder?: string;
-    nftRecipient?: string;
     poolNftsToSwapFor: PoolNftSwap[];
     swapParams: SwapParams;
   }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
   swapTokensForAnyNfts: ({
     collection,
-    finder,
     maxExpectedTokenInput,
-    nftRecipient,
     swapParams
   }: {
     collection: string;
-    finder?: string;
     maxExpectedTokenInput: Uint128[];
-    nftRecipient?: string;
     swapParams: SwapParams;
   }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
 }
@@ -473,17 +453,13 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
     };
   };
   directSwapNftsForTokens = ({
-    finder,
     nftsToSwap,
     poolId,
-    swapParams,
-    tokenRecipient
+    swapParams
   }: {
-    finder?: string;
     nftsToSwap: NftSwap[];
     poolId: number;
     swapParams: SwapParams;
-    tokenRecipient?: string;
   }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
@@ -492,11 +468,9 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
         contract: this.contractAddress,
         msg: toUtf8(JSON.stringify({
           direct_swap_nfts_for_tokens: {
-            finder,
             nfts_to_swap: nftsToSwap,
             pool_id: poolId,
-            swap_params: swapParams,
-            token_recipient: tokenRecipient
+            swap_params: swapParams
           }
         })),
         funds
@@ -505,16 +479,12 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
   };
   swapNftsForTokens = ({
     collection,
-    finder,
     nftsToSwap,
-    swapParams,
-    tokenRecipient
+    swapParams
   }: {
     collection: string;
-    finder?: string;
     nftsToSwap: NftSwap[];
     swapParams: SwapParams;
-    tokenRecipient?: string;
   }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
@@ -524,10 +494,8 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
         msg: toUtf8(JSON.stringify({
           swap_nfts_for_tokens: {
             collection,
-            finder,
             nfts_to_swap: nftsToSwap,
-            swap_params: swapParams,
-            token_recipient: tokenRecipient
+            swap_params: swapParams
           }
         })),
         funds
@@ -535,14 +503,10 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
     };
   };
   directSwapTokensForSpecificNfts = ({
-    finder,
-    nftRecipient,
     nftsToSwapFor,
     poolId,
     swapParams
   }: {
-    finder?: string;
-    nftRecipient?: string;
     nftsToSwapFor: NftSwap[];
     poolId: number;
     swapParams: SwapParams;
@@ -554,8 +518,6 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
         contract: this.contractAddress,
         msg: toUtf8(JSON.stringify({
           direct_swap_tokens_for_specific_nfts: {
-            finder,
-            nft_recipient: nftRecipient,
             nfts_to_swap_for: nftsToSwapFor,
             pool_id: poolId,
             swap_params: swapParams
@@ -567,14 +529,10 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
   };
   swapTokensForSpecificNfts = ({
     collection,
-    finder,
-    nftRecipient,
     poolNftsToSwapFor,
     swapParams
   }: {
     collection: string;
-    finder?: string;
-    nftRecipient?: string;
     poolNftsToSwapFor: PoolNftSwap[];
     swapParams: SwapParams;
   }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
@@ -586,8 +544,6 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
         msg: toUtf8(JSON.stringify({
           swap_tokens_for_specific_nfts: {
             collection,
-            finder,
-            nft_recipient: nftRecipient,
             pool_nfts_to_swap_for: poolNftsToSwapFor,
             swap_params: swapParams
           }
@@ -598,15 +554,11 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
   };
   swapTokensForAnyNfts = ({
     collection,
-    finder,
     maxExpectedTokenInput,
-    nftRecipient,
     swapParams
   }: {
     collection: string;
-    finder?: string;
     maxExpectedTokenInput: Uint128[];
-    nftRecipient?: string;
     swapParams: SwapParams;
   }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
@@ -617,9 +569,7 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
         msg: toUtf8(JSON.stringify({
           swap_tokens_for_any_nfts: {
             collection,
-            finder,
             max_expected_token_input: maxExpectedTokenInput,
-            nft_recipient: nftRecipient,
             swap_params: swapParams
           }
         })),

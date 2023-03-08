@@ -1,7 +1,7 @@
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 use cosmwasm_std::Uint128;
 use infinity_pool::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, NftSwap, PoolInfo, PoolNftSwap, PoolQuoteResponse,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, NftSwap, PoolNftSwap, PoolQuoteResponse,
     PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
 };
 use std::env::current_dir;
@@ -17,7 +17,6 @@ fn main() {
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
     export_schema(&schema_for!(NftSwap), &out_dir);
-    export_schema(&schema_for!(PoolInfo), &out_dir);
     export_schema(&schema_for!(PoolNftSwap), &out_dir);
     export_schema(&schema_for!(PoolQuoteResponse), &out_dir);
     export_schema(&schema_for!(PoolsByIdResponse), &out_dir);
