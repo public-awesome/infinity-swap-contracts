@@ -3,7 +3,7 @@ use crate::{
     swap_processor::Swap,
 };
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128};
+use cosmwasm_std::{Timestamp, Uint128};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -22,6 +22,17 @@ pub struct SwapParams {
     pub deadline: Timestamp,
     /// Whether or not to revert the entire trade if one of the swaps fails
     pub robust: bool,
+    /// The address to receive the assets from the swap, if not specified is set to sender
+    pub asset_recipient: Option<String>,
+    /// The address of the finder, will receive a portion of the fees equal to percentage set by the pool
+    pub finder: Option<String>,
+}
+
+/// Defines whether the end user is buying or selling NFTs
+#[cw_serde]
+pub enum TransactionType {
+    Sell,
+    Buy,
 }
 
 /// NftSwap contains the parameters for an NFT swap
@@ -42,21 +53,6 @@ pub struct PoolNftSwap {
     pub pool_id: u64,
     /// The NFT swaps to execute
     pub nft_swaps: Vec<NftSwap>,
-}
-
-/// A convenience struct for creating Pools
-#[cw_serde]
-pub struct PoolInfo {
-    pub collection: Addr,
-    pub asset_recipient: Option<Addr>,
-    pub pool_type: PoolType,
-    pub bonding_curve: BondingCurve,
-    pub spot_price: Uint128,
-    pub delta: Uint128,
-    pub finders_fee_percent: Decimal,
-    pub swap_fee_percent: Decimal,
-    pub reinvest_tokens: bool,
-    pub reinvest_nfts: bool,
 }
 
 #[cw_serde]
@@ -132,16 +128,12 @@ pub enum ExecuteMsg {
         pool_id: u64,
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
-        token_recipient: Option<String>,
-        finder: Option<String>,
     },
     /// Swap NFTs for tokens at optimal sale prices
     SwapNftsForTokens {
         collection: String,
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
-        token_recipient: Option<String>,
-        finder: Option<String>,
     },
     /// Swap tokens for NFTs directly with a specified pool
     /// Note: client must specify which NFTs they want to swap for
@@ -149,24 +141,18 @@ pub enum ExecuteMsg {
         pool_id: u64,
         nfts_to_swap_for: Vec<NftSwap>,
         swap_params: SwapParams,
-        nft_recipient: Option<String>,
-        finder: Option<String>,
     },
     /// Swap tokens for specific NFTs at optimal purchase prices
     SwapTokensForSpecificNfts {
         collection: String,
         pool_nfts_to_swap_for: Vec<PoolNftSwap>,
         swap_params: SwapParams,
-        nft_recipient: Option<String>,
-        finder: Option<String>,
     },
     /// Swap tokens for any NFTs at optimal purchase prices
     SwapTokensForAnyNfts {
         collection: String,
         max_expected_token_input: Vec<Uint128>,
         swap_params: SwapParams,
-        nft_recipient: Option<String>,
-        finder: Option<String>,
     },
 }
 
@@ -215,45 +201,40 @@ pub enum QueryMsg {
     SimDirectSwapNftsForTokens {
         pool_id: u64,
         nfts_to_swap: Vec<NftSwap>,
+        sender: String,
         swap_params: SwapParams,
-        token_recipient: String,
-        finder: Option<String>,
     },
     /// Simulate a SwapNftsForTokens transaction
     /// Return type: `SwapResponse`
     SimSwapNftsForTokens {
         collection: String,
         nfts_to_swap: Vec<NftSwap>,
+        sender: String,
         swap_params: SwapParams,
-        token_recipient: String,
-        finder: Option<String>,
     },
     /// Simulate a DirectSwapTokensforSpecificNfts transaction
     /// Return type: `SwapResponse`
     SimDirectSwapTokensforSpecificNfts {
         pool_id: u64,
         nfts_to_swap_for: Vec<NftSwap>,
+        sender: String,
         swap_params: SwapParams,
-        nft_recipient: String,
-        finder: Option<String>,
     },
     /// Simulate a SimSwapTokensForSpecificNfts transaction
     /// Return type: `SwapResponse`
     SimSwapTokensForSpecificNfts {
         collection: String,
         pool_nfts_to_swap_for: Vec<PoolNftSwap>,
+        sender: String,
         swap_params: SwapParams,
-        nft_recipient: String,
-        finder: Option<String>,
     },
     /// Simulate a SwapTokensForAnyNfts transaction
     /// Return type: `SwapResponse`
     SimSwapTokensForAnyNfts {
         collection: String,
         max_expected_token_input: Vec<Uint128>,
+        sender: String,
         swap_params: SwapParams,
-        nft_recipient: String,
-        finder: Option<String>,
     },
 }
 

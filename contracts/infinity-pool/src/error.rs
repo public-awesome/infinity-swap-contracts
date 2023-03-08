@@ -28,6 +28,9 @@ pub enum ContractError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    #[error("Invalid swap params: {0}")]
+    InvalidSwapParams(String),
+
     #[error("Internal error: {0}")]
     InternalError(String),
 

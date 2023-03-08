@@ -1,4 +1,7 @@
-use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, POOL_COUNTER};
+use crate::msg::{NftSwap, PoolNftSwap, SwapParams};
+use crate::state::{
+    buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, CONFIG, POOL_COUNTER,
+};
 use crate::ContractError;
 use cosmwasm_std::{
     to_binary, Addr, Attribute, BankMsg, BlockInfo, Coin, Deps, Empty, MessageInfo, Order,
@@ -6,6 +9,7 @@ use cosmwasm_std::{
 };
 use cw721::OwnerOfResponse;
 use cw721_base::helpers::Cw721Contract;
+use cw_utils::{maybe_addr, must_pay};
 use sg721::RoyaltyInfoResponse;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
@@ -303,8 +307,103 @@ pub fn validate_finder(
     if finder.is_none() {
         return Ok(());
     }
-    if finder == asset_recipient || finder.as_ref().unwrap() == sender {
+    if finder.as_ref().unwrap() == sender || finder == asset_recipient {
         return Err(ContractError::InvalidInput("finder is invalid".to_string()));
     }
     Ok(())
+}
+
+pub struct SwapPrepResult {
+    pub denom: String,
+    pub marketplace_params: ParamsResponse,
+    pub collection_royalties: Option<RoyaltyInfoResponse>,
+    pub asset_recipient: Addr,
+    pub finder: Option<Addr>,
+    pub developer: Option<Addr>,
+}
+
+/// Prepare the contract for a swap transaction
+pub fn prep_for_swap(
+    deps: Deps,
+    block_info: &Option<BlockInfo>,
+    sender: &Addr,
+    collection: &Addr,
+    swap_params: &SwapParams,
+) -> Result<SwapPrepResult, ContractError> {
+    if let Some(_block_info) = block_info {
+        check_deadline(_block_info, swap_params.deadline)?;
+    }
+
+    let finder = maybe_addr(deps.api, swap_params.finder.clone())?;
+    let asset_recipient = maybe_addr(deps.api, swap_params.asset_recipient.clone())?;
+
+    validate_finder(&finder, &sender, &asset_recipient)?;
+
+    let config = CONFIG.load(deps.storage)?;
+    let marketplace_params = load_marketplace_params(deps, &config.marketplace_addr)?;
+
+    let collection_royalties = load_collection_royalties(deps, &collection)?;
+
+    let seller_recipient = asset_recipient.unwrap_or_else(|| sender.clone());
+
+    return Ok(SwapPrepResult {
+        denom: config.denom.clone(),
+        marketplace_params,
+        collection_royalties,
+        asset_recipient: seller_recipient,
+        finder,
+        developer: config.developer,
+    });
+}
+
+/// Validate NftSwap vector token amounts, and NFT ownership
+pub fn validate_nft_swaps_for_sell(
+    deps: Deps,
+    info: &MessageInfo,
+    collection: &Addr,
+    nft_swaps: &Vec<NftSwap>,
+) -> Result<(), ContractError> {
+    for (idx, nft_swap) in nft_swaps.iter().enumerate() {
+        only_nft_owner(deps, &info, &collection, &nft_swap.nft_token_id)?;
+
+        if idx == 0 {
+            continue;
+        }
+        if nft_swaps[idx - 1].token_amount < nft_swap.token_amount {
+            return Err(ContractError::InvalidInput(
+                "nft swap token amounts must increase monotonically".to_string(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Validate NftSwap vector token amounts, and that user has provided enough tokens
+pub fn validate_nft_swaps_for_buy(
+    info: &MessageInfo,
+    denom: &str,
+    pool_nft_swaps: &Vec<PoolNftSwap>,
+) -> Result<Uint128, ContractError> {
+    let mut expected_amount = Uint128::zero();
+    for pool_nft_swap in pool_nft_swaps {
+        for (idx, nft_swap) in pool_nft_swap.nft_swaps.iter().enumerate() {
+            expected_amount += nft_swap.token_amount;
+            if idx == 0 {
+                continue;
+            }
+            if pool_nft_swap.nft_swaps[idx - 1].token_amount > nft_swap.token_amount {
+                return Err(ContractError::InvalidInput(
+                    "nft swap token amounts must increase monotonically".to_string(),
+                ));
+            }
+        }
+    }
+    let received_amount = must_pay(info, denom)?;
+    if received_amount != expected_amount {
+        return Err(ContractError::InsufficientFunds(format!(
+            "expected {} but received {}",
+            expected_amount, received_amount
+        )));
+    }
+    Ok(received_amount)
 }
