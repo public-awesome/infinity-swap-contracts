@@ -1,3 +1,5 @@
+use std::iter::Sum;
+
 use crate::helpers::{option_bool_to_order, prep_for_swap};
 use crate::msg::{
     ConfigResponse, NftSwap, PoolNftSwap, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse,
@@ -357,11 +359,15 @@ pub fn sim_swap_tokens_for_any_nfts(
     let swap_prep_result = prep_for_swap(deps, &None, &sender, &collection, &swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
+    let mut total_tokens = 0_u128;
+    for token_amount in max_expected_token_input.iter() {
+        total_tokens += token_amount.u128();
+    }
     let mut processor = SwapProcessor::new(
         TransactionType::Buy,
         collection,
         sender.clone(),
-        Uint128::zero(),
+        total_tokens.into(),
         sender,
         swap_prep_result
             .marketplace_params
@@ -373,7 +379,7 @@ pub fn sim_swap_tokens_for_any_nfts(
     );
     processor
         .swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)
-        .map_err(|_| StdError::generic_err("swap_tokens_for_any_nfts err"))?;
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     Ok(SwapResponse {
         swaps: processor.swaps,
