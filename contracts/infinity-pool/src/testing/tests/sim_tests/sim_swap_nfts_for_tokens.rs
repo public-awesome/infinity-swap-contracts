@@ -2,10 +2,10 @@ use crate::msg::{NftSwap, PoolQuoteResponse, QueryMsg, QueryOptions, SwapParams,
 use crate::state::{PoolQuote, PoolType};
 use crate::testing::setup::setup_accounts::setup_second_bidder_account;
 use crate::testing::setup::templates::{_minter_template_30_pct_fee, standard_minter_template};
+use crate::testing::tests::sim_tests::get_messages::get_sim_swap_nfts_for_tokens_msg;
 use crate::testing::tests::sim_tests::helpers::{
-    check_nft_sale, deposit_nfts, deposit_tokens, get_sim_swap_nfts_for_tokens_msg,
-    set_pool_active, setup_swap_pool, NftSaleCheckParams, SwapPoolResult, SwapPoolSetup,
-    VendingTemplateSetup,
+    check_nft_sale, deposit_nfts, deposit_tokens, set_pool_active, setup_swap_pool,
+    NftSaleCheckParams, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup,
 };
 use crate::testing::tests::sim_tests::sim_swap_nfts_for_tokens::QueryMsg::SimSwapNftsForTokens;
 use cosmwasm_std::StdResult;

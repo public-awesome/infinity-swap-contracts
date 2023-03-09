@@ -4,10 +4,10 @@ use crate::msg::SwapResponse;
 use crate::msg::{NftSwap, SwapParams};
 use crate::state::PoolType;
 use crate::testing::setup::templates::{_minter_template_30_pct_fee, standard_minter_template};
+use crate::testing::tests::sim_tests::get_messages::get_sim_swap_message;
 use crate::testing::tests::sim_tests::helpers::{
-    check_nft_sale, deposit_nfts, deposit_nfts_and_tokens, deposit_tokens, get_sim_swap_message,
-    set_pool_active, setup_swap_pool, NftSaleCheckParams, SwapPoolResult, SwapPoolSetup,
-    VendingTemplateSetup,
+    check_nft_sale, deposit_nfts, deposit_nfts_and_tokens, deposit_tokens, set_pool_active,
+    setup_swap_pool, NftSaleCheckParams, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup,
 };
 use cosmwasm_std::StdError::GenericErr;
 use cosmwasm_std::StdResult;

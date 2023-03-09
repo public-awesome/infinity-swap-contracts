@@ -1,10 +1,10 @@
 use crate::msg::SwapResponse;
 use crate::state::PoolType;
 use crate::testing::setup::templates::standard_minter_template;
+use crate::testing::tests::sim_tests::get_messages::get_swap_tokens_for_any_nfts_msg;
 use crate::testing::tests::sim_tests::helpers::{
-    check_nft_sale, deposit_nfts, get_swap_tokens_for_any_nfts_msg, process_swap_results,
-    set_pool_active, setup_swap_pool, NftSaleCheckParams, SwapPoolResult, SwapPoolSetup,
-    VendingTemplateSetup, ASSET_ACCOUNT,
+    check_nft_sale, deposit_nfts, process_swap_results, set_pool_active, setup_swap_pool,
+    NftSaleCheckParams, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup, ASSET_ACCOUNT,
 };
 use cosmwasm_std::Addr;
 use cosmwasm_std::StdResult;
