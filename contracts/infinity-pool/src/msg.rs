@@ -1,5 +1,5 @@
 use crate::{
-    state::{BondingCurve, Config, Pool, PoolQuote, PoolType},
+    state::{BondingCurve, Config, Pool, PoolQuote},
     swap_processor::Swap,
 };
 use cosmwasm_schema::cw_serde;
@@ -65,13 +65,26 @@ pub struct PoolNftSwap {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Create a new pool, defaults to an inactive state
-    CreatePool {
+    CreateTokenPool {
         collection: String,
         asset_recipient: Option<String>,
-        pool_type: PoolType,
         bonding_curve: BondingCurve,
         spot_price: Uint128,
         delta: Uint128,
+        finders_fee_bps: u64,
+    },
+    CreateNftPool {
+        collection: String,
+        asset_recipient: Option<String>,
+        bonding_curve: BondingCurve,
+        spot_price: Uint128,
+        delta: Uint128,
+        finders_fee_bps: u64,
+    },
+    CreateTradePool {
+        collection: String,
+        asset_recipient: Option<String>,
+        bonding_curve: BondingCurve,
         finders_fee_bps: u64,
         swap_fee_bps: u64,
         reinvest_tokens: bool,

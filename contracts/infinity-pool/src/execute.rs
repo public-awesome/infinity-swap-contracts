@@ -39,13 +39,56 @@ pub fn execute(
     let api = deps.api;
 
     match msg {
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection,
             asset_recipient,
-            pool_type,
             bonding_curve,
             delta,
             spot_price,
+            finders_fee_bps,
+        } => execute_create_pool(
+            deps,
+            info,
+            PoolInfo {
+                collection: api.addr_validate(&collection)?,
+                asset_recipient: maybe_addr(api, asset_recipient)?,
+                pool_type: PoolType::Token,
+                bonding_curve,
+                spot_price,
+                delta,
+                finders_fee_percent: Decimal::percent(finders_fee_bps),
+                swap_fee_percent: Decimal::percent(0u64),
+                reinvest_tokens: false,
+                reinvest_nfts: false,
+            },
+        ),
+        ExecuteMsg::CreateNftPool {
+            collection,
+            asset_recipient,
+            bonding_curve,
+            delta,
+            spot_price,
+            finders_fee_bps,
+        } => execute_create_pool(
+            deps,
+            info,
+            PoolInfo {
+                collection: api.addr_validate(&collection)?,
+                asset_recipient: maybe_addr(api, asset_recipient)?,
+                pool_type: PoolType::Nft,
+                bonding_curve,
+                spot_price,
+                delta,
+                finders_fee_percent: Decimal::percent(finders_fee_bps),
+                swap_fee_percent: Decimal::percent(0),
+                reinvest_tokens: false,
+                reinvest_nfts: false,
+            },
+        ),
+        ExecuteMsg::CreateTradePool {
+            collection,
+            asset_recipient,
+            bonding_curve,
             finders_fee_bps,
             swap_fee_bps,
             reinvest_tokens,
@@ -56,10 +99,10 @@ pub fn execute(
             PoolInfo {
                 collection: api.addr_validate(&collection)?,
                 asset_recipient: maybe_addr(api, asset_recipient)?,
-                pool_type,
+                pool_type: PoolType::Trade,
                 bonding_curve,
-                spot_price,
-                delta,
+                spot_price: Uint128::zero(),
+                delta: Uint128::zero(),
                 finders_fee_percent: Decimal::percent(finders_fee_bps),
                 swap_fee_percent: Decimal::percent(swap_fee_bps),
                 reinvest_tokens,
