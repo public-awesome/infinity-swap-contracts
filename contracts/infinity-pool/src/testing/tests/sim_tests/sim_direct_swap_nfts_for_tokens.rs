@@ -26,7 +26,6 @@ fn cant_swap_inactive_pool() {
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -39,7 +38,7 @@ fn cant_swap_inactive_pool() {
         finders_fee_bps: None,
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
@@ -80,7 +79,6 @@ fn can_swap_active_pool() {
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -93,7 +91,7 @@ fn can_swap_active_pool() {
         finders_fee_bps: None,
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
@@ -162,7 +160,6 @@ fn invalid_nft_pool_can_not_deposit() {
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -175,7 +172,7 @@ fn invalid_nft_pool_can_not_deposit() {
         finders_fee_bps: None,
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
@@ -210,7 +207,6 @@ fn insufficient_tokens_error() {
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -223,7 +219,7 @@ fn insufficient_tokens_error() {
         finders_fee_bps: None,
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
@@ -313,7 +309,6 @@ fn invalid_sale_price_below_min_expected() {
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -326,7 +321,7 @@ fn invalid_sale_price_below_min_expected() {
         finders_fee_bps: None,
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
@@ -369,7 +364,6 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -382,7 +376,7 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         finders_fee_bps: None,
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
@@ -462,7 +456,6 @@ fn trading_fee_is_applied_correctly() {
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -475,7 +468,7 @@ fn trading_fee_is_applied_correctly() {
         finders_fee_bps: None,
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, Some(trading_fee));
+        setup_swap_pool(&mut router, vts, swap_pool_configs, Some(trading_fee));
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
@@ -545,7 +538,6 @@ fn royalty_fee_applied_correctly() {
 
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -558,7 +550,7 @@ fn royalty_fee_applied_correctly() {
         finders_fee_bps: None,
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
@@ -630,7 +622,6 @@ fn finders_fee_is_applied_correctly() {
 
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: vt.accts.creator,
         user1: vt.accts.bidder,
@@ -643,7 +634,7 @@ fn finders_fee_is_applied_correctly() {
         finders_fee_bps: Some(finders_fee_bps.try_into().unwrap()),
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 

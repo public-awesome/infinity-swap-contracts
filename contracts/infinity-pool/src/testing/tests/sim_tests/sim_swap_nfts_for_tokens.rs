@@ -28,7 +28,6 @@ fn cant_swap_two_inactive_pools() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -48,7 +47,7 @@ fn cant_swap_two_inactive_pools() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
@@ -123,7 +122,6 @@ fn can_swap_two_active_pools() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -143,7 +141,7 @@ fn can_swap_two_active_pools() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
@@ -257,7 +255,6 @@ fn pool_type_can_not_be_nft_error() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -277,7 +274,7 @@ fn pool_type_can_not_be_nft_error() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
@@ -333,7 +330,6 @@ fn insufficient_tokens_error() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -353,7 +349,7 @@ fn insufficient_tokens_error() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
@@ -425,7 +421,6 @@ fn invalid_sale_price_below_min_expected() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -445,7 +440,7 @@ fn invalid_sale_price_below_min_expected() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
@@ -532,7 +527,6 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -552,7 +546,7 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
@@ -654,7 +648,6 @@ fn trading_fee_is_applied_correctly() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -674,7 +667,7 @@ fn trading_fee_is_applied_correctly() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, Some(trading_fee));
+        setup_swap_pool(&mut router, vts, swap_pool_configs, Some(trading_fee));
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
@@ -789,7 +782,6 @@ fn royalty_fee_applied_correctly() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -809,7 +801,7 @@ fn royalty_fee_applied_correctly() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
@@ -926,7 +918,6 @@ fn finders_fee_is_applied_correctly() {
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
-        router: &mut router,
         minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
         creator: creator.clone(),
         user1: vt.accts.bidder,
@@ -946,7 +937,7 @@ fn finders_fee_is_applied_correctly() {
         },
     ];
     let swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(vts, swap_pool_configs, None);
+        setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let sprs: Vec<Result<SwapPoolResult, anyhow::Error>> = swap_results;
     let infinity_pool = &sprs[1].as_ref().unwrap().infinity_pool.clone();
