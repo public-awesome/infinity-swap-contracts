@@ -7,6 +7,8 @@ use std::collections::BTreeSet;
 
 /// 100% represented as basis points
 const MAX_BASIS_POINTS: u128 = 10000u128;
+/// Maximum swap fee percent that can be set on trade pools
+const MAX_SWAP_FEE_PERCENT: u64 = 5000u64;
 
 impl Pool {
     /// Create a Pool object
@@ -47,7 +49,7 @@ impl Pool {
     pub fn validate(&self, marketplace_params: &ParamsResponse) -> Result<(), ContractError> {
         if self.finders_fee_percent > marketplace_params.params.max_finders_fee_percent {
             return Err(ContractError::InvalidPool(
-                "finders_fee_percent is above max_finders_fee_percent".to_string(),
+                "finders_fee_percent is above marketplace max_finders_fee_percent".to_string(),
             ));
         }
         if self.bonding_curve == BondingCurve::Exponential && self.delta.u128() > MAX_BASIS_POINTS {
@@ -123,9 +125,9 @@ impl Pool {
                 }
             }
             PoolType::Trade => {
-                if self.swap_fee_percent > Decimal::percent(9000u64) {
+                if self.swap_fee_percent > Decimal::percent(MAX_SWAP_FEE_PERCENT) {
                     return Err(ContractError::InvalidPool(
-                        "swap_fee_percent is greater than 90%".to_string(),
+                        "swap_fee_percent cannot be greater than 50%".to_string(),
                     ));
                 }
             }
