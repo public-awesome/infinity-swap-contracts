@@ -1,6 +1,7 @@
 use crate::error::ContractError;
 use crate::helpers::{transfer_nft, transfer_token};
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
+use crate::pool;
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType};
 
 use core::cmp::Ordering;
@@ -358,6 +359,7 @@ impl<'a> SwapProcessor<'a> {
                     .range(storage, None, None, Order::Descending),
             })
         }
+        println!("looking to do a {:?}", &self.tx_type);
 
         // Get the current pool
         let current = match &self.tx_type {
@@ -366,12 +368,14 @@ impl<'a> SwapProcessor<'a> {
             // For sells, the last pool will have the highest quote which is the best quote
             TransactionType::Sell => self.pool_queue.last(),
         };
+        println!("current none is {:?}", current.is_none());
 
         // If the pool is empty, or the front of the pool is the latest fetched, load the next pool
         // Note: if the front of the pool is not the latest fetched, that means the next pool won't have the best price
         if current.is_none() || Some(current.unwrap().pool.id) == self.latest {
             // Try and fetch next pool quote
             let next_pool_quote = self.pool_quote_iter.as_mut().unwrap().next();
+            println!("next pool quote is {:?}", next_pool_quote);
 
             // If next pool quote exists fetch and set PoolPair
             if let Some(_next_pool_quote) = next_pool_quote {
