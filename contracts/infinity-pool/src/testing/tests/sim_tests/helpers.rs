@@ -43,12 +43,21 @@ pub struct SwapPoolSetup {
 }
 
 pub struct VendingTemplateSetup<'a> {
-    pub router: &'a mut StargazeApp,
     pub minter: &'a Addr,
     pub collection: &'a Addr,
     pub creator: Addr,
     pub user1: Addr,
     pub user2: Addr,
+}
+
+pub struct ProcessSwapPoolResultsResponse {
+    pub minter: Addr,
+    pub collection: Addr,
+    pub infinity_pool: Addr,
+    pub pool: Pool,
+    pub creator: Addr,
+    pub user2: Addr,
+    pub token_ids: Vec<u32>,
 }
 
 pub struct NftSaleCheckParams {
@@ -65,12 +74,12 @@ pub struct NftSaleCheckParams {
 }
 
 pub fn setup_swap_pool(
+    router: &mut StargazeApp,
     vts: VendingTemplateSetup,
     swap_pool_configs: Vec<SwapPoolSetup>,
     trading_fee: Option<u64>,
 ) -> Vec<Result<SwapPoolResult, anyhow::Error>> {
-    let (router, minter, creator, user1, user2) =
-        (vts.router, vts.minter, vts.creator, vts.user1, vts.user2);
+    let (minter, creator, user1, user2) = (vts.minter, vts.creator, vts.user1, vts.user2);
     let minter = minter.to_owned();
 
     let collection = vts.collection;
@@ -171,7 +180,7 @@ pub fn deposit_nfts(
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };
-    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
 
     DepositNftsResult {
         token_id_1,
@@ -218,6 +227,80 @@ pub fn deposit_tokens(
     match res {
         Ok(_) => Ok(()),
         Err(err) => Err(err),
+    }
+}
+
+fn process_swap_result(
+    router: &mut StargazeApp,
+    swap_result: Result<SwapPoolResult, anyhow::Error>,
+) -> (u32, Addr, Addr, Addr, Pool, Addr, Addr) {
+    let r = swap_result.unwrap();
+
+    set_pool_active(
+        router,
+        true,
+        r.pool.clone(),
+        r.creator.clone(),
+        r.infinity_pool.clone(),
+    );
+    let token_id = deposit_one_nft(
+        router,
+        r.minter.clone(),
+        r.collection.clone(),
+        r.infinity_pool.clone(),
+        r.pool.clone(),
+        r.creator.clone(),
+    );
+    println!(
+        "spot price {:?} token id: {:?}",
+        r.pool.spot_price, token_id
+    );
+
+    (
+        token_id,
+        r.minter,
+        r.collection,
+        r.infinity_pool,
+        r.pool,
+        r.creator,
+        r.user2,
+    )
+}
+pub fn execute_process_swap_results(
+    router: &mut StargazeApp,
+    swap_results: Vec<Result<SwapPoolResult, anyhow::Error>>,
+) -> Vec<u32> {
+    let mut token_ids = vec![];
+    for result in swap_results {
+        let token_id = process_swap_result(router, result).0;
+        token_ids.append(&mut vec![token_id]);
+    }
+    token_ids.reverse();
+    token_ids
+}
+
+pub fn process_swap_results(
+    router: &mut StargazeApp,
+    vts: VendingTemplateSetup,
+    swap_pool_configs: Vec<SwapPoolSetup>,
+) -> ProcessSwapPoolResultsResponse {
+    let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
+        setup_swap_pool(router, vts, swap_pool_configs, None);
+    let swap_result = swap_results.pop().unwrap();
+    let (token_id, minter, collection, infinity_pool, pool, creator, user2) =
+        process_swap_result(router, swap_result);
+    let mut token_ids_2 = execute_process_swap_results(router, swap_results);
+
+    let mut token_ids = vec![token_id];
+    token_ids.append(&mut token_ids_2);
+    ProcessSwapPoolResultsResponse {
+        minter,
+        collection,
+        infinity_pool,
+        pool,
+        creator,
+        user2,
+        token_ids,
     }
 }
 
@@ -361,7 +444,7 @@ pub fn check_nft_sale(scp: NftSaleCheckParams) {
         nft_token_id: scp.token_id,
         address: scp.expected_nft_payer.to_string(),
     });
-    // assert_eq!(scp.swaps[0].nft_payment, expected_nft_payment);
+    assert_eq!(scp.swaps[0].nft_payment, expected_nft_payment);
 
     let network_fee = scp.swaps[0].network_fee.u128();
 

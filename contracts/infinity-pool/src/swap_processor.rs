@@ -1,7 +1,6 @@
 use crate::error::ContractError;
 use crate::helpers::{transfer_nft, transfer_token};
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
-use crate::pool;
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType};
 
 use core::cmp::Ordering;
