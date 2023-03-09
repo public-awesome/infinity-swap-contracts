@@ -233,9 +233,9 @@ pub fn sim_direct_swap_nfts_for_tokens(
     let mut processor = SwapProcessor::new(
         TransactionType::Sell,
         pool.collection.clone(),
-        sender.clone(),
-        Uint128::zero(),
         sender,
+        Uint128::zero(),
+        swap_prep_result.asset_recipient,
         swap_prep_result
             .marketplace_params
             .params
@@ -266,9 +266,9 @@ pub fn sim_swap_nfts_for_tokens(
     let mut processor = SwapProcessor::new(
         TransactionType::Sell,
         collection,
-        sender.clone(),
-        Uint128::zero(),
         sender,
+        Uint128::zero(),
+        swap_prep_result.asset_recipient,
         swap_prep_result
             .marketplace_params
             .params
@@ -327,9 +327,9 @@ pub fn sim_swap_tokens_for_specific_nfts(
     let mut processor = SwapProcessor::new(
         TransactionType::Buy,
         collection,
-        sender.clone(),
-        spend_amount.into(),
         sender,
+        spend_amount.into(),
+        swap_prep_result.asset_recipient,
         swap_prep_result
             .marketplace_params
             .params
@@ -357,16 +357,14 @@ pub fn sim_swap_tokens_for_any_nfts(
     let swap_prep_result = prep_for_swap(deps, &None, &sender, &collection, &swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
-    let mut total_tokens = 0_u128;
-    for token_amount in max_expected_token_input.iter() {
-        total_tokens += token_amount.u128();
-    }
+    let total_tokens: Uint128 = max_expected_token_input.iter().sum();
+
     let mut processor = SwapProcessor::new(
         TransactionType::Buy,
         collection,
         sender.clone(),
-        total_tokens.into(),
-        sender,
+        total_tokens,
+        swap_prep_result.asset_recipient,
         swap_prep_result
             .marketplace_params
             .params
