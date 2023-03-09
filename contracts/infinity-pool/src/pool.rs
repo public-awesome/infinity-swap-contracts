@@ -1,7 +1,7 @@
 use crate::msg::{NftSwap, TransactionType};
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
-use cosmwasm_std::{Addr, Decimal, StdError, Uint128};
+use cosmwasm_std::{attr, Addr, Attribute, Decimal, Event, StdError, Uint128};
 use sg_marketplace::msg::ParamsResponse;
 use std::collections::BTreeSet;
 
@@ -379,5 +379,78 @@ impl Pool {
                 Err(_err)
             }
         }
+    }
+
+    /// Create an event with all the Pool properties
+    pub fn create_event_all_props(&self, event_type: &str) -> Result<Event, ContractError> {
+        self.create_event(
+            event_type,
+            vec![
+                "id",
+                "collection",
+                "owner",
+                "asset_recipient",
+                "pool_type",
+                "bonding_curve",
+                "spot_price",
+                "delta",
+                "total_tokens",
+                "nft_token_ids",
+                "is_active",
+                "swap_fee_percent",
+                "finders_fee_percent",
+                "reinvest_tokens",
+                "reinvest_nfts",
+            ],
+        )
+    }
+
+    /// Create an event with certain Pool properties
+    pub fn create_event(
+        &self,
+        event_type: &str,
+        attr_keys: Vec<&str>,
+    ) -> Result<Event, ContractError> {
+        let mut attributes: Vec<Attribute> = vec![];
+        for attr_keys in attr_keys {
+            let attribute = match attr_keys {
+                "id" => attr("id", self.id.to_string()),
+                "collection" => attr("collection", self.collection.to_string()),
+                "owner" => attr("owner", self.owner.to_string()),
+                "asset_recipient" => attr(
+                    "asset_recipient",
+                    self.asset_recipient
+                        .as_ref()
+                        .map_or("".to_string(), |addr| addr.to_string()),
+                ),
+                "pool_type" => attr("pool_type", self.pool_type.to_string()),
+                "bonding_curve" => attr("bonding_curve", self.bonding_curve.to_string()),
+                "spot_price" => attr("spot_price", self.spot_price.to_string()),
+                "delta" => attr("delta", self.delta.to_string()),
+                "total_tokens" => attr("total_tokens", self.total_tokens.to_string()),
+                "nft_token_ids" => attr(
+                    "nft_token_ids",
+                    self.nft_token_ids
+                        .iter()
+                        .map(|id| id.to_string())
+                        .collect::<Vec<String>>()
+                        .join(","),
+                ),
+                "is_active" => attr("is_active", self.is_active.to_string()),
+                "swap_fee_percent" => attr("swap_fee_percent", self.swap_fee_percent.to_string()),
+                "finders_fee_percent" => {
+                    attr("finders_fee_percent", self.finders_fee_percent.to_string())
+                }
+                "reinvest_tokens" => attr("reinvest_tokens", self.reinvest_tokens.to_string()),
+                "reinvest_nfts" => attr("reinvest_nfts", self.reinvest_nfts.to_string()),
+                _ => {
+                    return Err(ContractError::InvalidPool(
+                        "pool does not sell NFTs".to_string(),
+                    ));
+                }
+            };
+            attributes.push(attribute);
+        }
+        Ok(Event::new(event_type).add_attributes(attributes))
     }
 }

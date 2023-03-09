@@ -5,8 +5,7 @@ use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, Po
 
 use core::cmp::Ordering;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, Addr, StdResult, Storage, Uint128};
-use cosmwasm_std::{Decimal, Order};
+use cosmwasm_std::{attr, coin, Addr, Decimal, Event, Order, StdResult, Storage, Uint128};
 use sg1::fair_burn;
 use sg721::RoyaltyInfoResponse;
 use sg_std::{Response, NATIVE_DENOM};
@@ -67,6 +66,66 @@ pub struct Swap {
     pub royalty_payment: Option<TokenPayment>,
     pub nft_payment: Option<NftPayment>,
     pub seller_payment: Option<TokenPayment>,
+}
+
+impl Into<Event> for &Swap {
+    fn into(self) -> Event {
+        let attributes = vec![
+            attr("pool_id", self.pool_id.to_string()),
+            attr("transaction_type", self.transaction_type.to_string()),
+            attr("spot_price", self.spot_price.to_string()),
+            attr("network_fee", self.network_fee.to_string()),
+            attr(
+                "finder_payment_address",
+                self.finder_payment
+                    .as_ref()
+                    .map_or("".to_string(), |fp| fp.address.to_string()),
+            ),
+            attr(
+                "finder_payment_amount",
+                self.finder_payment
+                    .as_ref()
+                    .map_or("".to_string(), |fp| fp.amount.to_string()),
+            ),
+            attr(
+                "royalty_payment_address",
+                self.royalty_payment
+                    .as_ref()
+                    .map_or("".to_string(), |rp| rp.address.to_string()),
+            ),
+            attr(
+                "royalty_payment_amount",
+                self.royalty_payment
+                    .as_ref()
+                    .map_or("".to_string(), |rp| rp.amount.to_string()),
+            ),
+            attr(
+                "nft_payment_address",
+                self.nft_payment
+                    .as_ref()
+                    .map_or("".to_string(), |np| np.address.to_string()),
+            ),
+            attr(
+                "nft_payment_amount",
+                self.nft_payment
+                    .as_ref()
+                    .map_or("".to_string(), |np| np.nft_token_id.to_string()),
+            ),
+            attr(
+                "seller_payment_address",
+                self.seller_payment
+                    .as_ref()
+                    .map_or("".to_string(), |sp| sp.address.to_string()),
+            ),
+            attr(
+                "seller_payment_amount",
+                self.seller_payment
+                    .as_ref()
+                    .map_or("".to_string(), |sp| sp.amount.to_string()),
+            ),
+        ];
+        Event::new("swap").add_attributes(attributes)
+    }
 }
 
 type IterResults = StdResult<(u64, PoolQuote)>;
@@ -336,6 +395,29 @@ impl<'a> SwapProcessor<'a> {
         self.move_pools();
 
         Ok(())
+    }
+
+    pub fn get_transaction_events(&self) -> Vec<Event> {
+        let mut events: Vec<Event> = vec![];
+        for swap in self.swaps.iter() {
+            events.push(swap.into());
+        }
+        for pool in self.pools_to_save.values() {
+            events.push(
+                pool.create_event(
+                    "pool-swap-update",
+                    vec![
+                        "id",
+                        "spot_price",
+                        "nft_token_ids",
+                        "total_tokens",
+                        "is_active",
+                    ],
+                )
+                .unwrap(),
+            );
+        }
+        events
     }
 
     /// Load the pool with the next best price
