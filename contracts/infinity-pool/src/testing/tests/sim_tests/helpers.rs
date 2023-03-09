@@ -1,8 +1,10 @@
 use std::vec;
 
+use crate::msg::PoolNftSwap;
 use crate::msg::QueryMsg::SimDirectSwapNftsForTokens;
 use crate::msg::QueryMsg::SimDirectSwapTokensforSpecificNfts;
 use crate::msg::QueryMsg::SimSwapNftsForTokens;
+use crate::msg::QueryMsg::SimSwapTokensForSpecificNfts;
 use crate::msg::{self, ExecuteMsg};
 use crate::msg::{NftSwap, SwapParams};
 use crate::state::BondingCurve;
@@ -262,6 +264,41 @@ pub fn get_sim_direct_swap_tokens_for_specific_nfts_msg(
             token_amount: Uint128::new(token_amount),
         }],
         sender: user2.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust,
+            asset_recipient: None,
+            finder,
+        },
+    }
+}
+
+// SimSwapTokensForSpecificNfts {
+//     collection: String,
+//     pool_nfts_to_swap_for: Vec<PoolNftSwap>,
+//     sender: String,
+//     swap_params: SwapParams,
+// },
+
+pub fn get_swap_tokens_for_specific_nfts_msg(
+    pool: Pool,
+    collection: Addr,
+    token_id_1: u32,
+    token_amount: u128,
+    robust: bool,
+    user2: Addr,
+    finder: Option<String>,
+) -> msg::QueryMsg {
+    SimSwapTokensForSpecificNfts {
+        pool_nfts_to_swap_for: vec![PoolNftSwap {
+            pool_id: pool.id,
+            nft_swaps: vec![NftSwap {
+                nft_token_id: token_id_1.to_string(),
+                token_amount: Uint128::new(token_amount),
+            }],
+        }],
+        sender: user2.to_string(),
+        collection: collection.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust,
