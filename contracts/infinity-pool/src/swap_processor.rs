@@ -133,31 +133,31 @@ type IterResults = StdResult<(u64, PoolQuote)>;
 /// A struct for managing a series of swaps
 pub struct SwapProcessor<'a> {
     /// The type of transaction (buy or sell)
-    pub tx_type: TransactionType,
+    tx_type: TransactionType,
     /// The address of the NFT collection
-    pub collection: Addr,
+    collection: Addr,
     /// The sender address
-    pub sender: Addr,
+    sender: Addr,
     /// The amount of tokens sent to the contract by the end user
-    pub remaining_balance: Uint128,
+    remaining_balance: Uint128,
     /// The address that will receive assets on the side of the end user
-    pub seller_recipient: Addr,
+    seller_recipient: Addr,
     /// The trading fee percentage to be burned
-    pub trading_fee_percent: Decimal,
+    trading_fee_percent: Decimal,
     /// The royalty info for the NFT collection
-    pub royalty: Option<RoyaltyInfoResponse>,
+    royalty: Option<RoyaltyInfoResponse>,
     /// The address of the finder of the transaction
-    pub finder: Option<Addr>,
+    finder: Option<Addr>,
     /// The address to receive developer burn fees
-    pub developer: Option<Addr>,
+    developer: Option<Addr>,
     /// A set of in memory pools that are involved in the transaction
-    pub pool_queue: BTreeSet<PoolPair>,
+    pool_queue: BTreeSet<PoolPair>,
+    /// The latest pool that was retrieved
+    latest: Option<u64>,
+    /// An iterator for retrieving sorted pool quotes
+    pool_quote_iter: Option<Box<dyn Iterator<Item = IterResults> + 'a>>,
     /// A set of in memory pools that should be saved at the end of the transaction
     pub pools_to_save: BTreeMap<u64, Pool>,
-    /// The latest pool that was retrieved
-    pub latest: Option<u64>,
-    /// An iterator for retrieving sorted pool quotes
-    pub pool_quote_iter: Option<Box<dyn Iterator<Item = IterResults> + 'a>>,
     /// A list of swaps that have been processed
     pub swaps: Vec<Swap>,
 }
@@ -257,7 +257,7 @@ impl<'a> SwapProcessor<'a> {
     }
 
     /// Process a swap
-    pub fn process_swap(
+    fn process_swap(
         &mut self,
         pool_pair: PoolPair,
         nft_swap: NftSwap,
@@ -311,7 +311,7 @@ impl<'a> SwapProcessor<'a> {
     }
 
     /// Push asset transfer messages to the response
-    pub fn commit_messages(&self, response: &mut Response) -> Result<(), ContractError> {
+    fn commit_messages(&self, response: &mut Response) -> Result<(), ContractError> {
         if self.swaps.is_empty() {
             return Err(ContractError::SwapError("no swaps found".to_string()));
         }
@@ -379,7 +379,7 @@ impl<'a> SwapProcessor<'a> {
     }
 
     /// Move pools from pool_queue to pools_to_save
-    pub fn move_pools(&mut self) {
+    fn move_pools(&mut self) {
         let mut pool_pair = self.pool_queue.pop_first();
         while let Some(_pool_pair) = pool_pair {
             if _pool_pair.needs_saving {
@@ -390,38 +390,8 @@ impl<'a> SwapProcessor<'a> {
         }
     }
 
-    pub fn finalize_transaction(&mut self, response: &mut Response) -> Result<(), ContractError> {
-        self.commit_messages(response)?;
-        self.move_pools();
-
-        Ok(())
-    }
-
-    pub fn get_transaction_events(&self) -> Vec<Event> {
-        let mut events: Vec<Event> = vec![];
-        for swap in self.swaps.iter() {
-            events.push(swap.into());
-        }
-        for pool in self.pools_to_save.values() {
-            events.push(
-                pool.create_event(
-                    "pool-swap-update",
-                    vec![
-                        "id",
-                        "spot_price",
-                        "nft_token_ids",
-                        "total_tokens",
-                        "is_active",
-                    ],
-                )
-                .unwrap(),
-            );
-        }
-        events
-    }
-
     /// Load the pool with the next best price
-    pub fn load_next_pool(
+    fn load_next_pool(
         &mut self,
         storage: &'a dyn Storage,
     ) -> Result<Option<PoolPair>, ContractError> {
@@ -479,6 +449,36 @@ impl<'a> SwapProcessor<'a> {
             // For sells, the last pool will have the highest quote
             TransactionType::Sell => self.pool_queue.pop_last(),
         })
+    }
+
+    pub fn finalize_transaction(&mut self, response: &mut Response) -> Result<(), ContractError> {
+        self.commit_messages(response)?;
+        self.move_pools();
+
+        Ok(())
+    }
+
+    pub fn get_transaction_events(&self) -> Vec<Event> {
+        let mut events: Vec<Event> = vec![];
+        for swap in self.swaps.iter() {
+            events.push(swap.into());
+        }
+        for pool in self.pools_to_save.values() {
+            events.push(
+                pool.create_event(
+                    "pool-swap-update",
+                    vec![
+                        "id",
+                        "spot_price",
+                        "nft_token_ids",
+                        "total_tokens",
+                        "is_active",
+                    ],
+                )
+                .unwrap(),
+            );
+        }
+        events
     }
 
     /// Swap NFTs to tokens directly with the specified pool
