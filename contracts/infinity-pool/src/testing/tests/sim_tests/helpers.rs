@@ -273,13 +273,6 @@ pub fn get_sim_direct_swap_tokens_for_specific_nfts_msg(
     }
 }
 
-// SimSwapTokensForSpecificNfts {
-//     collection: String,
-//     pool_nfts_to_swap_for: Vec<PoolNftSwap>,
-//     sender: String,
-//     swap_params: SwapParams,
-// },
-
 pub fn get_swap_tokens_for_specific_nfts_msg(
     pool: Pool,
     collection: Addr,
