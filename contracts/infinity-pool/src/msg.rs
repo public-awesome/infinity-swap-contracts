@@ -4,6 +4,7 @@ use crate::{
 };
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Timestamp, Uint128};
+use std::fmt;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -33,6 +34,12 @@ pub struct SwapParams {
 pub enum TransactionType {
     Sell,
     Buy,
+}
+
+impl fmt::Display for TransactionType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// NftSwap contains the parameters for an NFT swap
