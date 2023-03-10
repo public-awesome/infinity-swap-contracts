@@ -310,10 +310,11 @@ pub fn process_swap_results(
     vts: VendingTemplateSetup,
     swap_pool_configs: Vec<SwapPoolSetup>,
     deposit_amounts: Vec<u128>,
+    trading_fee: Option<u64>,
     skip_deposit_nfts: Option<bool>,
 ) -> ProcessSwapPoolResultsResponse {
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
-        setup_swap_pool(router, vts, swap_pool_configs, None);
+        setup_swap_pool(router, vts, swap_pool_configs, trading_fee);
     let swap_result = swap_results.pop().unwrap();
     let (token_id, minter, collection, infinity_pool, pool, creator, user1, user2) =
         process_swap_result(
