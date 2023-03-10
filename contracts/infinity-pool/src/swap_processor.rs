@@ -358,7 +358,6 @@ impl<'a> SwapProcessor<'a> {
                     .range(storage, None, None, Order::Descending),
             })
         }
-        println!("looking to do a {:?}", &self.tx_type);
 
         // Get the current pool
         let current = match &self.tx_type {
@@ -367,7 +366,6 @@ impl<'a> SwapProcessor<'a> {
             // For sells, the last pool will have the highest quote which is the best quote
             TransactionType::Sell => self.pool_queue.last(),
         };
-        println!("current none is {:?}", current.is_none());
 
         // If the pool is empty, or the front of the pool is the latest fetched, load the next pool
         // Note: if the front of the pool is not the latest fetched, that means the next pool won't have the best price
@@ -582,7 +580,7 @@ impl<'a> SwapProcessor<'a> {
         for token_amount in min_expected_token_input {
             // Load best priced pool
             let pool_pair_option = self.load_next_pool(storage)?;
-            // No pools found, so return empty
+            // No pools found, so return empty);
             if pool_pair_option.is_none() {
                 return Ok(());
             }
@@ -590,6 +588,10 @@ impl<'a> SwapProcessor<'a> {
             {
                 // Grab first NFT from the pool
                 let nft_token_id = pool_pair.pool.nft_token_ids.first().unwrap().to_string();
+                println!(
+                    "nft token id is {:?}, token_amount: {:?}",
+                    nft_token_id, token_amount
+                );
                 match self.process_swap(
                     pool_pair,
                     NftSwap {
