@@ -7,17 +7,23 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("{0}")]
+    PaymentError(#[from] PaymentError),
+
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
 
     #[error("Invalid pool: {0}")]
     InvalidPool(String),
 
-    #[error("InvalidListingFee: {0}")]
-    InvalidListingFee(Uint128),
+    #[error("Pool not found: {0}")]
+    PoolNotFound(String),
 
-    #[error("{0}")]
-    PaymentError(#[from] PaymentError),
+    #[error("No quote for pool: {0}")]
+    NoQuoteForPool(String),
+
+    #[error("UnpaidListingFee: {0}")]
+    UnpaidListingFee(Uint128),
 
     #[error("Insufficient funds: {0}")]
     InsufficientFunds(String),
@@ -39,4 +45,7 @@ pub enum ContractError {
 
     #[error("Swap error: {0}")]
     SwapError(String),
+
+    #[error("Invalid property key error: {0}")]
+    InvalidPropertyKeyError(String),
 }

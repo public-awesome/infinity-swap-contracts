@@ -351,7 +351,7 @@ pub fn validate_nft_swaps_for_sell(
         }
         if nft_swaps[idx - 1].token_amount < nft_swap.token_amount {
             return Err(ContractError::InvalidInput(
-                "nft swap token amounts must increase monotonically".to_string(),
+                "nft swap token amounts must decrease monotonically".to_string(),
             ));
         }
     }

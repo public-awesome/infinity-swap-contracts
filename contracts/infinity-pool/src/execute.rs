@@ -271,7 +271,7 @@ pub fn execute_create_pool(
     // Burn the listing fee set on the marketplace contract
     let listing_fee = must_pay(&info, NATIVE_DENOM)?;
     if listing_fee != marketplace_params.params.listing_fee {
-        return Err(ContractError::InvalidListingFee(listing_fee));
+        return Err(ContractError::UnpaidListingFee(listing_fee));
     }
     if listing_fee > Uint128::zero() {
         fair_burn(listing_fee.u128(), config.developer, &mut response);

@@ -1,7 +1,7 @@
 use crate::msg::{NftSwap, TransactionType};
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
-use cosmwasm_std::{attr, Addr, Attribute, Decimal, Event, StdError, Uint128};
+use cosmwasm_std::{attr, Addr, Attribute, Decimal, Event, OverflowError, StdError, Uint128};
 use sg_marketplace::msg::ParamsResponse;
 use std::collections::BTreeSet;
 
@@ -182,9 +182,11 @@ impl Pool {
             ));
         }
         if self.total_tokens < amount {
-            return Err(ContractError::InvalidPool(
-                "insufficient tokens in pool".to_string(),
-            ));
+            return Err(ContractError::Std(StdError::overflow(OverflowError {
+                operation: cosmwasm_std::OverflowOperation::Sub,
+                operand1: self.total_tokens.to_string(),
+                operand2: amount.to_string(),
+            })));
         }
         self.total_tokens -= amount;
         Ok(())
@@ -272,7 +274,7 @@ impl Pool {
     ) -> Result<(), ContractError> {
         if !self.can_sell_nfts() {
             return Err(ContractError::InvalidPool(
-                "pool does not sell NFTs".to_string(),
+                "pool cannot sell nfts".to_string(),
             ));
         }
         if !self.is_active {
@@ -289,9 +291,10 @@ impl Pool {
         // Remove the nft_token_id from the pool
         // Also, if pool does not own the NFT, return an error
         if !self.nft_token_ids.remove(&nft_swap.nft_token_id) {
-            return Err(ContractError::SwapError(
-                "pool does not own NFT".to_string(),
-            ));
+            return Err(ContractError::SwapError(format!(
+                "pool does not own NFT {}",
+                nft_swap.nft_token_id
+            )));
         }
 
         Ok(())
@@ -305,7 +308,7 @@ impl Pool {
     ) -> Result<(), ContractError> {
         if !self.can_buy_nfts() {
             return Err(ContractError::InvalidPool(
-                "pool does not buy NFTs".to_string(),
+                "pool cannot buy nfts".to_string(),
             ));
         }
         if !self.is_active {
@@ -445,10 +448,11 @@ impl Pool {
                 }
                 "reinvest_tokens" => attr("reinvest_tokens", self.reinvest_tokens.to_string()),
                 "reinvest_nfts" => attr("reinvest_nfts", self.reinvest_nfts.to_string()),
-                _ => {
-                    return Err(ContractError::InvalidPool(
-                        "pool does not sell NFTs".to_string(),
-                    ));
+                _key => {
+                    return Err(ContractError::InvalidPropertyKeyError(format!(
+                        "Invalid property key: {}",
+                        _key
+                    )));
                 }
             };
             attributes.push(attribute);
