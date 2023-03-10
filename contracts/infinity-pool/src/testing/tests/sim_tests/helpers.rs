@@ -264,11 +264,6 @@ fn process_swap_result(
         r.creator.clone(),
     );
 
-    println!(
-        "spot price {:?} token id: {:?}",
-        r.pool.spot_price, token_id
-    );
-
     (
         token_id,
         minter,
@@ -279,16 +274,6 @@ fn process_swap_result(
         user1,
         user2,
     )
-    // (
-    //     token_id,
-    //     r.minter,
-    //     r.collection,
-    //     r.infinity_pool,
-    //     r.pool,
-    //     r.creator,
-    //     r.user1,
-    //     r.user2,
-    // )
 }
 pub fn execute_process_swap_results(
     router: &mut StargazeApp,
