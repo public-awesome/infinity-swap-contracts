@@ -1,3 +1,5 @@
+use crate::msg::PoolNftSwap;
+use crate::msg::QueryMsg::SimSwapTokensForSpecificNfts;
 use crate::msg::{NftSwap, SwapParams, SwapResponse};
 use crate::state::PoolType;
 use crate::testing::helpers::nft_functions::{approve, mint};
@@ -393,8 +395,6 @@ fn robust_query_does_not_revert_whole_tx() {
         spr.creator.clone(),
     )
     .token_id_1;
-    use crate::msg::PoolNftSwap;
-    use crate::msg::QueryMsg::SimSwapTokensForSpecificNfts;
 
     let swap_msg = SimSwapTokensForSpecificNfts {
         pool_nfts_to_swap_for: vec![PoolNftSwap {
