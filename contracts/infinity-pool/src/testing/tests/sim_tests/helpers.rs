@@ -48,6 +48,7 @@ pub struct ProcessSwapPoolResultsResponse {
     pub infinity_pool: Addr,
     pub pool: Pool,
     pub creator: Addr,
+    pub user1: Addr,
     pub user2: Addr,
     pub token_ids: Vec<u32>,
 }
@@ -224,9 +225,11 @@ pub fn deposit_tokens(
 
 fn process_swap_result(
     router: &mut StargazeApp,
-    swap_result: Result<SwapPoolResult, anyhow::Error>,
-) -> (u32, Addr, Addr, Addr, Pool, Addr, Addr) {
-    let r = swap_result.unwrap();
+    swap_result: &Result<SwapPoolResult, anyhow::Error>,
+    deposit_amount: u128,
+    skip_deposit_nfts: bool,
+) -> (u32, Addr, Addr, Addr, Pool, Addr, Addr, Addr) {
+    let r = swap_result.as_ref().unwrap();
 
     set_pool_active(
         router,
@@ -235,14 +238,32 @@ fn process_swap_result(
         r.creator.clone(),
         r.infinity_pool.clone(),
     );
-    let token_id = deposit_one_nft(
+    let minter = r.minter.clone();
+    let collection = r.collection.clone();
+    let infinity_pool = r.infinity_pool.clone();
+    let pool = r.pool.clone();
+    let creator = r.creator.clone();
+    let user1 = r.user1.clone();
+    let user2 = r.user2.clone();
+    let token_id = match skip_deposit_nfts {
+        false => deposit_one_nft(
+            router,
+            minter.clone(),
+            collection.clone(),
+            infinity_pool.clone(),
+            pool.clone(),
+            creator.clone(),
+        ),
+        true => 0,
+    };
+    let _ = deposit_tokens(
         router,
-        r.minter.clone(),
-        r.collection.clone(),
+        deposit_amount,
         r.infinity_pool.clone(),
         r.pool.clone(),
         r.creator.clone(),
     );
+
     println!(
         "spot price {:?} token id: {:?}",
         r.pool.spot_price, token_id
@@ -250,21 +271,34 @@ fn process_swap_result(
 
     (
         token_id,
-        r.minter,
-        r.collection,
-        r.infinity_pool,
-        r.pool,
-        r.creator,
-        r.user2,
+        minter,
+        collection,
+        infinity_pool,
+        pool,
+        creator,
+        user1,
+        user2,
     )
+    // (
+    //     token_id,
+    //     r.minter,
+    //     r.collection,
+    //     r.infinity_pool,
+    //     r.pool,
+    //     r.creator,
+    //     r.user1,
+    //     r.user2,
+    // )
 }
 pub fn execute_process_swap_results(
     router: &mut StargazeApp,
     swap_results: Vec<Result<SwapPoolResult, anyhow::Error>>,
+    deposit_amounts: Vec<u128>,
+    skip_deposit_nfts: bool,
 ) -> Vec<u32> {
     let mut token_ids = vec![];
-    for result in swap_results {
-        let token_id = process_swap_result(router, result).0;
+    for (i, result) in swap_results.iter().enumerate() {
+        let token_id = process_swap_result(router, result, deposit_amounts[i], skip_deposit_nfts).0;
         token_ids.append(&mut vec![token_id]);
     }
     token_ids.reverse();
@@ -275,13 +309,25 @@ pub fn process_swap_results(
     router: &mut StargazeApp,
     vts: VendingTemplateSetup,
     swap_pool_configs: Vec<SwapPoolSetup>,
+    deposit_amounts: Vec<u128>,
+    skip_deposit_nfts: Option<bool>,
 ) -> ProcessSwapPoolResultsResponse {
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
         setup_swap_pool(router, vts, swap_pool_configs, None);
     let swap_result = swap_results.pop().unwrap();
-    let (token_id, minter, collection, infinity_pool, pool, creator, user2) =
-        process_swap_result(router, swap_result);
-    let mut token_ids_2 = execute_process_swap_results(router, swap_results);
+    let (token_id, minter, collection, infinity_pool, pool, creator, user1, user2) =
+        process_swap_result(
+            router,
+            &swap_result,
+            deposit_amounts[0],
+            skip_deposit_nfts.unwrap_or(false),
+        );
+    let mut token_ids_2 = execute_process_swap_results(
+        router,
+        swap_results,
+        deposit_amounts[1..].into(),
+        skip_deposit_nfts.unwrap_or(false),
+    );
 
     let mut token_ids = vec![token_id];
     token_ids.append(&mut token_ids_2);
@@ -291,6 +337,7 @@ pub fn process_swap_results(
         infinity_pool,
         pool,
         creator,
+        user1,
         user2,
         token_ids,
     }

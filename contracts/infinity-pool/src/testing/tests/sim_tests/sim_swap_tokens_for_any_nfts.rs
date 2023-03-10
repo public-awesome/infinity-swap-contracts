@@ -1,5 +1,6 @@
 use crate::msg::SwapResponse;
 use crate::state::PoolType;
+use crate::testing::helpers::nft_functions::{approve, mint};
 use crate::testing::setup::templates::standard_minter_template;
 use crate::testing::tests::sim_tests::get_messages::get_swap_tokens_for_any_nfts_msg;
 use crate::testing::tests::sim_tests::helpers::{
@@ -7,6 +8,7 @@ use crate::testing::tests::sim_tests::helpers::{
     NftSaleCheckParams, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup, ASSET_ACCOUNT,
 };
 use cosmwasm_std::Addr;
+use cosmwasm_std::StdError::GenericErr;
 use cosmwasm_std::StdResult;
 use cosmwasm_std::Uint128;
 use std::vec;
@@ -31,6 +33,7 @@ fn error_inactive_pool() {
         spot_price,
         finders_fee_bps: None,
     }];
+
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
         setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
@@ -100,8 +103,9 @@ fn can_swap_active_pool() {
             finders_fee_bps: None,
         },
     ];
+    let deposit_amounts = vec![spot_price_3, spot_price_3, spot_price_3];
     let pspr: ProcessSwapPoolResultsResponse =
-        process_swap_results(&mut router, vts, swap_pool_configs);
+        process_swap_results(&mut router, vts, swap_pool_configs, deposit_amounts, None);
     let token_id_1 = pspr.token_ids.first().unwrap();
 
     let sale_price = 2000_u128;
@@ -176,9 +180,9 @@ fn pool_type_must_be_pool_trade_or_nft_error() {
             finders_fee_bps: None,
         },
     ];
-
+    let deposit_amounts = vec![spot_price_3, spot_price_3, spot_price_3];
     let pspr: ProcessSwapPoolResultsResponse =
-        process_swap_results(&mut router, vts, swap_pool_configs);
+        process_swap_results(&mut router, vts, swap_pool_configs, deposit_amounts, None);
 
     let swap_msg = get_swap_tokens_for_any_nfts_msg(
         pspr.collection,
@@ -193,4 +197,127 @@ fn pool_type_must_be_pool_trade_or_nft_error() {
         .query_wasm_smart(pspr.infinity_pool, &swap_msg);
 
     assert_eq!(res.unwrap().swaps, []);
+}
+
+#[test]
+fn insuficient_nfts_error() {
+    let spot_price_1 = 1000_u128;
+    let spot_price_2 = 2000_u128;
+    let spot_price_3 = 3000_u128;
+    let vt = standard_minter_template(5000);
+    let mut router = vt.router;
+
+    let vts = VendingTemplateSetup {
+        minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
+        creator: vt.accts.creator,
+        user1: vt.accts.bidder,
+        user2: vt.accts.owner,
+        collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
+    };
+
+    let swap_pool_configs = vec![
+        SwapPoolSetup {
+            pool_type: PoolType::Token,
+            spot_price: spot_price_3,
+            finders_fee_bps: None,
+        },
+        SwapPoolSetup {
+            pool_type: PoolType::Token,
+            spot_price: spot_price_2,
+            finders_fee_bps: None,
+        },
+        SwapPoolSetup {
+            pool_type: PoolType::Token,
+            spot_price: spot_price_1,
+            finders_fee_bps: None,
+        },
+    ];
+    let deposit_amounts = vec![spot_price_3, spot_price_3, spot_price_3];
+    let pspr: ProcessSwapPoolResultsResponse = process_swap_results(
+        &mut router,
+        vts,
+        swap_pool_configs,
+        deposit_amounts,
+        Some(true),
+    );
+
+    let token_id_1 = mint(&mut router, &pspr.user1.clone(), &pspr.minter);
+    approve(
+        &mut router,
+        &pspr.user1.clone(),
+        &pspr.collection.clone(),
+        &pspr.infinity_pool.clone(),
+        token_id_1,
+    );
+
+    let swap_msg = get_swap_tokens_for_any_nfts_msg(
+        pspr.collection,
+        vec![spot_price_1.into()],
+        false,
+        pspr.user2,
+        None,
+    );
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(pspr.infinity_pool.clone(), &swap_msg);
+    assert_eq!(res.unwrap().swaps, []);
+}
+
+#[test]
+fn sale_price_above_expected_error() {
+    let spot_price_1 = 1000_u128;
+    let spot_price_2 = 2000_u128;
+    let spot_price_3 = 3000_u128;
+
+    let vt = standard_minter_template(5000);
+    let mut router = vt.router;
+
+    let vts = VendingTemplateSetup {
+        minter: vt.collection_response_vec[0].minter.as_ref().unwrap(),
+        creator: vt.accts.creator,
+        user1: vt.accts.bidder,
+        user2: vt.accts.owner,
+        collection: vt.collection_response_vec[0].collection.as_ref().unwrap(),
+    };
+    let swap_pool_configs = vec![
+        SwapPoolSetup {
+            pool_type: PoolType::Nft,
+            spot_price: spot_price_3,
+            finders_fee_bps: None,
+        },
+        SwapPoolSetup {
+            pool_type: PoolType::Nft,
+            spot_price: spot_price_2,
+            finders_fee_bps: None,
+        },
+        SwapPoolSetup {
+            pool_type: PoolType::Nft,
+            spot_price: spot_price_1,
+            finders_fee_bps: None,
+        },
+    ];
+    let deposit_amounts = vec![spot_price_3, spot_price_3, spot_price_3];
+    let pspr: ProcessSwapPoolResultsResponse =
+        process_swap_results(&mut router, vts, swap_pool_configs, deposit_amounts, None);
+
+    let sale_price = 50_u128;
+    let swap_msg = get_swap_tokens_for_any_nfts_msg(
+        pspr.collection,
+        vec![sale_price.into()],
+        false,
+        pspr.user2.clone(),
+        None,
+    );
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(pspr.infinity_pool, &swap_msg);
+
+    let expected_error = GenericErr {
+            msg: "Querier contract error: Generic error: Swap error: pool sale price is above max expected"
+                .to_string(),
+        };
+    let error_msg = res.err().unwrap();
+    assert_eq!(error_msg, expected_error);
 }
