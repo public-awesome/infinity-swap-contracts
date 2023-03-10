@@ -429,9 +429,9 @@ impl<'a> SwapProcessor<'a> {
             if let Some(_next_pool_quote) = next_pool_quote {
                 let (pool_id, pool_quote) = _next_pool_quote?;
 
-                let pool = pools()
-                    .load(storage, pool_id)
-                    .map_err(|_| ContractError::InvalidPool("pool does not exist".to_string()))?;
+                let pool = pools().load(storage, pool_id).map_err(|_| {
+                    ContractError::PoolNotFound(format!("pool {} not found", pool_id))
+                })?;
 
                 self.pool_queue.insert(PoolPair {
                     // Recently fetched pools do not need saving yet
@@ -490,9 +490,10 @@ impl<'a> SwapProcessor<'a> {
     ) -> Result<(), ContractError> {
         let quote_price = pool.get_buy_quote()?;
         if quote_price.is_none() {
-            return Err(ContractError::InvalidPool(
-                "pool cannot offer quote".to_string(),
-            ));
+            return Err(ContractError::NoQuoteForPool(format!(
+                "pool {} cannot offer quote",
+                pool.id
+            )));
         }
 
         let mut pool_pair = PoolPair {
@@ -583,7 +584,7 @@ impl<'a> SwapProcessor<'a> {
                 if swap_params.robust {
                     continue;
                 } else {
-                    return Err(ContractError::InvalidPool(
+                    return Err(ContractError::SwapError(
                         "pool cannot be involved in further swaps".to_string(),
                     ));
                 }
@@ -593,7 +594,10 @@ impl<'a> SwapProcessor<'a> {
                 let pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
                 // If pool is not found, return error
                 if pool_option.is_none() {
-                    return Err(ContractError::InvalidPool("pool not found".to_string()));
+                    return Err(ContractError::PoolNotFound(format!(
+                        "pool {} not found",
+                        pool_nfts.pool_id
+                    )));
                 }
                 // Create PoolPair and insert into pool_pair_map
                 let pool = pool_option.unwrap();
@@ -602,9 +606,10 @@ impl<'a> SwapProcessor<'a> {
                     if swap_params.robust {
                         continue;
                     } else {
-                        return Err(ContractError::InvalidPool(
-                            "pool cannot offer quote".to_string(),
-                        ));
+                        return Err(ContractError::NoQuoteForPool(format!(
+                            "pool {} cannot offer quote",
+                            pool.id
+                        )));
                     }
                 }
                 pool_pair_map.insert(
