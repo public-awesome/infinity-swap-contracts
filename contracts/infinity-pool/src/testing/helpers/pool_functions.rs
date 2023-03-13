@@ -1,5 +1,6 @@
 use crate::msg::{ExecuteMsg, PoolsByIdResponse, QueryMsg};
 use crate::state::Pool;
+use crate::testing::setup::setup_marketplace::LISTING_FEE;
 use anyhow::Error;
 use cosmwasm_std::{coins, Addr, Uint128};
 use cw_multi_test::Executor;
@@ -12,7 +13,12 @@ pub fn create_pool(
     creator: Addr,
     msg: ExecuteMsg,
 ) -> Result<Pool, Error> {
-    let res = router.execute_contract(creator, infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(
+        creator,
+        infinity_pool.clone(),
+        &msg,
+        &coins(LISTING_FEE, NATIVE_DENOM),
+    );
     assert!(res.is_ok());
     let pool_id = res.unwrap().events[1].attributes[1]
         .value
@@ -80,9 +86,18 @@ pub fn activate(
     creator: Addr,
     pool_id: u64,
     is_active: bool,
-) -> Result<bool, Error> {
+) -> Result<Pool, Error> {
     let msg = ExecuteMsg::SetActivePool { pool_id, is_active };
-    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    let res = router.execute_contract(creator, infinity_pool.clone(), &msg, &[]);
     assert!(res.is_ok());
-    Ok(is_active)
+    let query_msg = QueryMsg::PoolsById {
+        pool_ids: vec![pool_id],
+    };
+    let res: PoolsByIdResponse = router
+        .wrap()
+        .query_wasm_smart(infinity_pool, &query_msg)
+        .unwrap();
+
+    let pool = res.pools[0].1.clone().unwrap();
+    Ok(pool)
 }

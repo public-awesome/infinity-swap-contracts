@@ -7,7 +7,7 @@ use sg_multi_test::StargazeApp;
 
 use crate::testing::setup::setup_contracts::contract_marketplace;
 
-pub const LISTING_FEE: u128 = 0;
+pub const LISTING_FEE: u128 = 100;
 // Governance parameters
 pub const TRADING_FEE_BPS: u64 = 200; // 2%
 pub const MIN_EXPIRY: u64 = 24 * 60 * 60; // 24 hours (in seconds)

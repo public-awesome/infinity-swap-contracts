@@ -7,9 +7,7 @@ use sg_std::NATIVE_DENOM;
 
 // all amounts in ustars
 pub const INITIAL_BALANCE: u128 = 5_000_000_000;
-pub const CREATION_FEE: u128 = 5_000_000_000;
 pub const _MINT_PRICE: u128 = 100_000_000;
-pub const SECOND_BIDDER_INITIAL_BALANCE: u128 = 2000;
 
 // initializes accounts with balances
 pub fn setup_accounts(router: &mut StargazeApp) -> Result<(Addr, Addr, Addr), ContractError> {
@@ -57,13 +55,17 @@ pub fn setup_accounts(router: &mut StargazeApp) -> Result<(Addr, Addr, Addr), Co
     Ok((owner, bidder, creator))
 }
 
-pub fn setup_second_bidder_account(router: &mut StargazeApp) -> Result<Addr, ContractError> {
-    let bidder2: Addr = Addr::unchecked("bidder2");
-    let funds: Vec<Coin> = coins(CREATION_FEE + SECOND_BIDDER_INITIAL_BALANCE, NATIVE_DENOM);
+pub fn setup_addtl_account(
+    router: &mut StargazeApp,
+    input: &str,
+    initial_balance: u128,
+) -> Result<Addr, ContractError> {
+    let addr: Addr = Addr::unchecked(input);
+    let funds: Vec<Coin> = coins(initial_balance, NATIVE_DENOM);
     router
         .sudo(CwSudoMsg::Bank({
             BankSudo::Mint {
-                to_address: bidder2.to_string(),
+                to_address: addr.to_string(),
                 amount: funds.clone(),
             }
         }))
@@ -71,8 +73,8 @@ pub fn setup_second_bidder_account(router: &mut StargazeApp) -> Result<Addr, Con
         .ok();
 
     // Check native balances
-    let bidder_native_balances = router.wrap().query_all_balances(bidder2.clone()).unwrap();
+    let bidder_native_balances = router.wrap().query_all_balances(addr.clone()).unwrap();
     assert_eq!(bidder_native_balances, funds);
 
-    Ok(bidder2)
+    Ok(addr)
 }

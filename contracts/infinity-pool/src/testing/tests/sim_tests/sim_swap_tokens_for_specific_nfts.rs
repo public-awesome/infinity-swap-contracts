@@ -286,7 +286,7 @@ fn insuficient_nfts_error() {
         .query_wasm_smart(spr.infinity_pool.clone(), &swap_msg);
 
     let expected_error = GenericErr {
-        msg: "Querier contract error: Generic error: Invalid pool: pool cannot offer quote"
+        msg: "Querier contract error: Generic error: No quote for pool: pool 1 cannot offer quote"
             .to_string(),
     };
     let error_msg = res.err().unwrap();

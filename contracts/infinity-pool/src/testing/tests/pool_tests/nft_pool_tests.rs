@@ -2,13 +2,13 @@ use std::vec;
 
 use crate::error::ContractError;
 use crate::msg::ExecuteMsg;
-use crate::state::{BondingCurve, PoolType};
+use crate::state::BondingCurve;
 use crate::testing::helpers::nft_functions::{approve, mint};
 use crate::testing::helpers::pool_functions::create_pool;
 use crate::testing::helpers::utils::assert_error;
-use crate::testing::setup::setup_accounts::setup_second_bidder_account;
+use crate::testing::setup::setup_accounts::setup_addtl_account;
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
-use crate::testing::setup::setup_marketplace::setup_marketplace;
+use crate::testing::setup::setup_marketplace::{setup_marketplace, LISTING_FEE};
 use crate::testing::setup::templates::standard_minter_template;
 use cosmwasm_std::{coins, Addr, Uint128};
 use cw_multi_test::Executor;
@@ -28,17 +28,13 @@ fn create_nft_pool() {
     let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     // Cannot create a ConstantProduct Nft Pool because the pool does not hold both assets
-    let msg = ExecuteMsg::CreatePool {
+    let msg = ExecuteMsg::CreateNftPool {
         collection: collection.to_string(),
         asset_recipient: Some(asset_account.to_string()),
-        pool_type: PoolType::Nft,
         bonding_curve: BondingCurve::ConstantProduct,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
         finders_fee_bps: 0,
-        swap_fee_bps: 0u64,
-        reinvest_nfts: false,
-        reinvest_tokens: false,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
     assert_error(
@@ -48,55 +44,38 @@ fn create_nft_pool() {
         )),
     );
 
-    // Cannot create a Nft Pool with a fee
-    let msg = ExecuteMsg::CreatePool {
-        collection: collection.to_string(),
-        asset_recipient: Some(asset_account.to_string()),
-        pool_type: PoolType::Nft,
-        bonding_curve: BondingCurve::Linear,
-        spot_price: Uint128::from(2400u64),
-        delta: Uint128::from(120u64),
-        finders_fee_bps: 0,
-        swap_fee_bps: 100u64,
-        reinvest_nfts: false,
-        reinvest_tokens: false,
-    };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
-    assert_error(
-        res,
-        ContractError::InvalidPool(String::from("swap_fee_percent must be 0 for nft pool")),
-    );
-
     // Can create a Linear Nft Pool
-    let msg = ExecuteMsg::CreatePool {
+    let msg = ExecuteMsg::CreateNftPool {
         collection: collection.to_string(),
         asset_recipient: Some(asset_account.to_string()),
-        pool_type: PoolType::Nft,
         bonding_curve: BondingCurve::Linear,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
         finders_fee_bps: 0,
-        swap_fee_bps: 0u64,
-        reinvest_nfts: false,
-        reinvest_tokens: false,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(
+        creator.clone(),
+        infinity_pool.clone(),
+        &msg,
+        &coins(LISTING_FEE, NATIVE_DENOM),
+    );
     assert!(res.is_ok());
 
     // Can create an Exponential Nft Pool
-    let msg = ExecuteMsg::CreatePool {
+    let msg = ExecuteMsg::CreateNftPool {
         collection: collection.to_string(),
         asset_recipient: Some(asset_account.to_string()),
-        pool_type: PoolType::Nft,
         bonding_curve: BondingCurve::Exponential,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
         finders_fee_bps: 0,
-        swap_fee_bps: 0u64,
-        reinvest_nfts: false,
-        reinvest_tokens: false,
     };
-    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    let res = router.execute_contract(
+        creator,
+        infinity_pool,
+        &msg,
+        &coins(LISTING_FEE, NATIVE_DENOM),
+    );
     assert!(res.is_ok());
 }
 
@@ -109,7 +88,7 @@ fn deposit_assets_nft_pool() {
         vt.accts.creator,
         vt.accts.bidder,
     );
-    let _user2 = setup_second_bidder_account(&mut router);
+    let _user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000);
 
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
@@ -122,17 +101,13 @@ fn deposit_assets_nft_pool() {
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateNftPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Nft,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(2400u64),
             delta: Uint128::from(100u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_tokens: false,
-            reinvest_nfts: false,
         },
     )
     .unwrap();

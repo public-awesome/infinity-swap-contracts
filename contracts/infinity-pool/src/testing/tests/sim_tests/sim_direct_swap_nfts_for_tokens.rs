@@ -67,7 +67,7 @@ fn cant_swap_inactive_pool() {
     assert_eq!(
         res,
         StdError::GenericErr {
-            msg: "Querier contract error: Generic error: Invalid pool: pool cannot offer quote"
+            msg: "Querier contract error: Generic error: No quote for pool: pool 1 cannot offer quote"
                 .to_string()
         }
     );
@@ -258,7 +258,7 @@ fn insufficient_tokens_error() {
 
     let expected_error = GenericErr {
         msg: "Querier contract error: \
-        Generic error: Invalid pool: pool cannot offer quote"
+        Generic error: No quote for pool: pool 1 cannot offer quote"
             .to_string(),
     };
     assert_eq!(error_msg, expected_error);
@@ -616,7 +616,7 @@ fn royalty_fee_applied_correctly() {
 #[test]
 fn finders_fee_is_applied_correctly() {
     let finders_fee_bps = 2_u128;
-    let spot_price = 20000_u128;
+    let spot_price = 20_000_u128;
 
     let vt = standard_minter_template(5000);
 
@@ -645,7 +645,7 @@ fn finders_fee_is_applied_correctly() {
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
-        25000_u128,
+        25_000_u128,
     )
     .token_id_1;
 

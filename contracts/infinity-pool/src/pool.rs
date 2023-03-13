@@ -229,15 +229,27 @@ impl Pool {
                 "pool cannot buy nfts".to_string(),
             )),
             PoolType::Trade => match self.bonding_curve {
-                BondingCurve::Linear => Ok(self.spot_price + self.delta),
-                BondingCurve::Exponential => Ok(self.spot_price
-                    * Decimal::percent((MAX_BASIS_POINTS + self.delta.u128()) as u64)),
-                BondingCurve::ConstantProduct => {
-                    Ok(self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 - 1))
+                BondingCurve::Linear => self
+                    .spot_price
+                    .checked_add(self.delta)
+                    .map_err(|e| ContractError::Std(StdError::overflow(e))),
+                BondingCurve::Exponential => {
+                    let product = self
+                        .spot_price
+                        .checked_mul(self.delta)
+                        .map_err(|e| StdError::Overflow { source: e })?
+                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
+                        .map_err(|e| ContractError::Std(StdError::divide_by_zero(e)))?;
+                    self.spot_price
+                        .checked_add(product)
+                        .map_err(|e| ContractError::Std(StdError::overflow(e)))
                 }
+                BondingCurve::ConstantProduct => self
+                    .total_tokens
+                    .checked_div(Uint128::from(self.nft_token_ids.len() as u64 + 1))
+                    .map_err(|e| ContractError::Std(StdError::divide_by_zero(e))),
             },
         }?;
-
         // If the pool has insufficient tokens to buy the NFT, return None
         if self.total_tokens < buy_price {
             return Ok(None);
@@ -260,7 +272,12 @@ impl Pool {
         let sell_price = match self.bonding_curve {
             BondingCurve::Linear | BondingCurve::Exponential => self.spot_price,
             BondingCurve::ConstantProduct => {
-                self.total_tokens / Uint128::from(self.nft_token_ids.len() as u128 + 1)
+                if self.nft_token_ids.len() < 2 {
+                    return Ok(None);
+                }
+                self.total_tokens
+                    .checked_div(Uint128::from(self.nft_token_ids.len() as u64 - 1))
+                    .unwrap()
             }
         };
         Ok(Some(sell_price))
