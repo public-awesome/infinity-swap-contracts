@@ -1,5 +1,5 @@
 use crate::msg::ExecuteMsg;
-use crate::state::{BondingCurve, Pool, PoolType};
+use crate::state::{BondingCurve, Pool};
 use crate::testing::helpers::nft_functions::{approve, mint};
 use crate::testing::helpers::pool_functions::create_pool;
 use cosmwasm_std::{Addr, Uint128};
@@ -9,58 +9,41 @@ use super::pool_functions::{activate, deposit_nfts, deposit_tokens};
 
 pub fn get_pool_fixtures(collection: &Addr, asset_account: &Addr) -> Vec<ExecuteMsg> {
     vec![
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(100u64),
             delta: Uint128::from(10u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_nfts: false,
-            reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(200u64),
             delta: Uint128::from(20u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_nfts: false,
-            reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateNftPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Nft,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(300u64),
             delta: Uint128::from(30u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_nfts: false,
-            reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateNftPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Nft,
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(400u64),
             delta: Uint128::from(40u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_nfts: false,
-            reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(500u64),
             delta: Uint128::from(50u64),
@@ -69,10 +52,9 @@ pub fn get_pool_fixtures(collection: &Addr, asset_account: &Addr) -> Vec<Execute
             reinvest_nfts: false,
             reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(600u64),
             delta: Uint128::from(60u64),
@@ -81,70 +63,52 @@ pub fn get_pool_fixtures(collection: &Addr, asset_account: &Addr) -> Vec<Execute
             reinvest_nfts: false,
             reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::ConstantProduct,
-            spot_price: Uint128::from(700u64),
-            delta: Uint128::from(70u64),
+            spot_price: Uint128::from(0u64),
+            delta: Uint128::from(0u64),
             finders_fee_bps: 0,
             swap_fee_bps: 70,
             reinvest_nfts: false,
             reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(800u64),
             delta: Uint128::from(80u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_nfts: false,
-            reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(900u64),
             delta: Uint128::from(90u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_nfts: false,
-            reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateNftPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Nft,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(1000u64),
             delta: Uint128::from(100u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_nfts: false,
-            reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateNftPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Nft,
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(1100u64),
             delta: Uint128::from(110u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_nfts: false,
-            reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(1200u64),
             delta: Uint128::from(120u64),
@@ -153,10 +117,9 @@ pub fn get_pool_fixtures(collection: &Addr, asset_account: &Addr) -> Vec<Execute
             reinvest_nfts: false,
             reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(1300u64),
             delta: Uint128::from(130u64),
@@ -165,13 +128,12 @@ pub fn get_pool_fixtures(collection: &Addr, asset_account: &Addr) -> Vec<Execute
             reinvest_nfts: false,
             reinvest_tokens: false,
         },
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::ConstantProduct,
-            spot_price: Uint128::from(1400u64),
-            delta: Uint128::from(140u64),
+            spot_price: Uint128::from(0u64),
+            delta: Uint128::from(0u64),
             finders_fee_bps: 0,
             swap_fee_bps: 70,
             reinvest_nfts: false,
@@ -215,12 +177,17 @@ pub fn create_and_activate_pool_fixtures(
     for msg in msgs.into_iter() {
         let pool = create_pool(router, infinity_pool.clone(), creator.clone(), msg).unwrap();
         if pool.can_buy_nfts() {
+            let deposit_amount = if pool.bonding_curve == BondingCurve::ConstantProduct {
+                Uint128::from(3_000u64)
+            } else {
+                pool.spot_price * Uint128::from(10u64)
+            };
             deposit_tokens(
                 router,
                 infinity_pool.clone(),
                 pool.owner.clone(),
                 pool.id,
-                pool.spot_price * Uint128::from(2u64),
+                deposit_amount,
             )
             .unwrap();
         }
@@ -242,7 +209,7 @@ pub fn create_and_activate_pool_fixtures(
             )
             .unwrap();
         }
-        activate(
+        let pool = activate(
             router,
             infinity_pool.clone(),
             pool.owner.clone(),

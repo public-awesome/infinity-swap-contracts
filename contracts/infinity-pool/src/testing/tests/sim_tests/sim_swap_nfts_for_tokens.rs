@@ -1,6 +1,6 @@
 use crate::msg::{NftSwap, PoolQuoteResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse};
 use crate::state::{PoolQuote, PoolType};
-use crate::testing::setup::setup_accounts::setup_second_bidder_account;
+use crate::testing::setup::setup_accounts::setup_addtl_account;
 use crate::testing::setup::templates::{_minter_template_30_pct_fee, standard_minter_template};
 use crate::testing::tests::sim_tests::get_messages::get_sim_swap_nfts_for_tokens_msg;
 use crate::testing::tests::sim_tests::helpers::{
@@ -24,7 +24,7 @@ fn cant_swap_two_inactive_pools() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
@@ -118,7 +118,7 @@ fn can_swap_two_active_pools() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
@@ -251,7 +251,7 @@ fn pool_type_can_not_be_nft_error() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
@@ -326,7 +326,7 @@ fn insufficient_tokens_error() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
@@ -417,7 +417,7 @@ fn invalid_sale_price_below_min_expected() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
@@ -523,7 +523,7 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
@@ -644,7 +644,7 @@ fn trading_fee_is_applied_correctly() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
@@ -778,7 +778,7 @@ fn royalty_fee_applied_correctly() {
 
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {
@@ -914,7 +914,7 @@ fn finders_fee_is_applied_correctly() {
     let mut router = vt.router;
     let collection = vt.collection_response_vec[0].collection.as_ref().unwrap();
     let user1 = vt.accts.bidder.clone();
-    let user2 = setup_second_bidder_account(&mut router).unwrap();
+    let user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000).unwrap();
     let creator = vt.accts.creator;
 
     let vts = VendingTemplateSetup {

@@ -93,23 +93,42 @@ pub fn setup_swap_pool(
         let minter = minter.clone();
         let collection = collection.clone();
 
+        let create_pool_msg = match swap_pool_config.pool_type {
+            PoolType::Token => ExecuteMsg::CreateTokenPool {
+                collection: collection.to_string(),
+                asset_recipient: Some(asset_account.to_string()),
+                bonding_curve: BondingCurve::Linear,
+                spot_price: Uint128::from(swap_pool_config.spot_price),
+                delta: Uint128::from(100u64),
+                finders_fee_bps: swap_pool_config.finders_fee_bps.unwrap_or(0),
+            },
+            PoolType::Nft => ExecuteMsg::CreateNftPool {
+                collection: collection.to_string(),
+                asset_recipient: Some(asset_account.to_string()),
+                bonding_curve: BondingCurve::Linear,
+                spot_price: Uint128::from(swap_pool_config.spot_price),
+                delta: Uint128::from(100u64),
+                finders_fee_bps: swap_pool_config.finders_fee_bps.unwrap_or(0),
+            },
+            PoolType::Trade => ExecuteMsg::CreateTradePool {
+                collection: collection.to_string(),
+                asset_recipient: Some(asset_account.to_string()),
+                bonding_curve: BondingCurve::Linear,
+                spot_price: Uint128::from(swap_pool_config.spot_price),
+                delta: Uint128::from(100u64),
+                finders_fee_bps: swap_pool_config.finders_fee_bps.unwrap_or(0),
+                swap_fee_bps: 0u64,
+                reinvest_tokens: false,
+                reinvest_nfts: false,
+            },
+        };
+
         // Can create a Linear Nft Pool
         let pool_result = create_pool(
             router,
             infinity_pool.clone(),
             creator.clone(),
-            ExecuteMsg::CreatePool {
-                collection: collection.to_string(),
-                asset_recipient: Some(asset_account.to_string()),
-                pool_type: swap_pool_config.pool_type,
-                bonding_curve: BondingCurve::Linear,
-                spot_price: Uint128::from(swap_pool_config.spot_price),
-                delta: Uint128::from(100u64),
-                finders_fee_bps: swap_pool_config.finders_fee_bps.unwrap_or(0),
-                swap_fee_bps: 0,
-                reinvest_tokens: false,
-                reinvest_nfts: false,
-            },
+            create_pool_msg,
         );
         let result = match pool_result {
             Ok(result) => Ok(SwapPoolResult {

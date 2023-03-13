@@ -2,13 +2,13 @@ use std::vec;
 
 use crate::error::ContractError;
 use crate::msg::ExecuteMsg;
-use crate::state::{BondingCurve, PoolType};
+use crate::state::BondingCurve;
 use crate::testing::helpers::nft_functions::{approve, mint};
 use crate::testing::helpers::pool_functions::{create_pool, deposit_tokens};
 use crate::testing::helpers::utils::assert_error;
-use crate::testing::setup::setup_accounts::{setup_second_bidder_account, INITIAL_BALANCE};
+use crate::testing::setup::setup_accounts::{setup_addtl_account, INITIAL_BALANCE};
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
-use crate::testing::setup::setup_marketplace::setup_marketplace;
+use crate::testing::setup::setup_marketplace::{setup_marketplace, LISTING_FEE};
 use crate::testing::setup::templates::standard_minter_template;
 use cosmwasm_std::{coins, Addr, Attribute, Uint128};
 use cw_multi_test::Executor;
@@ -28,19 +28,20 @@ fn create_token_pool() {
     let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
 
     // Cannot create a ConstantProduct Token Pool because the pool does not hold both assets
-    let msg = ExecuteMsg::CreatePool {
+    let msg = ExecuteMsg::CreateTokenPool {
         collection: collection.to_string(),
         asset_recipient: Some(asset_account.to_string()),
-        pool_type: PoolType::Token,
         bonding_curve: BondingCurve::ConstantProduct,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
         finders_fee_bps: 0,
-        swap_fee_bps: 0u64,
-        reinvest_nfts: false,
-        reinvest_tokens: false,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(
+        creator.clone(),
+        infinity_pool.clone(),
+        &msg,
+        &coins(LISTING_FEE, NATIVE_DENOM),
+    );
     assert_error(
         res,
         ContractError::InvalidPool(String::from(
@@ -48,55 +49,38 @@ fn create_token_pool() {
         )),
     );
 
-    // Cannot create a Token Pool with a fee
-    let msg = ExecuteMsg::CreatePool {
-        collection: collection.to_string(),
-        asset_recipient: Some(asset_account.to_string()),
-        pool_type: PoolType::Token,
-        bonding_curve: BondingCurve::Linear,
-        spot_price: Uint128::from(2400u64),
-        delta: Uint128::from(120u64),
-        finders_fee_bps: 0,
-        swap_fee_bps: 100u64,
-        reinvest_nfts: false,
-        reinvest_tokens: false,
-    };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
-    assert_error(
-        res,
-        ContractError::InvalidPool(String::from("swap_fee_percent must be 0 for token pool")),
-    );
-
     // Can create a Linear Token Pool
-    let msg = ExecuteMsg::CreatePool {
+    let msg = ExecuteMsg::CreateTokenPool {
         collection: collection.to_string(),
         asset_recipient: Some(asset_account.to_string()),
-        pool_type: PoolType::Token,
         bonding_curve: BondingCurve::Linear,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
         finders_fee_bps: 0,
-        swap_fee_bps: 0u64,
-        reinvest_nfts: false,
-        reinvest_tokens: false,
     };
-    let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(
+        creator.clone(),
+        infinity_pool.clone(),
+        &msg,
+        &coins(LISTING_FEE, NATIVE_DENOM),
+    );
     assert!(res.is_ok());
 
     // Can create an Exponential Token Pool
-    let msg = ExecuteMsg::CreatePool {
+    let msg = ExecuteMsg::CreateTokenPool {
         collection: collection.to_string(),
         asset_recipient: Some(asset_account.to_string()),
-        pool_type: PoolType::Token,
         bonding_curve: BondingCurve::Exponential,
         spot_price: Uint128::from(2400u64),
         delta: Uint128::from(120u64),
         finders_fee_bps: 0,
-        swap_fee_bps: 0u64,
-        reinvest_nfts: false,
-        reinvest_tokens: false,
     };
-    let res = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    let res = router.execute_contract(
+        creator,
+        infinity_pool,
+        &msg,
+        &coins(LISTING_FEE, NATIVE_DENOM),
+    );
     assert!(res.is_ok());
 }
 
@@ -109,7 +93,7 @@ fn deposit_assets_token_pool() {
         vt.accts.creator,
         vt.accts.bidder,
     );
-    let _user2 = setup_second_bidder_account(&mut router);
+    let _user2 = setup_addtl_account(&mut router, "bidder2", 5_000_002_000);
 
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
@@ -122,17 +106,13 @@ fn deposit_assets_token_pool() {
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(2400u64),
             delta: Uint128::from(100u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_tokens: false,
-            reinvest_nfts: false,
         },
     )
     .unwrap();
@@ -224,17 +204,13 @@ fn withdraw_assets_token_pool() {
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: Some(asset_account.to_string()),
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(2400u64),
             delta: Uint128::from(100u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_tokens: false,
-            reinvest_nfts: false,
         },
     )
     .unwrap();
@@ -269,17 +245,11 @@ fn withdraw_assets_token_pool() {
         asset_recipient: Some(asset_account.to_string()),
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
-    let total_withdrawn = res.as_ref().unwrap().events[1].attributes[2]
-        .value
-        .parse::<u128>()
-        .unwrap();
-
     let total_tokens = res.as_ref().unwrap().events[1].attributes[3]
         .value
         .parse::<u128>()
         .unwrap();
     assert!(res.is_ok());
-    assert_eq!(Uint128::from(total_withdrawn), withdraw_amount);
     assert_eq!(
         Uint128::from(total_tokens),
         deposit_amount - withdraw_amount
@@ -293,24 +263,16 @@ fn withdraw_assets_token_pool() {
         asset_recipient: None,
     };
     let res = router.execute_contract(creator.clone(), infinity_pool.clone(), &msg, &[]);
-    let total_withdrawn = res.as_ref().unwrap().events[1].attributes[2]
-        .value
-        .parse::<u128>()
-        .unwrap();
     let total_tokens = res.as_ref().unwrap().events[1].attributes[3]
         .value
         .parse::<u128>()
         .unwrap();
     assert!(res.is_ok());
-    assert_eq!(
-        Uint128::from(total_withdrawn),
-        deposit_amount - withdraw_amount
-    );
     assert_eq!(Uint128::from(total_tokens), Uint128::from(0u128));
     let creator_balance = router.wrap().query_all_balances(creator.clone()).unwrap();
     assert_eq!(
         creator_balance[0].amount,
-        Uint128::from(INITIAL_BALANCE) - withdraw_amount
+        Uint128::from(INITIAL_BALANCE) - withdraw_amount - Uint128::from(LISTING_FEE)
     );
 
     // Owner of pool cannot withdraw NFTs from a token pool
@@ -358,17 +320,13 @@ fn update_token_pool() {
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: None,
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(2400u64),
             delta: Uint128::from(100u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_tokens: false,
-            reinvest_nfts: false,
         },
     )
     .unwrap();
@@ -431,21 +389,21 @@ fn update_token_pool() {
         }
     );
     assert_eq!(
-        attrs[4],
+        attrs[2],
         Attribute {
             key: "asset_recipient".to_string(),
             value: ASSET_ACCOUNT.to_string()
         }
     );
     assert_eq!(
-        attrs[7],
+        attrs[3],
         Attribute {
             key: "spot_price".to_string(),
             value: new_spot_price.to_string()
         }
     );
     assert_eq!(
-        attrs[8],
+        attrs[4],
         Attribute {
             key: "delta".to_string(),
             value: new_delta.to_string()
@@ -474,17 +432,13 @@ fn remove_token_pool() {
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: None,
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(2400u64),
             delta: Uint128::from(100u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_tokens: false,
-            reinvest_nfts: false,
         },
     )
     .unwrap();
@@ -542,17 +496,13 @@ fn activate_token_pool() {
         &mut router,
         infinity_pool.clone(),
         creator.clone(),
-        ExecuteMsg::CreatePool {
+        ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
             asset_recipient: None,
-            pool_type: PoolType::Token,
             bonding_curve: BondingCurve::Linear,
             spot_price: Uint128::from(2400u64),
             delta: Uint128::from(100u64),
             finders_fee_bps: 0,
-            swap_fee_bps: 0,
-            reinvest_tokens: false,
-            reinvest_nfts: false,
         },
     )
     .unwrap();
