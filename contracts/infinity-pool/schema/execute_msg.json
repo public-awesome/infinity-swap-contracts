@@ -6,17 +6,106 @@
       "description": "Create a new pool, defaults to an inactive state",
       "type": "object",
       "required": [
-        "create_pool"
+        "create_token_pool"
       ],
       "properties": {
-        "create_pool": {
+        "create_token_pool": {
           "type": "object",
           "required": [
             "bonding_curve",
             "collection",
             "delta",
             "finders_fee_bps",
-            "pool_type",
+            "spot_price"
+          ],
+          "properties": {
+            "asset_recipient": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "bonding_curve": {
+              "$ref": "#/definitions/BondingCurve"
+            },
+            "collection": {
+              "type": "string"
+            },
+            "delta": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "finders_fee_bps": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "spot_price": {
+              "$ref": "#/definitions/Uint128"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "create_nft_pool"
+      ],
+      "properties": {
+        "create_nft_pool": {
+          "type": "object",
+          "required": [
+            "bonding_curve",
+            "collection",
+            "delta",
+            "finders_fee_bps",
+            "spot_price"
+          ],
+          "properties": {
+            "asset_recipient": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "bonding_curve": {
+              "$ref": "#/definitions/BondingCurve"
+            },
+            "collection": {
+              "type": "string"
+            },
+            "delta": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "finders_fee_bps": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "spot_price": {
+              "$ref": "#/definitions/Uint128"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "create_trade_pool"
+      ],
+      "properties": {
+        "create_trade_pool": {
+          "type": "object",
+          "required": [
+            "bonding_curve",
+            "collection",
+            "delta",
+            "finders_fee_bps",
             "reinvest_nfts",
             "reinvest_tokens",
             "spot_price",
@@ -42,9 +131,6 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
-            },
-            "pool_type": {
-              "$ref": "#/definitions/PoolType"
             },
             "reinvest_nfts": {
               "type": "boolean"
@@ -617,15 +703,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "PoolType": {
-      "description": "PoolType refers to the assets held by the pool * Token: A pool that holds fungible tokens * Nft: A pool that holds NFTs * Trade: A pool that holds both fungible tokens and NFTs",
-      "type": "string",
-      "enum": [
-        "token",
-        "nft",
-        "trade"
-      ]
     },
     "SwapParams": {
       "description": "SwapParams contains the parameters for a swap",

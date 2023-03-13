@@ -362,7 +362,7 @@ pub fn sim_swap_tokens_for_any_nfts(
     let mut processor = SwapProcessor::new(
         TransactionType::Buy,
         collection,
-        sender.clone(),
+        sender,
         total_tokens,
         swap_prep_result.asset_recipient,
         swap_prep_result

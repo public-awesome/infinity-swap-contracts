@@ -68,58 +68,58 @@ pub struct Swap {
     pub seller_payment: Option<TokenPayment>,
 }
 
-impl Into<Event> for &Swap {
-    fn into(self) -> Event {
+impl From<&Swap> for Event {
+    fn from(val: &Swap) -> Self {
         let attributes = vec![
-            attr("pool_id", self.pool_id.to_string()),
-            attr("transaction_type", self.transaction_type.to_string()),
-            attr("spot_price", self.spot_price.to_string()),
-            attr("network_fee", self.network_fee.to_string()),
+            attr("pool_id", val.pool_id.to_string()),
+            attr("transaction_type", val.transaction_type.to_string()),
+            attr("spot_price", val.spot_price.to_string()),
+            attr("network_fee", val.network_fee.to_string()),
             attr(
                 "finder_payment_address",
-                self.finder_payment
+                val.finder_payment
                     .as_ref()
                     .map_or("".to_string(), |fp| fp.address.to_string()),
             ),
             attr(
                 "finder_payment_amount",
-                self.finder_payment
+                val.finder_payment
                     .as_ref()
                     .map_or("".to_string(), |fp| fp.amount.to_string()),
             ),
             attr(
                 "royalty_payment_address",
-                self.royalty_payment
+                val.royalty_payment
                     .as_ref()
                     .map_or("".to_string(), |rp| rp.address.to_string()),
             ),
             attr(
                 "royalty_payment_amount",
-                self.royalty_payment
+                val.royalty_payment
                     .as_ref()
                     .map_or("".to_string(), |rp| rp.amount.to_string()),
             ),
             attr(
                 "nft_payment_address",
-                self.nft_payment
+                val.nft_payment
                     .as_ref()
                     .map_or("".to_string(), |np| np.address.to_string()),
             ),
             attr(
                 "nft_payment_amount",
-                self.nft_payment
+                val.nft_payment
                     .as_ref()
                     .map_or("".to_string(), |np| np.nft_token_id.to_string()),
             ),
             attr(
                 "seller_payment_address",
-                self.seller_payment
+                val.seller_payment
                     .as_ref()
                     .map_or("".to_string(), |sp| sp.address.to_string()),
             ),
             attr(
                 "seller_payment_amount",
-                self.seller_payment
+                val.seller_payment
                     .as_ref()
                     .map_or("".to_string(), |sp| sp.amount.to_string()),
             ),

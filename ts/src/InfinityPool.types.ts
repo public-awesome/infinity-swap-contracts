@@ -14,13 +14,30 @@ export interface Config {
   marketplace_addr: Addr;
 }
 export type ExecuteMsg = {
-  create_pool: {
+  create_token_pool: {
     asset_recipient?: string | null;
     bonding_curve: BondingCurve;
     collection: string;
     delta: Uint128;
     finders_fee_bps: number;
-    pool_type: PoolType;
+    spot_price: Uint128;
+  };
+} | {
+  create_nft_pool: {
+    asset_recipient?: string | null;
+    bonding_curve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    finders_fee_bps: number;
+    spot_price: Uint128;
+  };
+} | {
+  create_trade_pool: {
+    asset_recipient?: string | null;
+    bonding_curve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    finders_fee_bps: number;
     reinvest_nfts: boolean;
     reinvest_tokens: boolean;
     spot_price: Uint128;
@@ -112,7 +129,6 @@ export type ExecuteMsg = {
 };
 export type BondingCurve = "linear" | "exponential" | "constant_product";
 export type Uint128 = string;
-export type PoolType = "token" | "nft" | "trade";
 export type Timestamp = Uint64;
 export type Uint64 = string;
 export interface NftSwap {
@@ -143,6 +159,7 @@ export interface PoolQuote {
   quote_price: Uint128;
 }
 export type Decimal = string;
+export type PoolType = "token" | "nft" | "trade";
 export interface PoolsByIdResponse {
   pools: [number, Pool | null][];
 }

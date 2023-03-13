@@ -8,17 +8,46 @@ import { Coin } from "@cosmjs/amino";
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, PoolType, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolType, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
 export interface InfinityPoolMessage {
   contractAddress: string;
   sender: string;
-  createPool: ({
+  createTokenPool: ({
     assetRecipient,
     bondingCurve,
     collection,
     delta,
     findersFeeBps,
-    poolType,
+    spotPrice
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    spotPrice: Uint128;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  createNftPool: ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
+    spotPrice
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    spotPrice: Uint128;
+  }, funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  createTradePool: ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
     reinvestNfts,
     reinvestTokens,
     spotPrice,
@@ -29,7 +58,6 @@ export interface InfinityPoolMessage {
     collection: string;
     delta: Uint128;
     findersFeeBps: number;
-    poolType: PoolType;
     reinvestNfts: boolean;
     reinvestTokens: boolean;
     spotPrice: Uint128;
@@ -167,7 +195,9 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
   constructor(sender: string, contractAddress: string) {
     this.sender = sender;
     this.contractAddress = contractAddress;
-    this.createPool = this.createPool.bind(this);
+    this.createTokenPool = this.createTokenPool.bind(this);
+    this.createNftPool = this.createNftPool.bind(this);
+    this.createTradePool = this.createTradePool.bind(this);
     this.depositTokens = this.depositTokens.bind(this);
     this.depositNfts = this.depositNfts.bind(this);
     this.withdrawTokens = this.withdrawTokens.bind(this);
@@ -184,13 +214,80 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
     this.swapTokensForAnyNfts = this.swapTokensForAnyNfts.bind(this);
   }
 
-  createPool = ({
+  createTokenPool = ({
     assetRecipient,
     bondingCurve,
     collection,
     delta,
     findersFeeBps,
-    poolType,
+    spotPrice
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    spotPrice: Uint128;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          create_token_pool: {
+            asset_recipient: assetRecipient,
+            bonding_curve: bondingCurve,
+            collection,
+            delta,
+            finders_fee_bps: findersFeeBps,
+            spot_price: spotPrice
+          }
+        })),
+        funds
+      })
+    };
+  };
+  createNftPool = ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
+    spotPrice
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    spotPrice: Uint128;
+  }, funds?: Coin[]): MsgExecuteContractEncodeObject => {
+    return {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: MsgExecuteContract.fromPartial({
+        sender: this.sender,
+        contract: this.contractAddress,
+        msg: toUtf8(JSON.stringify({
+          create_nft_pool: {
+            asset_recipient: assetRecipient,
+            bonding_curve: bondingCurve,
+            collection,
+            delta,
+            finders_fee_bps: findersFeeBps,
+            spot_price: spotPrice
+          }
+        })),
+        funds
+      })
+    };
+  };
+  createTradePool = ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
     reinvestNfts,
     reinvestTokens,
     spotPrice,
@@ -201,7 +298,6 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
     collection: string;
     delta: Uint128;
     findersFeeBps: number;
-    poolType: PoolType;
     reinvestNfts: boolean;
     reinvestTokens: boolean;
     spotPrice: Uint128;
@@ -213,13 +309,12 @@ export class InfinityPoolMessageComposer implements InfinityPoolMessage {
         sender: this.sender,
         contract: this.contractAddress,
         msg: toUtf8(JSON.stringify({
-          create_pool: {
+          create_trade_pool: {
             asset_recipient: assetRecipient,
             bonding_curve: bondingCurve,
             collection,
             delta,
             finders_fee_bps: findersFeeBps,
-            pool_type: poolType,
             reinvest_nfts: reinvestNfts,
             reinvest_tokens: reinvestTokens,
             spot_price: spotPrice,

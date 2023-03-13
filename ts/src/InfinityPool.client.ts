@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, PoolType, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolType, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
 export interface InfinityPoolReadOnlyInterface {
   contractAddress: string;
   config: () => Promise<ConfigResponse>;
@@ -290,13 +290,42 @@ export class InfinityPoolQueryClient implements InfinityPoolReadOnlyInterface {
 export interface InfinityPoolInterface extends InfinityPoolReadOnlyInterface {
   contractAddress: string;
   sender: string;
-  createPool: ({
+  createTokenPool: ({
     assetRecipient,
     bondingCurve,
     collection,
     delta,
     findersFeeBps,
-    poolType,
+    spotPrice
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    spotPrice: Uint128;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  createNftPool: ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
+    spotPrice
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    spotPrice: Uint128;
+  }, fee?: number | StdFee | "auto", memo?: string, funds?: Coin[]) => Promise<ExecuteResult>;
+  createTradePool: ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
     reinvestNfts,
     reinvestTokens,
     spotPrice,
@@ -307,7 +336,6 @@ export interface InfinityPoolInterface extends InfinityPoolReadOnlyInterface {
     collection: string;
     delta: Uint128;
     findersFeeBps: number;
-    poolType: PoolType;
     reinvestNfts: boolean;
     reinvestTokens: boolean;
     spotPrice: Uint128;
@@ -448,7 +476,9 @@ export class InfinityPoolClient extends InfinityPoolQueryClient implements Infin
     this.client = client;
     this.sender = sender;
     this.contractAddress = contractAddress;
-    this.createPool = this.createPool.bind(this);
+    this.createTokenPool = this.createTokenPool.bind(this);
+    this.createNftPool = this.createNftPool.bind(this);
+    this.createTradePool = this.createTradePool.bind(this);
     this.depositTokens = this.depositTokens.bind(this);
     this.depositNfts = this.depositNfts.bind(this);
     this.withdrawTokens = this.withdrawTokens.bind(this);
@@ -465,13 +495,64 @@ export class InfinityPoolClient extends InfinityPoolQueryClient implements Infin
     this.swapTokensForAnyNfts = this.swapTokensForAnyNfts.bind(this);
   }
 
-  createPool = async ({
+  createTokenPool = async ({
     assetRecipient,
     bondingCurve,
     collection,
     delta,
     findersFeeBps,
-    poolType,
+    spotPrice
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    spotPrice: Uint128;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      create_token_pool: {
+        asset_recipient: assetRecipient,
+        bonding_curve: bondingCurve,
+        collection,
+        delta,
+        finders_fee_bps: findersFeeBps,
+        spot_price: spotPrice
+      }
+    }, fee, memo, funds);
+  };
+  createNftPool = async ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
+    spotPrice
+  }: {
+    assetRecipient?: string;
+    bondingCurve: BondingCurve;
+    collection: string;
+    delta: Uint128;
+    findersFeeBps: number;
+    spotPrice: Uint128;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
+    return await this.client.execute(this.sender, this.contractAddress, {
+      create_nft_pool: {
+        asset_recipient: assetRecipient,
+        bonding_curve: bondingCurve,
+        collection,
+        delta,
+        finders_fee_bps: findersFeeBps,
+        spot_price: spotPrice
+      }
+    }, fee, memo, funds);
+  };
+  createTradePool = async ({
+    assetRecipient,
+    bondingCurve,
+    collection,
+    delta,
+    findersFeeBps,
     reinvestNfts,
     reinvestTokens,
     spotPrice,
@@ -482,20 +563,18 @@ export class InfinityPoolClient extends InfinityPoolQueryClient implements Infin
     collection: string;
     delta: Uint128;
     findersFeeBps: number;
-    poolType: PoolType;
     reinvestNfts: boolean;
     reinvestTokens: boolean;
     spotPrice: Uint128;
     swapFeeBps: number;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      create_pool: {
+      create_trade_pool: {
         asset_recipient: assetRecipient,
         bonding_curve: bondingCurve,
         collection,
         delta,
         finders_fee_bps: findersFeeBps,
-        pool_type: poolType,
         reinvest_nfts: reinvestNfts,
         reinvest_tokens: reinvestTokens,
         spot_price: spotPrice,

@@ -51,7 +51,7 @@ pub fn remove_buy_pool_quote(
     pool_id: u64,
     response: Response,
 ) -> Result<Response, ContractError> {
-    let old_data = buy_pool_quotes().may_load(store, pool_id.clone())?;
+    let old_data = buy_pool_quotes().may_load(store, pool_id)?;
     if old_data.is_none() {
         return Ok(response);
     }
@@ -66,7 +66,7 @@ pub fn remove_sell_pool_quote(
     pool_id: u64,
     response: Response,
 ) -> Result<Response, ContractError> {
-    let old_data = sell_pool_quotes().may_load(store, pool_id.clone())?;
+    let old_data = sell_pool_quotes().may_load(store, pool_id)?;
     if old_data.is_none() {
         return Ok(response);
     }
