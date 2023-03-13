@@ -85,6 +85,8 @@ pub enum ExecuteMsg {
         collection: String,
         asset_recipient: Option<String>,
         bonding_curve: BondingCurve,
+        spot_price: Uint128,
+        delta: Uint128,
         finders_fee_bps: u64,
         swap_fee_bps: u64,
         reinvest_tokens: bool,

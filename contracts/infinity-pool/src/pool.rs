@@ -426,7 +426,7 @@ impl Pool {
                     "asset_recipient",
                     self.asset_recipient
                         .as_ref()
-                        .map_or("".to_string(), |addr| addr.to_string()),
+                        .map_or("None".to_string(), |addr| addr.to_string()),
                 ),
                 "pool_type" => attr("pool_type", self.pool_type.to_string()),
                 "bonding_curve" => attr("bonding_curve", self.bonding_curve.to_string()),
@@ -435,11 +435,16 @@ impl Pool {
                 "total_tokens" => attr("total_tokens", self.total_tokens.to_string()),
                 "nft_token_ids" => attr(
                     "nft_token_ids",
-                    self.nft_token_ids
-                        .iter()
-                        .map(|id| id.to_string())
-                        .collect::<Vec<String>>()
-                        .join(","),
+                    [
+                        String::from("["),
+                        self.nft_token_ids
+                            .iter()
+                            .map(|id| id.to_string())
+                            .collect::<Vec<String>>()
+                            .join(","),
+                        String::from("]"),
+                    ]
+                    .join(""),
                 ),
                 "is_active" => attr("is_active", self.is_active.to_string()),
                 "swap_fee_percent" => attr("swap_fee_percent", self.swap_fee_percent.to_string()),

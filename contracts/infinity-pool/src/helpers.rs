@@ -1,6 +1,6 @@
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams};
 use crate::state::{
-    buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, CONFIG, POOL_COUNTER,
+    buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Pool, PoolQuote, CONFIG, POOL_COUNTER,
 };
 use crate::ContractError;
 use cosmwasm_std::{
@@ -149,16 +149,31 @@ pub fn update_sell_pool_quotes(
     Ok(response)
 }
 
+/// Force pool property values for certain pools
+pub fn force_property_values(pool: &mut Pool) -> Result<(), ContractError> {
+    if pool.bonding_curve == BondingCurve::ConstantProduct {
+        pool.delta = Uint128::zero();
+        let num_nfts = Uint128::from(pool.nft_token_ids.len() as u64);
+        if num_nfts == Uint128::zero() {
+            pool.spot_price = Uint128::zero();
+        } else {
+            pool.spot_price = pool.total_tokens.checked_div(num_nfts).unwrap();
+        }
+    };
+    Ok(())
+}
+
 /// Save a pool, check invariants, update pool quotes
 /// IMPORTANT: this function must always be called when saving a pool!
 pub fn save_pool(
     store: &mut dyn Storage,
-    pool: &Pool,
+    pool: &mut Pool,
     marketplace_params: &ParamsResponse,
     response: Response,
 ) -> Result<Response, ContractError> {
     let mut response = response;
     pool.validate(marketplace_params)?;
+    force_property_values(pool)?;
     response = update_buy_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
     response = update_sell_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
     pools().save(store, pool.id, pool)?;
@@ -169,13 +184,13 @@ pub fn save_pool(
 /// Save pools batch convenience function
 pub fn save_pools(
     store: &mut dyn Storage,
-    pools: Vec<Pool>,
+    pools: Vec<&mut Pool>,
     marketplace_params: &ParamsResponse,
     response: Response,
 ) -> Result<Response, ContractError> {
     let mut response = response;
     for pool in pools {
-        response = save_pool(store, &pool, marketplace_params, response)?;
+        response = save_pool(store, pool, marketplace_params, response)?;
     }
     Ok(response)
 }
