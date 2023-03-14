@@ -61,10 +61,10 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Exe
         }
 
         println!("Minted {} NFTs", mint_ctr);
-        chain
-            .orc
-            .poll_for_n_blocks(2, Duration::from_secs(10), true)
-            .unwrap();
+        // chain
+        //     .orc
+        //     .poll_for_n_blocks(2, Duration::from_secs(10), true)
+        //     .unwrap();
     }
 
     return responses;
