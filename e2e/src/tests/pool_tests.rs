@@ -14,6 +14,7 @@ use infinity_pool::msg::{
 use infinity_pool::state::Pool;
 use infinity_pool::state::{BondingCurve, PoolType};
 use std::collections::BTreeSet;
+use std::env;
 use test_context::test_context;
 
 #[test_context(Chain)]
@@ -68,10 +69,9 @@ fn test_small_pool_creation(chain: &mut Chain) {
 
     let resp = pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::CreatePool {
+        InfinityPoolExecuteMsg::CreateTradePool {
             collection: collection.clone(),
             asset_recipient: None,
-            pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::ConstantProduct,
             spot_price: Uint128::zero(),
             delta: Uint128::zero(),
@@ -161,6 +161,10 @@ fn test_small_pool_creation(chain: &mut Chain) {
 #[test]
 #[ignore]
 fn test_large_pool_creation(chain: &mut Chain) {
+    if env::var("ENABLE_LARGE_TESTS").is_err() {
+        return;
+    }
+
     let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
     let prefix = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
 
@@ -215,10 +219,9 @@ fn test_large_pool_creation(chain: &mut Chain) {
 
     let resp = pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::CreatePool {
+        InfinityPoolExecuteMsg::CreateTradePool {
             collection: collection.clone(),
             asset_recipient: None,
-            pool_type: PoolType::Trade,
             bonding_curve: BondingCurve::ConstantProduct,
             spot_price: Uint128::zero(),
             delta: Uint128::zero(),
@@ -280,5 +283,26 @@ fn test_large_pool_creation(chain: &mut Chain) {
         InfinityPoolQueryMsg::PoolsById {
             pool_ids: vec![pool_id],
         },
+    );
+    let resp_pool = resp.pools[0].1.clone().unwrap();
+    assert_eq!(
+        resp_pool,
+        Pool {
+            id: 1,
+            collection: Addr::unchecked(collection.clone()),
+            owner: Addr::unchecked(user_addr.to_string()),
+            asset_recipient: None,
+            pool_type: PoolType::Trade,
+            bonding_curve: BondingCurve::ConstantProduct,
+            spot_price: Uint128::new(pool_deposit_amount) / Uint128::from(token_ids.len() as u64),
+            delta: Uint128::zero(),
+            total_tokens: Uint128::new(pool_deposit_amount),
+            nft_token_ids: BTreeSet::from_iter(token_ids.into_iter()),
+            finders_fee_percent: Decimal::zero(),
+            swap_fee_percent: Decimal::new(Uint128::from(100u64)),
+            is_active: true,
+            reinvest_tokens: true,
+            reinvest_nfts: true,
+        }
     );
 }
