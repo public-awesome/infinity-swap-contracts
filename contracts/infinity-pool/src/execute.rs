@@ -629,6 +629,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
                 .marketplace_params
                 .params
                 .trading_fee_percent,
+            swap_prep_result.marketplace_params.params.min_price,
             swap_prep_result.collection_royalties,
             swap_prep_result.finder,
             swap_prep_result.developer,
@@ -684,6 +685,7 @@ pub fn execute_swap_nfts_for_tokens(
                 .marketplace_params
                 .params
                 .trading_fee_percent,
+            swap_prep_result.marketplace_params.params.min_price,
             swap_prep_result.collection_royalties,
             swap_prep_result.finder,
             swap_prep_result.developer,
@@ -761,6 +763,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
                 .marketplace_params
                 .params
                 .trading_fee_percent,
+            swap_prep_result.marketplace_params.params.min_price,
             swap_prep_result.collection_royalties,
             swap_prep_result.finder,
             swap_prep_result.developer,
@@ -825,6 +828,7 @@ pub fn execute_swap_tokens_for_any_nfts(
                 .marketplace_params
                 .params
                 .trading_fee_percent,
+            swap_prep_result.marketplace_params.params.min_price,
             swap_prep_result.collection_royalties,
             swap_prep_result.finder,
             swap_prep_result.developer,

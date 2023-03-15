@@ -91,10 +91,10 @@ pub fn update_buy_pool_quotes(
         response = remove_buy_pool_quote(store, pool.id, response)?;
         return Ok(response);
     }
-    let buy_pool_quote = pool.get_buy_quote()?;
+    let buy_pool_quote = pool.get_buy_quote(min_price)?;
 
     // If the pool quote is less than the minimum price, remove it from the index
-    if buy_pool_quote.is_none() || buy_pool_quote.unwrap() < min_price {
+    if buy_pool_quote.is_none() {
         response = remove_buy_pool_quote(store, pool.id, response)?;
         return Ok(response);
     }
@@ -104,7 +104,7 @@ pub fn update_buy_pool_quotes(
         quote_price: buy_pool_quote.unwrap(),
     };
     buy_pool_quotes().save(store, pool.id, &pool_quote)?;
-    let response = response.add_event(
+    response = response.add_event(
         Event::new("add-buy-pool-quote")
             .add_attribute("id", pool_quote.id.to_string())
             .add_attribute("collection", pool_quote.collection.to_string())
@@ -128,9 +128,9 @@ pub fn update_sell_pool_quotes(
         response = remove_sell_pool_quote(store, pool.id, response)?;
         return Ok(response);
     }
-    let sell_pool_quote = pool.get_sell_quote()?;
+    let sell_pool_quote = pool.get_sell_quote(min_price)?;
     // If the pool quote is less than the minimum price, remove it from the index
-    if sell_pool_quote.is_none() || sell_pool_quote.unwrap() < min_price {
+    if sell_pool_quote.is_none() {
         response = remove_sell_pool_quote(store, pool.id, response)?;
         return Ok(response);
     }
@@ -140,7 +140,7 @@ pub fn update_sell_pool_quotes(
         quote_price: sell_pool_quote.unwrap(),
     };
     sell_pool_quotes().save(store, pool.id, &pool_quote)?;
-    let response = response.add_event(
+    response = response.add_event(
         Event::new("add-sell-pool-quote")
             .add_attribute("id", pool_quote.id.to_string())
             .add_attribute("collection", pool_quote.collection.to_string())

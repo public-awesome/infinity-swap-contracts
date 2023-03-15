@@ -221,7 +221,7 @@ impl Pool {
 
     /// Returns the price at which this pool will buy NFTs
     /// Note: the buy quote is indexed by PoolQuote for future discovery
-    pub fn get_buy_quote(&self) -> Result<Option<Uint128>, ContractError> {
+    pub fn get_buy_quote(&self, min_quote: Uint128) -> Result<Option<Uint128>, ContractError> {
         // Calculate the buy price with respect to pool types and bonding curves
         let buy_price = match self.pool_type {
             PoolType::Token => Ok(self.spot_price),
@@ -251,7 +251,7 @@ impl Pool {
             },
         }?;
         // If the pool has insufficient tokens to buy the NFT, return None
-        if self.total_tokens < buy_price {
+        if self.total_tokens < buy_price || buy_price < min_quote {
             return Ok(None);
         }
         Ok(Some(buy_price))
@@ -259,7 +259,7 @@ impl Pool {
 
     /// Returns the price at which this pool will sell NFTs
     /// Note: the sell quote is indexed by PoolQuote for future discovery
-    pub fn get_sell_quote(&self) -> Result<Option<Uint128>, ContractError> {
+    pub fn get_sell_quote(&self, min_quote: Uint128) -> Result<Option<Uint128>, ContractError> {
         if !self.can_sell_nfts() {
             return Err(ContractError::InvalidPool(
                 "pool cannot sell nfts".to_string(),
@@ -280,6 +280,9 @@ impl Pool {
                     .unwrap()
             }
         };
+        if sell_price < min_quote {
+            return Ok(None);
+        }
         Ok(Some(sell_price))
     }
 
