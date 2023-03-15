@@ -70,60 +70,43 @@ pub struct Swap {
 
 impl From<&Swap> for Event {
     fn from(val: &Swap) -> Self {
-        let attributes = vec![
+        let mut attributes = vec![
             attr("pool_id", val.pool_id.to_string()),
             attr("transaction_type", val.transaction_type.to_string()),
             attr("spot_price", val.spot_price.to_string()),
             attr("network_fee", val.network_fee.to_string()),
-            attr(
-                "finder_payment_address",
-                val.finder_payment
-                    .as_ref()
-                    .map_or("".to_string(), |fp| fp.address.to_string()),
-            ),
-            attr(
-                "finder_payment_amount",
-                val.finder_payment
-                    .as_ref()
-                    .map_or("".to_string(), |fp| fp.amount.to_string()),
-            ),
-            attr(
-                "royalty_payment_address",
-                val.royalty_payment
-                    .as_ref()
-                    .map_or("".to_string(), |rp| rp.address.to_string()),
-            ),
-            attr(
-                "royalty_payment_amount",
-                val.royalty_payment
-                    .as_ref()
-                    .map_or("".to_string(), |rp| rp.amount.to_string()),
-            ),
-            attr(
-                "nft_payment_address",
-                val.nft_payment
-                    .as_ref()
-                    .map_or("".to_string(), |np| np.address.to_string()),
-            ),
-            attr(
-                "nft_payment_amount",
-                val.nft_payment
-                    .as_ref()
-                    .map_or("".to_string(), |np| np.nft_token_id.to_string()),
-            ),
-            attr(
-                "seller_payment_address",
-                val.seller_payment
-                    .as_ref()
-                    .map_or("".to_string(), |sp| sp.address.to_string()),
-            ),
-            attr(
-                "seller_payment_amount",
-                val.seller_payment
-                    .as_ref()
-                    .map_or("".to_string(), |sp| sp.amount.to_string()),
-            ),
         ];
+        if val.finder_payment.is_some() {
+            let finder_payment = val.finder_payment.as_ref().unwrap();
+            attributes.extend([
+                attr("finder_payment_address", finder_payment.address.to_string()),
+                attr("finder_payment_amount", finder_payment.amount.to_string()),
+            ]);
+        }
+        if val.royalty_payment.is_some() {
+            let royalty_payment = val.royalty_payment.as_ref().unwrap();
+            attributes.extend([
+                attr(
+                    "royalty_payment_address",
+                    royalty_payment.address.to_string(),
+                ),
+                attr("royalty_payment_amount", royalty_payment.amount.to_string()),
+            ]);
+        }
+        if val.nft_payment.is_some() {
+            let nft_payment = val.nft_payment.as_ref().unwrap();
+            attributes.extend([
+                attr("nft_payment_address", nft_payment.address.to_string()),
+                attr("nft_payment_amount", nft_payment.nft_token_id.to_string()),
+            ]);
+        }
+        if val.seller_payment.is_some() {
+            let seller_payment = val.seller_payment.as_ref().unwrap();
+            attributes.extend([
+                attr("seller_payment_address", seller_payment.address.to_string()),
+                attr("seller_payment_amount", seller_payment.amount.to_string()),
+            ]);
+        }
         Event::new("swap").add_attributes(attributes)
     }
 }
@@ -144,6 +127,8 @@ pub struct SwapProcessor<'a> {
     seller_recipient: Addr,
     /// The trading fee percentage to be burned
     trading_fee_percent: Decimal,
+    /// The minimum quote price to be handled by the contract
+    min_quote: Uint128,
     /// The royalty info for the NFT collection
     royalty: Option<RoyaltyInfoResponse>,
     /// The address of the finder of the transaction
@@ -171,6 +156,7 @@ impl<'a> SwapProcessor<'a> {
         remaining_balance: Uint128,
         seller_recipient: Addr,
         trading_fee_percent: Decimal,
+        min_quote: Uint128,
         royalty: Option<RoyaltyInfoResponse>,
         finder: Option<Addr>,
         developer: Option<Addr>,
@@ -182,6 +168,7 @@ impl<'a> SwapProcessor<'a> {
             remaining_balance,
             seller_recipient,
             trading_fee_percent,
+            min_quote,
             royalty,
             finder,
             developer,
@@ -209,7 +196,7 @@ impl<'a> SwapProcessor<'a> {
         // Calculate finder payment, deduct from seller payment
         let mut finder_payment = None;
         if self.finder.is_some() && !pool.finders_fee_percent.is_zero() {
-            let finder_amount = payment_amount * pool.finders_fee_percent;
+            let finder_amount = payment_amount * pool.finders_fee_percent / Uint128::from(100u128);
             if !finder_amount.is_zero() {
                 seller_amount -= finder_amount;
                 finder_payment = Some(TokenPayment {
@@ -299,8 +286,8 @@ impl<'a> SwapProcessor<'a> {
         let result = pool_pair.pool.update_spot_price(&self.tx_type);
         if result.is_ok() {
             let next_pool_quote = match self.tx_type {
-                TransactionType::Buy => pool_pair.pool.get_sell_quote(),
-                TransactionType::Sell => pool_pair.pool.get_buy_quote(),
+                TransactionType::Buy => pool_pair.pool.get_sell_quote(self.min_quote),
+                TransactionType::Sell => pool_pair.pool.get_buy_quote(self.min_quote),
             }?;
             if let Some(_next_pool_quote) = next_pool_quote {
                 pool_pair.quote_price = _next_pool_quote;
@@ -488,7 +475,7 @@ impl<'a> SwapProcessor<'a> {
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
-        let quote_price = pool.get_buy_quote()?;
+        let quote_price = pool.get_buy_quote(self.min_quote)?;
         if quote_price.is_none() {
             return Err(ContractError::NoQuoteForPool(format!(
                 "pool {} cannot offer quote",
@@ -601,7 +588,7 @@ impl<'a> SwapProcessor<'a> {
                 }
                 // Create PoolPair and insert into pool_pair_map
                 let pool = pool_option.unwrap();
-                let quote_price = pool.get_sell_quote()?;
+                let quote_price = pool.get_sell_quote(self.min_quote)?;
                 if quote_price.is_none() {
                     if swap_params.robust {
                         continue;
