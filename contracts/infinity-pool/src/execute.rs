@@ -620,7 +620,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
 
     {
         let mut processor = SwapProcessor::new(
-            TransactionType::Sell,
+            TransactionType::NftsForTokens,
             pool.collection.clone(),
             info.sender,
             Uint128::zero(),
@@ -676,7 +676,7 @@ pub fn execute_swap_nfts_for_tokens(
 
     {
         let mut processor = SwapProcessor::new(
-            TransactionType::Sell,
+            TransactionType::NftsForTokens,
             collection,
             info.sender,
             Uint128::zero(),
@@ -754,7 +754,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
 
     {
         let mut processor = SwapProcessor::new(
-            TransactionType::Buy,
+            TransactionType::TokensForNfts,
             collection,
             info.sender,
             received_amount,
@@ -819,7 +819,7 @@ pub fn execute_swap_tokens_for_any_nfts(
 
     {
         let mut processor = SwapProcessor::new(
-            TransactionType::Buy,
+            TransactionType::TokensForNfts,
             collection,
             info.sender,
             received_amount,
