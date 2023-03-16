@@ -44,6 +44,7 @@ sg-std = "0.21.8"
 sg-marketplace = { git = "https://github.com/public-awesome/marketplace", features = ["library"] }
 cw721-base = { version = "0.16.0", features = ["library"] }
 cw721 = "0.16.0"
+itertools = "0.10.5"
 
 
 [dev-dependencies]

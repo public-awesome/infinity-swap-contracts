@@ -402,7 +402,7 @@ fn incorrect_nfts_error() {
 }
 
 #[test]
-fn sale_price_above_max_expected_error() {
+fn sale_price_above_max_expected() {
     let SwapTestSetup {
         vending_template:
             VendingTemplateResponse {

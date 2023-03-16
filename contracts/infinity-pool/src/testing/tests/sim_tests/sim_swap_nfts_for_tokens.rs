@@ -183,7 +183,7 @@ fn can_swap_active_pools() {
 }
 
 #[test]
-fn invalid_sale_price_below_min_expected() {
+fn sale_price_below_min_expected() {
     let SwapTestSetup {
         vending_template:
             VendingTemplateResponse {
