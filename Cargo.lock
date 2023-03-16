@@ -1403,6 +1403,7 @@ dependencies = [
  "cw2 0.16.0",
  "cw721",
  "cw721-base",
+ "itertools",
  "sg-marketplace",
  "sg-multi-test",
  "sg-std",
