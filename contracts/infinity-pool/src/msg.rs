@@ -32,8 +32,8 @@ pub struct SwapParams {
 /// Defines whether the end user is buying or selling NFTs
 #[cw_serde]
 pub enum TransactionType {
-    Sell,
-    Buy,
+    NftsForTokens,
+    TokensForNfts,
 }
 
 impl fmt::Display for TransactionType {

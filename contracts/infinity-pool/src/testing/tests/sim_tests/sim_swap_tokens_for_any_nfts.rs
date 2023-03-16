@@ -38,7 +38,7 @@ fn cant_swap_inactive_pools() {
     );
 
     let deposit_tokens_per_pool = Uint128::from(10_000u128);
-    let pools = prepare_pool_variations(
+    let _pools = prepare_pool_variations(
         &mut router,
         7,
         &None,
@@ -54,29 +54,24 @@ fn cant_swap_inactive_pools() {
         true,
     );
 
-    for pool in pools {
-        if !pool.can_buy_nfts() {
-            continue;
-        }
-        let max_expected_token_input: Vec<Uint128> =
-            vec![Uint128::from(1_000_000u128), Uint128::from(1_000_000u128)];
-        let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
-            collection: collection.to_string(),
-            max_expected_token_input,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: false,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-        let res: StdResult<SwapResponse> = router
-            .wrap()
-            .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+    let max_expected_token_input: Vec<Uint128> =
+        vec![Uint128::from(1_000_000u128), Uint128::from(1_000_000u128)];
+    let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
-        assert!(res.unwrap().swaps.is_empty());
-    }
+    assert!(res.unwrap().swaps.is_empty());
 }
 
 #[test]
@@ -108,7 +103,7 @@ fn can_swap_active_pools() {
     );
 
     let deposit_tokens_per_pool = Uint128::from(10_000u128);
-    let pools = prepare_pool_variations(
+    let _pools = prepare_pool_variations(
         &mut router,
         7,
         &None,
@@ -124,30 +119,25 @@ fn can_swap_active_pools() {
         true,
     );
 
-    for pool in pools {
-        if !pool.can_buy_nfts() {
-            continue;
-        }
-        let max_expected_token_input: Vec<Uint128> =
-            vec![Uint128::from(1_000_000u128), Uint128::from(1_000_000u128)];
-        let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
-            collection: collection.to_string(),
-            max_expected_token_input,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: false,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-        let res: StdResult<SwapResponse> = router
-            .wrap()
-            .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+    let max_expected_token_input: Vec<Uint128> =
+        vec![Uint128::from(1_000_000u128), Uint128::from(1_000_000u128)];
+    let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
-        assert!(res.is_ok());
-        assert!(res.unwrap().swaps.len() > 0);
-    }
+    assert!(res.is_ok());
+    assert!(res.unwrap().swaps.len() > 0);
 }
 
 #[test]
@@ -179,7 +169,7 @@ fn sale_price_above_max_expected() {
     );
 
     let deposit_tokens_per_pool = Uint128::from(10_000u128);
-    let pools = prepare_pool_variations(
+    let _pools = prepare_pool_variations(
         &mut router,
         7,
         &None,
@@ -195,36 +185,30 @@ fn sale_price_above_max_expected() {
         true,
     );
 
-    for pool in pools {
-        if !pool.can_buy_nfts() {
-            continue;
-        }
-        let max_expected_token_input: Vec<Uint128> =
-            vec![Uint128::from(10u128), Uint128::from(10u128)];
-        let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
-            collection: collection.to_string(),
-            max_expected_token_input,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: false,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
+    let max_expected_token_input: Vec<Uint128> = vec![Uint128::from(10u128), Uint128::from(10u128)];
+    let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
 
-        let res: StdResult<SwapResponse> = router
-            .wrap()
-            .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
-        assert_eq!(
+    assert_eq!(
             res.unwrap_err(),
             StdError::GenericErr {
                 msg: "Querier contract error: Generic error: Swap error: pool sale price is above max expected"
                     .to_string()
             }
         );
-    }
 }
 
 #[test]
@@ -256,7 +240,7 @@ fn robust_query_does_not_revert_whole_tx() {
     );
 
     let deposit_tokens_per_pool = Uint128::from(10_000u128);
-    let pools = prepare_pool_variations(
+    let _pools = prepare_pool_variations(
         &mut router,
         7,
         &None,
@@ -272,33 +256,28 @@ fn robust_query_does_not_revert_whole_tx() {
         true,
     );
 
-    for pool in pools {
-        if !pool.can_buy_nfts() {
-            continue;
-        }
-        let max_expected_token_input: Vec<Uint128> = vec![
-            Uint128::from(320u128),
-            Uint128::from(340u128),
-            Uint128::from(350u128),
-        ];
-        let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
-            collection: collection.to_string(),
-            max_expected_token_input,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: true,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-        let res: StdResult<SwapResponse> = router
-            .wrap()
-            .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+    let max_expected_token_input: Vec<Uint128> = vec![
+        Uint128::from(320u128),
+        Uint128::from(340u128),
+        Uint128::from(350u128),
+    ];
+    let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: true,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
-        assert!(res.is_ok());
-        assert_eq!(res.unwrap().swaps.len(), 2);
-    }
+    assert!(res.is_ok());
+    assert_eq!(res.unwrap().swaps.len(), 2);
 }
 
 #[test]
@@ -355,39 +334,34 @@ fn minimal_fee_tx_is_handled_correctly() {
         .query_wasm_smart(collection.clone(), &Sg721QueryMsg::CollectionInfo {})
         .unwrap();
 
-    for pool in pools.iter() {
-        if !pool.can_buy_nfts() {
-            continue;
-        }
-        let max_expected_token_input: Vec<Uint128> = vec![
-            Uint128::from(1_000_000u128),
-            Uint128::from(1_000_000u128),
-            Uint128::from(1_000_000u128),
-        ];
-        let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
-            collection: collection.to_string(),
-            max_expected_token_input,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: true,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-        let res: StdResult<SwapResponse> = router
-            .wrap()
-            .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+    let max_expected_token_input: Vec<Uint128> = vec![
+        Uint128::from(1_000_000u128),
+        Uint128::from(1_000_000u128),
+        Uint128::from(1_000_000u128),
+    ];
+    let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: true,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
-        for swap in res.unwrap().swaps {
-            let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
-            validate_swap(
-                &swap,
-                &pool,
-                &marketplace_params,
-                &collection_info.royalty_info,
-            );
-        }
+    for swap in res.unwrap().swaps {
+        let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
+        validate_swap(
+            &swap,
+            &pool,
+            &marketplace_params,
+            &collection_info.royalty_info,
+        );
     }
 }
 
@@ -446,38 +420,105 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         .query_wasm_smart(collection.clone(), &Sg721QueryMsg::CollectionInfo {})
         .unwrap();
 
-    for pool in pools.iter() {
-        if !pool.can_buy_nfts() {
+    let max_expected_token_input: Vec<Uint128> = vec![
+        Uint128::from(1_000_000u128),
+        Uint128::from(1_000_000u128),
+        Uint128::from(1_000_000u128),
+    ];
+    let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: true,
+            asset_recipient: None,
+            finder: Some(user2.to_string()),
+        },
+    };
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+
+    for swap in res.unwrap().swaps {
+        let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
+        validate_swap(
+            &swap,
+            &pool,
+            &marketplace_params,
+            &collection_info.royalty_info,
+        );
+    }
+}
+
+#[test]
+fn trades_are_routed_correctly() {
+    let SwapTestSetup {
+        vending_template:
+            VendingTemplateResponse {
+                mut router,
+                accts,
+                collection_response_vec,
+                ..
+            },
+        infinity_pool,
+        ..
+    } = setup_swap_test(5000).unwrap();
+
+    let collection_resp = &collection_response_vec[0];
+    let minter = collection_resp.minter.clone().unwrap();
+    let collection = collection_resp.collection.clone().unwrap();
+
+    let owner_token_ids = mint_and_approve_many(
+        &mut router,
+        &accts.creator,
+        &accts.owner,
+        &minter,
+        &collection,
+        &infinity_pool,
+        500,
+    );
+
+    let deposit_tokens_per_pool = Uint128::from(10_000u128);
+    let _pools = prepare_pool_variations(
+        &mut router,
+        7,
+        &None,
+        &infinity_pool,
+        &collection,
+        &accts.owner,
+        deposit_tokens_per_pool,
+        owner_token_ids.to_vec(),
+        20,
+        true,
+        0,
+        0,
+        true,
+    );
+
+    let num_swaps: usize = 50;
+    let max_expected_token_input: Vec<Uint128> = vec![Uint128::from(1_000_000u128); num_swaps];
+    let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: true,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+    let swaps = res.unwrap().swaps;
+    assert_eq!(swaps.len(), num_swaps);
+
+    for (idx, swap) in swaps.iter().enumerate() {
+        if idx == 0 {
             continue;
         }
-        let max_expected_token_input: Vec<Uint128> = vec![
-            Uint128::from(1_000_000u128),
-            Uint128::from(1_000_000u128),
-            Uint128::from(1_000_000u128),
-        ];
-        let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
-            collection: collection.to_string(),
-            max_expected_token_input,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: true,
-                asset_recipient: None,
-                finder: Some(user2.to_string()),
-            },
-        };
-        let res: StdResult<SwapResponse> = router
-            .wrap()
-            .query_wasm_smart(infinity_pool.clone(), &sim_msg);
-
-        for swap in res.unwrap().swaps {
-            let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
-            validate_swap(
-                &swap,
-                &pool,
-                &marketplace_params,
-                &collection_info.royalty_info,
-            );
-        }
+        assert!(swaps[idx - 1].spot_price <= swap.spot_price);
     }
 }

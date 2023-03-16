@@ -12,6 +12,7 @@ use sg_std::{Response, NATIVE_DENOM};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// A struct for tracking in memory pools that are involved in swaps
+#[derive(Debug)]
 pub struct PoolPair {
     /// When true, the pool will be saved to storage at the end of the transaction
     pub needs_saving: bool,
@@ -139,6 +140,8 @@ pub struct SwapProcessor<'a> {
     pool_queue: BTreeSet<PoolPair>,
     /// The latest pool that was retrieved
     latest: Option<u64>,
+    /// Skip next pool load to improve efficiency
+    skip_next_pool_load: bool,
     /// An iterator for retrieving sorted pool quotes
     pool_quote_iter: Option<Box<dyn Iterator<Item = IterResults> + 'a>>,
     /// A set of in memory pools that should be saved at the end of the transaction
@@ -175,6 +178,7 @@ impl<'a> SwapProcessor<'a> {
             pool_queue: BTreeSet::new(),
             pools_to_save: BTreeMap::new(),
             latest: None,
+            skip_next_pool_load: false,
             pool_quote_iter: None,
             swaps: vec![],
         }
@@ -183,7 +187,7 @@ impl<'a> SwapProcessor<'a> {
     /// Create an individual swap object
     fn create_swap(&mut self, pool: &Pool, payment_amount: Uint128, nft_token_id: String) -> Swap {
         // Subtract from received amount in the case of a buy
-        if self.tx_type == TransactionType::Buy {
+        if self.tx_type == TransactionType::TokensForNfts {
             self.remaining_balance -= payment_amount;
         }
 
@@ -221,8 +225,8 @@ impl<'a> SwapProcessor<'a> {
 
         // Set the addresses that will receive the NFT and token payment
         let (nft_recipient, token_recipient) = match &self.tx_type {
-            TransactionType::Buy => (self.seller_recipient.clone(), pool.get_recipient()),
-            TransactionType::Sell => (pool.get_recipient(), self.seller_recipient.clone()),
+            TransactionType::TokensForNfts => (self.seller_recipient.clone(), pool.get_recipient()),
+            TransactionType::NftsForTokens => (pool.get_recipient(), self.seller_recipient.clone()),
         };
 
         Swap {
@@ -252,10 +256,10 @@ impl<'a> SwapProcessor<'a> {
         let mut pool_pair = pool_pair;
         // Withdraw assets from the pool
         match self.tx_type {
-            TransactionType::Buy => pool_pair
+            TransactionType::TokensForNfts => pool_pair
                 .pool
                 .buy_nft_from_pool(&nft_swap, pool_pair.quote_price)?,
-            TransactionType::Sell => pool_pair
+            TransactionType::NftsForTokens => pool_pair
                 .pool
                 .sell_nft_to_pool(&nft_swap, pool_pair.quote_price)?,
         };
@@ -269,11 +273,12 @@ impl<'a> SwapProcessor<'a> {
 
         // Reinvest tokens or NFTs if applicable
         if pool_pair.pool.pool_type == PoolType::Trade {
-            if self.tx_type == TransactionType::Buy && pool_pair.pool.reinvest_tokens {
+            if self.tx_type == TransactionType::TokensForNfts && pool_pair.pool.reinvest_tokens {
                 let reinvest_amount = swap.seller_payment.unwrap().amount;
                 swap.seller_payment = None;
                 pool_pair.pool.deposit_tokens(reinvest_amount)?;
-            } else if self.tx_type == TransactionType::Sell && pool_pair.pool.reinvest_nfts {
+            } else if self.tx_type == TransactionType::NftsForTokens && pool_pair.pool.reinvest_nfts
+            {
                 let reinvest_nft_token_id = swap.nft_payment.unwrap().nft_token_id;
                 swap.nft_payment = None;
                 pool_pair.pool.deposit_nfts(&vec![reinvest_nft_token_id])?;
@@ -286,8 +291,8 @@ impl<'a> SwapProcessor<'a> {
         let result = pool_pair.pool.update_spot_price(&self.tx_type);
         if result.is_ok() {
             let next_pool_quote = match self.tx_type {
-                TransactionType::Buy => pool_pair.pool.get_sell_quote(self.min_quote),
-                TransactionType::Sell => pool_pair.pool.get_buy_quote(self.min_quote),
+                TransactionType::TokensForNfts => pool_pair.pool.get_sell_quote(self.min_quote),
+                TransactionType::NftsForTokens => pool_pair.pool.get_buy_quote(self.min_quote),
             }?;
             if let Some(_next_pool_quote) = next_pool_quote {
                 pool_pair.quote_price = _next_pool_quote;
@@ -385,12 +390,12 @@ impl<'a> SwapProcessor<'a> {
         // Init iter
         if self.pool_quote_iter.is_none() {
             self.pool_quote_iter = Some(match &self.tx_type {
-                TransactionType::Buy => sell_pool_quotes()
+                TransactionType::TokensForNfts => sell_pool_quotes()
                     .idx
                     .collection_sell_price
                     .sub_prefix(self.collection.clone())
                     .range(storage, None, None, Order::Ascending),
-                TransactionType::Sell => buy_pool_quotes()
+                TransactionType::NftsForTokens => buy_pool_quotes()
                     .idx
                     .collection_buy_price
                     .sub_prefix(self.collection.clone())
@@ -398,17 +403,9 @@ impl<'a> SwapProcessor<'a> {
             })
         }
 
-        // Get the current pool
-        let current = match &self.tx_type {
-            // For buys, the first pool will have the lowest quote which is the best quote
-            TransactionType::Buy => self.pool_queue.first(),
-            // For sells, the last pool will have the highest quote which is the best quote
-            TransactionType::Sell => self.pool_queue.last(),
-        };
-
         // If the pool is empty, or the front of the pool is the latest fetched, load the next pool
         // Note: if the front of the pool is not the latest fetched, that means the next pool won't have the best price
-        if current.is_none() || Some(current.unwrap().pool.id) == self.latest {
+        if self.pool_queue.len() < 2 || !self.skip_next_pool_load {
             // Try and fetch next pool quote
             let next_pool_quote = self.pool_quote_iter.as_mut().unwrap().next();
 
@@ -430,12 +427,18 @@ impl<'a> SwapProcessor<'a> {
             }
         }
 
-        Ok(match &self.tx_type {
+        let loaded_pool_pair = match &self.tx_type {
             // For buys, the first pool will have the lowest quote
-            TransactionType::Buy => self.pool_queue.pop_first(),
+            TransactionType::TokensForNfts => self.pool_queue.pop_first(),
             // For sells, the last pool will have the highest quote
-            TransactionType::Sell => self.pool_queue.pop_last(),
-        })
+            TransactionType::NftsForTokens => self.pool_queue.pop_last(),
+        };
+
+        if let Some(_loaded_pool_pair) = &loaded_pool_pair {
+            self.skip_next_pool_load = _loaded_pool_pair.pool.id != self.latest.unwrap();
+        }
+
+        Ok(loaded_pool_pair)
     }
 
     pub fn finalize_transaction(&mut self, response: &mut Response) -> Result<(), ContractError> {

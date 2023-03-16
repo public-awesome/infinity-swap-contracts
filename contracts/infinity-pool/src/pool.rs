@@ -351,7 +351,7 @@ impl Pool {
     /// Updates the spot price of the pool depending on the transaction type
     pub fn update_spot_price(&mut self, tx_type: &TransactionType) -> Result<(), StdError> {
         let result = match tx_type {
-            TransactionType::Buy => match self.bonding_curve {
+            TransactionType::TokensForNfts => match self.bonding_curve {
                 BondingCurve::Linear => self
                     .spot_price
                     .checked_add(self.delta)
@@ -372,7 +372,7 @@ impl Pool {
                     .checked_div(Uint128::from(self.nft_token_ids.len() as u64))
                     .map_err(|e| StdError::DivideByZero { source: e }),
             },
-            TransactionType::Sell => match self.bonding_curve {
+            TransactionType::NftsForTokens => match self.bonding_curve {
                 BondingCurve::Linear => self
                     .spot_price
                     .checked_sub(self.delta)

@@ -231,7 +231,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let mut processor = SwapProcessor::new(
-        TransactionType::Sell,
+        TransactionType::NftsForTokens,
         pool.collection.clone(),
         sender,
         Uint128::zero(),
@@ -265,7 +265,7 @@ pub fn sim_swap_nfts_for_tokens(
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let mut processor = SwapProcessor::new(
-        TransactionType::Sell,
+        TransactionType::NftsForTokens,
         collection,
         sender,
         Uint128::zero(),
@@ -327,7 +327,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
     }
 
     let mut processor = SwapProcessor::new(
-        TransactionType::Buy,
+        TransactionType::TokensForNfts,
         collection,
         sender,
         spend_amount.into(),
@@ -363,7 +363,7 @@ pub fn sim_swap_tokens_for_any_nfts(
     let total_tokens: Uint128 = max_expected_token_input.iter().sum();
 
     let mut processor = SwapProcessor::new(
-        TransactionType::Buy,
+        TransactionType::TokensForNfts,
         collection,
         sender,
         total_tokens,
