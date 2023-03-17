@@ -3,12 +3,18 @@ use crate::msg::QueryMsg::SimDirectSwapNftsForTokens;
 use crate::msg::SwapResponse;
 use crate::msg::{NftSwap, SwapParams};
 use crate::state::PoolType;
+use crate::testing::helpers::deposit::deposit_nfts;
+use crate::testing::helpers::deposit::deposit_nfts_and_tokens;
+use crate::testing::helpers::deposit::deposit_tokens;
+use crate::testing::helpers::msg::NftSaleCheckParams;
+use crate::testing::helpers::msg::SwapPoolResult;
+use crate::testing::helpers::msg::SwapPoolSetup;
+use crate::testing::helpers::msg::VendingTemplateSetup;
+use crate::testing::helpers::setup_swap_pool::setup_swap_pool;
+use crate::testing::helpers::setup_swap_pool::{set_pool_active, ASSET_ACCOUNT};
+use crate::testing::helpers::sim_messages::get_sim_swap_message;
+use crate::testing::helpers::validation::check_nft_sale;
 use crate::testing::setup::templates::{_minter_template_30_pct_fee, standard_minter_template};
-use crate::testing::tests::sim_tests::get_messages::get_sim_swap_message;
-use crate::testing::tests::sim_tests::helpers::{
-    check_nft_sale, deposit_nfts, deposit_nfts_and_tokens, deposit_tokens, set_pool_active,
-    setup_swap_pool, NftSaleCheckParams, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup,
-};
 use cosmwasm_std::StdError::GenericErr;
 use cosmwasm_std::StdResult;
 use cosmwasm_std::Timestamp;
@@ -17,8 +23,6 @@ use cosmwasm_std::{Addr, StdError};
 use cw_multi_test::Executor;
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
 use std::vec;
-
-use crate::testing::tests::sim_tests::helpers::ASSET_ACCOUNT;
 
 #[test]
 fn cant_swap_inactive_pool() {

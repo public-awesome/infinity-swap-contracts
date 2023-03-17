@@ -1,13 +1,18 @@
-use super::helpers::ProcessSwapPoolResultsResponse;
 use crate::msg::SwapResponse;
 use crate::state::PoolType;
+use crate::testing::helpers::deposit::deposit_nfts;
+use crate::testing::helpers::msg::NftSaleCheckParams;
+use crate::testing::helpers::msg::ProcessSwapPoolResultsResponse;
+use crate::testing::helpers::msg::SwapPoolResult;
+use crate::testing::helpers::msg::SwapPoolSetup;
+use crate::testing::helpers::msg::VendingTemplateSetup;
 use crate::testing::helpers::nft_functions::{approve, mint};
+use crate::testing::helpers::setup_swap_pool::process_swap_results;
+use crate::testing::helpers::setup_swap_pool::setup_swap_pool;
+use crate::testing::helpers::setup_swap_pool::{set_pool_active, ASSET_ACCOUNT};
+use crate::testing::helpers::sim_messages::get_swap_tokens_for_any_nfts_msg;
+use crate::testing::helpers::validation::check_nft_sale;
 use crate::testing::setup::templates::{_minter_template_30_pct_fee, standard_minter_template};
-use crate::testing::tests::sim_tests::get_messages::get_swap_tokens_for_any_nfts_msg;
-use crate::testing::tests::sim_tests::helpers::{
-    check_nft_sale, deposit_nfts, process_swap_results, set_pool_active, setup_swap_pool,
-    NftSaleCheckParams, SwapPoolResult, SwapPoolSetup, VendingTemplateSetup, ASSET_ACCOUNT,
-};
 use cosmwasm_std::Addr;
 use cosmwasm_std::StdError::GenericErr;
 use cosmwasm_std::StdResult;

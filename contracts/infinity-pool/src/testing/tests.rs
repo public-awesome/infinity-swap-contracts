@@ -9,3 +9,6 @@ mod multitest;
 
 #[cfg(test)]
 mod sim_tests;
+
+#[cfg(test)]
+mod execute_tests;

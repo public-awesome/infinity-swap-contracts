@@ -4,67 +4,22 @@ use crate::msg::ExecuteMsg;
 use crate::state::BondingCurve;
 use crate::state::Pool;
 use crate::state::PoolType;
-use crate::swap_processor::{NftPayment, Swap, TokenPayment};
-use crate::testing::helpers::nft_functions::{approve, mint};
+use crate::testing::helpers::deposit::deposit_one_nft;
+use crate::testing::helpers::deposit::deposit_tokens;
+use crate::testing::helpers::msg::ProcessSwapPoolResultsResponse;
+use crate::testing::helpers::msg::SwapPoolResult;
+use crate::testing::helpers::msg::SwapPoolSetup;
+use crate::testing::helpers::msg::VendingTemplateSetup;
 use crate::testing::helpers::pool_functions::create_pool;
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
 use crate::testing::setup::setup_marketplace::setup_marketplace_trading_fee;
-use cosmwasm_std::{coins, Addr, Uint128};
+use cosmwasm_std::{Addr, Uint128};
 use cw_multi_test::Executor;
 use sg_multi_test::StargazeApp;
-use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
+use sg_std::GENESIS_MINT_START_TIME;
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
 pub const ASSET_ACCOUNT: &str = "asset";
-
-#[derive(Debug)]
-pub struct SwapPoolResult {
-    pub user1: Addr,
-    pub user2: Addr,
-    pub creator: Addr,
-    pub minter: Addr,
-    pub collection: Addr,
-    pub infinity_pool: Addr,
-    pub pool: Pool,
-}
-
-pub struct SwapPoolSetup {
-    pub pool_type: PoolType,
-    pub spot_price: u128,
-    pub finders_fee_bps: Option<u64>,
-}
-
-pub struct VendingTemplateSetup<'a> {
-    pub minter: &'a Addr,
-    pub collection: &'a Addr,
-    pub creator: Addr,
-    pub user1: Addr,
-    pub user2: Addr,
-}
-
-pub struct ProcessSwapPoolResultsResponse {
-    pub minter: Addr,
-    pub collection: Addr,
-    pub infinity_pool: Addr,
-    pub pool: Pool,
-    pub creator: Addr,
-    pub user1: Addr,
-    pub user2: Addr,
-    pub token_ids: Vec<u32>,
-}
-
-pub struct NftSaleCheckParams {
-    pub expected_spot_price: u128,
-    pub expected_royalty_price: u128,
-    pub expected_network_fee: u128,
-    pub expected_finders_fee: u128,
-    pub swaps: Vec<Swap>,
-    pub creator: Addr,
-    pub expected_seller: Addr,
-    pub token_id: String,
-    pub expected_nft_payer: Addr,
-    pub expected_finder: Addr,
-}
 
 pub fn setup_swap_pool(
     router: &mut StargazeApp,
@@ -145,101 +100,6 @@ pub fn setup_swap_pool(
         results.push(result);
     }
     results
-}
-pub struct DepositNftsResult {
-    pub token_id_1: u32,
-    pub token_id_2: u32,
-}
-
-pub fn deposit_nfts_and_tokens(
-    router: &mut StargazeApp,
-    minter: Addr,
-    collection: Addr,
-    infinity_pool: Addr,
-    pool: Pool,
-    creator: Addr,
-    deposit_amount: u128,
-) -> DepositNftsResult {
-    let tokens = deposit_nfts(
-        router,
-        minter,
-        collection,
-        infinity_pool.clone(),
-        pool.clone(),
-        creator.clone(),
-    );
-    let _ = deposit_tokens(router, deposit_amount, infinity_pool, pool, creator);
-    DepositNftsResult {
-        token_id_1: tokens.token_id_1,
-        token_id_2: tokens.token_id_2,
-    }
-}
-
-pub fn deposit_nfts(
-    router: &mut StargazeApp,
-    minter: Addr,
-    collection: Addr,
-    infinity_pool: Addr,
-    pool: Pool,
-    creator: Addr,
-) -> DepositNftsResult {
-    let token_id_1 = mint(router, &creator, &minter);
-    approve(router, &creator, &collection, &infinity_pool, token_id_1);
-    let token_id_2 = mint(router, &creator, &minter);
-    approve(router, &creator, &collection, &infinity_pool, token_id_2);
-    let msg = ExecuteMsg::DepositNfts {
-        pool_id: pool.id,
-        collection: collection.to_string(),
-        nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
-    };
-    let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
-
-    DepositNftsResult {
-        token_id_1,
-        token_id_2,
-    }
-}
-
-pub fn deposit_one_nft(
-    router: &mut StargazeApp,
-    minter: Addr,
-    collection: Addr,
-    infinity_pool: Addr,
-    pool: Pool,
-    creator: Addr,
-) -> u32 {
-    let token_id_1 = mint(router, &creator, &minter);
-    approve(router, &creator, &collection, &infinity_pool, token_id_1);
-
-    let msg = ExecuteMsg::DepositNfts {
-        pool_id: pool.id,
-        collection: collection.to_string(),
-        nft_token_ids: vec![token_id_1.to_string()],
-    };
-    let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
-    token_id_1
-}
-
-pub fn deposit_tokens(
-    router: &mut StargazeApp,
-    deposit_amount: u128,
-    infinity_pool: Addr,
-    pool: Pool,
-    creator: Addr,
-) -> Result<(), anyhow::Error> {
-    // Owner can deposit tokens
-    let deposit_amount_1 = deposit_amount;
-    let msg = ExecuteMsg::DepositTokens { pool_id: pool.id };
-    let res = router.execute_contract(
-        creator,
-        infinity_pool,
-        &msg,
-        &coins(deposit_amount_1, NATIVE_DENOM),
-    );
-    match res {
-        Ok(_) => Ok(()),
-        Err(err) => Err(err),
-    }
 }
 
 fn process_swap_result(
@@ -360,41 +220,4 @@ pub fn set_pool_active(
         pool_id: pool.id,
     };
     let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
-}
-
-pub fn check_nft_sale(scp: NftSaleCheckParams) {
-    assert_eq!(scp.swaps[0].spot_price.u128(), scp.expected_spot_price);
-    let expected_nft_payment = Some(NftPayment {
-        nft_token_id: scp.token_id,
-        address: scp.expected_nft_payer.to_string(),
-    });
-    assert_eq!(scp.swaps[0].nft_payment, expected_nft_payment);
-
-    let network_fee = scp.swaps[0].network_fee.u128();
-
-    assert_eq!(network_fee, scp.expected_network_fee);
-    let mut expected_price = scp.expected_spot_price - network_fee;
-    expected_price -= scp.expected_royalty_price;
-    expected_price -= scp.expected_finders_fee;
-
-    let expected_seller_payment = Some(TokenPayment {
-        amount: Uint128::new(expected_price),
-        address: scp.expected_seller.to_string(),
-    });
-    assert_eq!(scp.swaps[0].seller_payment, expected_seller_payment);
-
-    let expected_finder_payment = match scp.expected_finders_fee {
-        0 => None,
-        _ => Some(TokenPayment {
-            amount: Uint128::from(scp.expected_finders_fee),
-            address: scp.expected_finder.to_string(),
-        }),
-    };
-    assert_eq!(scp.swaps[0].finder_payment, expected_finder_payment);
-
-    let expected_royalty_payment = Some(TokenPayment {
-        amount: Uint128::new(scp.expected_royalty_price),
-        address: scp.creator.to_string(),
-    });
-    assert_eq!(scp.swaps[0].royalty_payment, expected_royalty_payment);
 }
