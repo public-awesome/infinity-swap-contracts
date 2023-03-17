@@ -1,4 +1,4 @@
-use crate::msg::QueryMsg::SimDirectSwapTokensforSpecificNfts;
+use crate::msg::QueryMsg::SimDirectSwapTokensForSpecificNfts;
 use crate::msg::SwapResponse;
 use crate::msg::{NftSwap, SwapParams};
 use crate::testing::helpers::nft_functions::mint_and_approve_many;
@@ -68,7 +68,7 @@ fn cant_swap_inactive_pool() {
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
-        let sim_msg = SimDirectSwapTokensforSpecificNfts {
+        let sim_msg = SimDirectSwapTokensForSpecificNfts {
             pool_id: pool.id,
             nfts_to_swap_for,
             sender: accts.bidder.to_string(),
@@ -150,7 +150,7 @@ fn cant_swap_invalid_pool_type() {
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
-        let sim_msg = SimDirectSwapTokensforSpecificNfts {
+        let sim_msg = SimDirectSwapTokensForSpecificNfts {
             pool_id: pool.id,
             nfts_to_swap_for,
             sender: accts.bidder.to_string(),
@@ -232,7 +232,7 @@ fn can_swap_active_pool() {
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
-        let sim_msg = SimDirectSwapTokensforSpecificNfts {
+        let sim_msg = SimDirectSwapTokensForSpecificNfts {
             pool_id: pool.id,
             nfts_to_swap_for,
             sender: accts.bidder.to_string(),
@@ -316,7 +316,7 @@ fn incorrect_nfts_error() {
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
-        let sim_msg = SimDirectSwapTokensforSpecificNfts {
+        let sim_msg = SimDirectSwapTokensForSpecificNfts {
             pool_id: pool.id,
             nfts_to_swap_for: nfts_to_swap_for.clone(),
             sender: accts.bidder.to_string(),
@@ -401,7 +401,7 @@ fn sale_price_above_max_expected() {
                 token_amount: Uint128::from(20u128),
             })
             .collect();
-        let sim_msg = SimDirectSwapTokensforSpecificNfts {
+        let sim_msg = SimDirectSwapTokensForSpecificNfts {
             pool_id: pool.id,
             nfts_to_swap_for,
             sender: accts.bidder.to_string(),
@@ -489,7 +489,7 @@ fn robust_query_does_not_revert_whole_tx() {
                 })
                 .collect::<Vec<NftSwap>>(),
         );
-        let sim_msg = SimDirectSwapTokensforSpecificNfts {
+        let sim_msg = SimDirectSwapTokensForSpecificNfts {
             pool_id: pool.id,
             nfts_to_swap_for,
             sender: accts.bidder.to_string(),
@@ -575,7 +575,7 @@ fn minimal_fee_tx_is_handled_correctly() {
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
-        let sim_msg = SimDirectSwapTokensforSpecificNfts {
+        let sim_msg = SimDirectSwapTokensForSpecificNfts {
             pool_id: pool.id,
             nfts_to_swap_for,
             sender: accts.bidder.to_string(),
@@ -669,7 +669,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
-        let sim_msg = SimDirectSwapTokensforSpecificNfts {
+        let sim_msg = SimDirectSwapTokensForSpecificNfts {
             pool_id: pool.id,
             nfts_to_swap_for,
             sender: accts.bidder.to_string(),
