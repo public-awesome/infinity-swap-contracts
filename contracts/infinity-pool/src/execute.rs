@@ -618,16 +618,11 @@ pub fn execute_direct_swap_nfts_for_tokens(
     let mut pools_to_save: Vec<Pool>;
 
     {
-        let mut spend_amount = 0_u128;
-        for nft_swap in nfts_to_swap.clone() {
-            spend_amount += nft_swap.token_amount.u128();
-        }
-
         let mut processor = SwapProcessor::new(
             TransactionType::Sell,
             pool.collection.clone(),
             info.sender,
-            spend_amount.into(),
+            Uint128::zero(),
             swap_prep_result.asset_recipient,
             swap_prep_result
                 .marketplace_params
