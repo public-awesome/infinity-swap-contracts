@@ -208,8 +208,10 @@ impl<'a> SwapProcessor<'a> {
 
         // Calculate finder payment, deduct from seller payment
         let mut finder_payment = None;
+
         if self.finder.is_some() && !pool.finders_fee_percent.is_zero() {
             let finder_amount = payment_amount * pool.finders_fee_percent;
+
             if !finder_amount.is_zero() {
                 seller_amount -= finder_amount;
                 finder_payment = Some(TokenPayment {

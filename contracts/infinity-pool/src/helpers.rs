@@ -173,13 +173,9 @@ pub fn save_pool(
 ) -> Result<Response, ContractError> {
     let mut response = response;
     pool.validate(marketplace_params)?;
-    println!("after pools.validate");
     force_property_values(pool)?;
-    println!("after force property values");
     response = update_buy_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
-    println!("after update buy pool");
     response = update_sell_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
-    println!("after update sell pool");
     pools().save(store, pool.id, pool)?;
 
     Ok(response)
@@ -250,10 +246,6 @@ pub fn transfer_token(coin_send: Coin, recipient: &str, response: &mut Response)
 
 /// Verify that a message is indeed invoked by the owner
 pub fn only_owner(info: &MessageInfo, pool: &Pool) -> Result<(), ContractError> {
-    println!(
-        "info.sender is {:?}, pool.owner is {:?}",
-        info.sender, pool.owner
-    );
     if pool.owner != info.sender {
         return Err(ContractError::Unauthorized(String::from(
             "sender is not the owner of the pool",
@@ -270,7 +262,6 @@ pub fn only_nft_owner(
 ) -> Result<OwnerOfResponse, ContractError> {
     let res = Cw721Contract::<Empty, Empty>(collection.clone(), PhantomData, PhantomData)
         .owner_of(&deps.querier, token_id, false)?;
-    println!("res.ownwer {:?}, info.sender {:?}", res.owner, info.sender);
     if res.owner != info.sender {
         return Err(ContractError::Unauthorized(String::from(
             "only the owner can call this function",

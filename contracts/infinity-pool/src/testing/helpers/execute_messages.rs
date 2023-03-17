@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Timestamp, Uint128};
+use cosmwasm_std::{Timestamp, Uint128};
 use sg_std::GENESIS_MINT_START_TIME;
 
 use crate::msg::ExecuteMsg::DirectSwapNftsForTokens;

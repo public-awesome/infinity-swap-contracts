@@ -1,21 +1,22 @@
-use crate::msg::SwapResponse;
+use crate::error::ContractError;
 use crate::state::PoolType;
-use crate::testing::helpers::deposit::deposit_nfts_and_tokens;
+use crate::testing::helpers::deposit::deposit_tokens;
 use crate::testing::helpers::execute_messages::get_direct_swap_nfts_for_tokens_msg;
 use crate::testing::helpers::msg::SwapPoolResult;
 use crate::testing::helpers::msg::SwapPoolSetup;
 use crate::testing::helpers::msg::VendingTemplateSetup;
+use crate::testing::helpers::nft_functions::approve;
+use crate::testing::helpers::nft_functions::mint;
 use crate::testing::helpers::setup_swap_pool::set_pool_active;
 use crate::testing::helpers::setup_swap_pool::setup_swap_pool;
 use crate::testing::setup::templates::standard_minter_template;
-use cosmwasm_std::StdError::GenericErr;
-use cosmwasm_std::StdResult;
 use cw_multi_test::Executor;
 use std::vec;
 
 #[test]
 fn cant_swap_inactive_pool() {
     let spot_price = 1000_u128;
+    let finders_fee_bps = 50_u128;
     let vt = standard_minter_template(5000);
     let mut router = vt.router;
     let vts = VendingTemplateSetup {
@@ -28,43 +29,47 @@ fn cant_swap_inactive_pool() {
     let swap_pool_configs = vec![SwapPoolSetup {
         pool_type: PoolType::Trade,
         spot_price,
-        finders_fee_bps: None,
+        finders_fee_bps: Some(finders_fee_bps.try_into().unwrap()),
     }];
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
         setup_swap_pool(&mut router, vts, swap_pool_configs, None);
 
     let spr: SwapPoolResult = swap_results.pop().unwrap().unwrap();
 
-    let token_id_1 = deposit_nfts_and_tokens(
+    let _ = deposit_tokens(
         &mut router,
-        spr.minter,
-        spr.collection,
+        2500_u128,
         spr.infinity_pool.clone(),
         spr.pool.clone(),
         spr.creator.clone(),
-        1000_u128,
-    )
-    .token_id_1;
-    println!("after deposit nfts");
+    );
+    let token_id_1 = mint(&mut router, &spr.creator.clone(), &spr.minter.clone());
+    approve(
+        &mut router,
+        &spr.creator.clone(),
+        &spr.collection,
+        &spr.infinity_pool.clone(),
+        token_id_1,
+    );
+
     set_pool_active(
         &mut router,
-        true,
+        false,
         spr.pool.clone(),
         spr.creator.clone(),
         spr.infinity_pool.clone(),
     );
-    let swap_msg = get_direct_swap_nfts_for_tokens_msg(spr.pool, token_id_1, 1000, true, None);
-    println!("before res");
-    let res = router.execute_contract(spr.infinity_pool.clone(), spr.infinity_pool, &swap_msg, &[]);
-    println!("res is {:?}", res.unwrap_err());
-    // let res: StdResult<SwapResponse> = router.wrap().query_wasm_smart(spr.infinity_pool, &swap_msg);
-
-    // let res = res.unwrap_err();
-    // assert_eq!(
-    //     res,
-    //     GenericErr {
-    //         msg: "Querier contract error: Generic error: No quote for pool: pool 1 cannot offer quote"
-    //             .to_string()
-    //     }
-    // );
+    let swap_msg = get_direct_swap_nfts_for_tokens_msg(
+        spr.pool,
+        token_id_1,
+        900,
+        true,
+        Some(spr.user1.to_string()),
+    );
+    let res = router.execute_contract(spr.creator.clone(), spr.infinity_pool, &swap_msg, &[]);
+    let expected_error = ContractError::InvalidPool("pool is not active".to_string());
+    assert_eq!(
+        res.unwrap_err().root_cause().to_string(),
+        expected_error.to_string()
+    );
 }
