@@ -584,10 +584,7 @@ fn constant_product_pools_with_little_nfts() {
         .wrap()
         .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
-    let swaps = res.unwrap().swaps;
-    for swap in swaps {
-        println!("swap: {:?}", swap);
-    }
+    let _swaps = res.unwrap().swaps;
 
     let exec_msg = ExecuteMsg::SwapTokensForAnyNfts {
         collection: collection.to_string(),
@@ -601,18 +598,12 @@ fn constant_product_pools_with_little_nfts() {
     };
 
     let funds: Uint128 = max_expected_token_input.iter().sum();
-    let exec_res = router
-        .execute_contract(
-            accts.bidder.clone(),
-            infinity_pool.clone(),
-            &exec_msg,
-            &coins(funds.u128(), NATIVE_DENOM),
-        )
-        .unwrap();
+    let exec_res = router.execute_contract(
+        accts.bidder.clone(),
+        infinity_pool.clone(),
+        &exec_msg,
+        &coins(funds.u128(), NATIVE_DENOM),
+    );
 
-    for event in exec_res.events {
-        println!("event: {:?}", event);
-    }
-
-    // assert_eq!(swaps.len(), num_swaps);
+    assert!(exec_res.is_ok());
 }

@@ -58,11 +58,10 @@ fn correct_swap_simple() {
         300,
     );
 
-    let chunk_size: u8 = 3;
     let pool_chunks: Vec<Vec<&Pool>> = pools
         .iter()
         .filter(|&p| p.can_sell_nfts())
-        .chunks(chunk_size as usize)
+        .chunks(3 as usize)
         .into_iter()
         .map(|chunk| chunk.collect())
         .collect();
@@ -89,7 +88,7 @@ fn correct_swap_simple() {
         let mut sender_amount = Uint128::zero();
 
         let swaps_per_chunk: u8 = 3;
-        for pool in chunk {
+        for pool in &chunk {
             pool_nfts_to_swap_for.push(PoolNftSwap {
                 pool_id: pool.id,
                 nft_swaps: pool
@@ -150,15 +149,13 @@ fn correct_swap_simple() {
         validate_swap_outcome(
             &router,
             &exec_res,
-            chunk_size * swaps_per_chunk,
+            chunk.len() as u8 * swaps_per_chunk,
             &pre_swap_balances,
             &post_swap_balances,
             &pools,
             &collection_info.royalty_info,
             &accts.bidder,
-            &Some(finder),
+            &Some(finder.clone()),
         );
-
-        break;
     }
 }
