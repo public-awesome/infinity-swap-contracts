@@ -53,7 +53,7 @@ pub fn setup_marketplace(
     Ok(marketplace)
 }
 
-pub fn setup_marketplace_trading_fee(
+pub fn _setup_marketplace_trading_fee(
     router: &mut StargazeApp,
     marketplace_admin: Addr,
     trading_fee: Option<u64>,

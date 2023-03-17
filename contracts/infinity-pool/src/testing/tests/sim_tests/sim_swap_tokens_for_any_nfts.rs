@@ -1,12 +1,14 @@
-use crate::msg::{QueryMsg, SwapParams, SwapResponse};
+use crate::msg::{ExecuteMsg, QueryMsg, SwapParams, SwapResponse};
+use crate::state::BondingCurve;
 use crate::testing::helpers::nft_functions::mint_and_approve_many;
-use crate::testing::helpers::pool_functions::prepare_pool_variations;
-use crate::testing::helpers::swap_functions::{setup_swap_test, validate_swap, SwapTestSetup};
+use crate::testing::helpers::pool_functions::{prepare_pool_variations, prepare_swap_pool};
+use crate::testing::helpers::swap_functions::{setup_swap_test, validate_swap_fees, SwapTestSetup};
 use crate::testing::setup::setup_accounts::setup_addtl_account;
-use cosmwasm_std::{StdError, StdResult, Timestamp, Uint128};
+use cosmwasm_std::{coins, StdError, StdResult, Timestamp, Uint128};
+use cw_multi_test::Executor;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
-use sg_std::GENESIS_MINT_START_TIME;
+use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
 use test_suite::common_setup::msg::VendingTemplateResponse;
 
 #[test]
@@ -51,7 +53,6 @@ fn cant_swap_inactive_pools() {
         false,
         0,
         0,
-        true,
     );
 
     let max_expected_token_input: Vec<Uint128> =
@@ -116,7 +117,6 @@ fn can_swap_active_pools() {
         true,
         0,
         0,
-        true,
     );
 
     let max_expected_token_input: Vec<Uint128> =
@@ -182,7 +182,6 @@ fn sale_price_above_max_expected() {
         true,
         0,
         0,
-        true,
     );
 
     let max_expected_token_input: Vec<Uint128> = vec![Uint128::from(10u128), Uint128::from(10u128)];
@@ -253,7 +252,6 @@ fn robust_query_does_not_revert_whole_tx() {
         true,
         0,
         0,
-        true,
     );
 
     let max_expected_token_input: Vec<Uint128> = vec![
@@ -322,7 +320,6 @@ fn minimal_fee_tx_is_handled_correctly() {
         true,
         0,
         0,
-        true,
     );
 
     let marketplace_params: ParamsResponse = router
@@ -356,7 +353,7 @@ fn minimal_fee_tx_is_handled_correctly() {
 
     for swap in res.unwrap().swaps {
         let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
-        validate_swap(
+        validate_swap_fees(
             &swap,
             &pool,
             &marketplace_params,
@@ -408,7 +405,6 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         true,
         250,
         300,
-        true,
     );
 
     let marketplace_params: ParamsResponse = router
@@ -442,7 +438,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
 
     for swap in res.unwrap().swaps {
         let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
-        validate_swap(
+        validate_swap_fees(
             &swap,
             &pool,
             &marketplace_params,
@@ -493,7 +489,6 @@ fn trades_are_routed_correctly() {
         true,
         0,
         0,
-        true,
     );
 
     let num_swaps: usize = 50;
@@ -521,4 +516,103 @@ fn trades_are_routed_correctly() {
         }
         assert!(swaps[idx - 1].spot_price <= swap.spot_price);
     }
+}
+
+#[test]
+fn constant_product_pools_with_little_nfts() {
+    let SwapTestSetup {
+        vending_template:
+            VendingTemplateResponse {
+                mut router,
+                accts,
+                collection_response_vec,
+                ..
+            },
+        infinity_pool,
+        ..
+    } = setup_swap_test(5000).unwrap();
+
+    let collection_resp = &collection_response_vec[0];
+    let minter = collection_resp.minter.clone().unwrap();
+    let collection = collection_resp.collection.clone().unwrap();
+
+    let owner_token_ids = mint_and_approve_many(
+        &mut router,
+        &accts.creator,
+        &accts.owner,
+        &minter,
+        &collection,
+        &infinity_pool,
+        100,
+    );
+
+    let _pool = prepare_swap_pool(
+        &mut router,
+        &infinity_pool,
+        &accts.owner,
+        Uint128::from(1_000u128),
+        owner_token_ids.to_vec().drain(0..4).collect(),
+        true,
+        ExecuteMsg::CreateTradePool {
+            collection: collection.to_string(),
+            asset_recipient: None,
+            bonding_curve: BondingCurve::ConstantProduct,
+            spot_price: Uint128::from(0u64),
+            delta: Uint128::from(0u64),
+            finders_fee_bps: 0,
+            swap_fee_bps: 0,
+            reinvest_nfts: true,
+            reinvest_tokens: true,
+        },
+    )
+    .unwrap();
+
+    let num_swaps: usize = 4;
+    let max_expected_token_input: Vec<Uint128> = vec![Uint128::from(100_000_000u128); num_swaps];
+    let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input: max_expected_token_input.clone(),
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: true,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+
+    let swaps = res.unwrap().swaps;
+    for swap in swaps {
+        println!("swap: {:?}", swap);
+    }
+
+    let exec_msg = ExecuteMsg::SwapTokensForAnyNfts {
+        collection: collection.to_string(),
+        max_expected_token_input: max_expected_token_input.clone(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: true,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+
+    let funds: Uint128 = max_expected_token_input.iter().sum();
+    let exec_res = router
+        .execute_contract(
+            accts.bidder.clone(),
+            infinity_pool.clone(),
+            &exec_msg,
+            &coins(funds.u128(), NATIVE_DENOM),
+        )
+        .unwrap();
+
+    for event in exec_res.events {
+        println!("event: {:?}", event);
+    }
+
+    // assert_eq!(swaps.len(), num_swaps);
 }

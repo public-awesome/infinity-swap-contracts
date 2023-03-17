@@ -61,6 +61,8 @@ fn try_query_pools() {
         creator,
         user,
         asset_account,
+        0,
+        50,
     );
 
     let pool_query = QueryMsg::Pools {
@@ -98,6 +100,8 @@ fn try_query_pools_by_id() {
         creator,
         user,
         asset_account,
+        0,
+        50,
     );
 
     let pool_query = QueryMsg::PoolsById {
@@ -131,6 +135,8 @@ fn try_query_pools_by_owner() {
         creator,
         user.clone(),
         asset_account,
+        0,
+        50,
     );
 
     let pool_query = QueryMsg::PoolsByOwner {
@@ -155,7 +161,7 @@ fn try_query_pools_by_owner() {
 #[test]
 fn try_query_pools_by_buy_price() {
     let vt = standard_minter_template(5000);
-    let (mut router, creator, bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
+    let (mut router, creator, _bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let minter = vt.collection_response_vec[0].minter.clone().unwrap();
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
@@ -171,8 +177,9 @@ fn try_query_pools_by_buy_price() {
         minter,
         collection.clone(),
         creator,
-        bidder,
         asset_account,
+        0,
+        50,
     );
 
     let pool_query = QueryMsg::PoolQuotesBuy {
@@ -192,56 +199,57 @@ fn try_query_pools_by_buy_price() {
     assert_eq!(res.pool_quotes.len(), 10);
     let expected_pool_quotes = vec![
         PoolQuote {
-            id: 12,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1320u64),
-        },
-        PoolQuote {
             id: 13,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1316u64),
+            quote_price: Uint128::from(1469u128),
+        },
+        PoolQuote {
+            id: 12,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(1320u128),
         },
         PoolQuote {
             id: 14,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1000u64),
+            quote_price: Uint128::from(1000u128),
         },
         PoolQuote {
             id: 7,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1000u64),
+            quote_price: Uint128::from(1000u128),
         },
         PoolQuote {
             id: 9,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(900u64),
+            quote_price: Uint128::from(900u128),
         },
         PoolQuote {
             id: 8,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(800u64),
+            quote_price: Uint128::from(800u128),
         },
         PoolQuote {
             id: 6,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(603u64),
+            quote_price: Uint128::from(636u128),
         },
         PoolQuote {
             id: 5,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(550u64),
+            quote_price: Uint128::from(550u128),
         },
         PoolQuote {
             id: 2,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(200u64),
+            quote_price: Uint128::from(200u128),
         },
         PoolQuote {
             id: 1,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(100u64),
+            quote_price: Uint128::from(100u128),
         },
     ];
+
     for (id, pq) in res.pool_quotes.iter().enumerate() {
         assert_eq!(pq, &expected_pool_quotes[id]);
     }
@@ -253,7 +261,7 @@ fn try_query_pools_by_sell_price() {
     let (mut router, creator, _bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
     let collection = vt.collection_response_vec[0].collection.clone().unwrap();
     let minter = vt.collection_response_vec[0].minter.clone().unwrap();
-    let user = setup_addtl_account(&mut router, USER, 1_000_000).unwrap();
+    let _user = setup_addtl_account(&mut router, USER, 1_000_000).unwrap();
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
@@ -267,8 +275,9 @@ fn try_query_pools_by_sell_price() {
         minter,
         collection.clone(),
         creator,
-        user,
         asset_account,
+        0,
+        50,
     );
 
     let pool_query = QueryMsg::PoolQuotesSell {

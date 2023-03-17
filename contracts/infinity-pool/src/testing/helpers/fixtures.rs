@@ -12,7 +12,6 @@ pub fn get_pool_fixtures(
     asset_account: &Option<String>,
     finders_fee_bps: u64,
     swap_fee_bps: u64,
-    reinvest: bool,
 ) -> Vec<ExecuteMsg> {
     vec![
         ExecuteMsg::CreateTokenPool {
@@ -28,7 +27,7 @@ pub fn get_pool_fixtures(
             asset_recipient: asset_account.clone(),
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(200u64),
-            delta: Uint128::from(20u64),
+            delta: Uint128::from(200u64),
             finders_fee_bps,
         },
         ExecuteMsg::CreateNftPool {
@@ -44,7 +43,7 @@ pub fn get_pool_fixtures(
             asset_recipient: asset_account.clone(),
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(400u64),
-            delta: Uint128::from(40u64),
+            delta: Uint128::from(400u64),
             finders_fee_bps,
         },
         ExecuteMsg::CreateTradePool {
@@ -55,19 +54,19 @@ pub fn get_pool_fixtures(
             delta: Uint128::from(50u64),
             finders_fee_bps,
             swap_fee_bps,
-            reinvest_nfts: reinvest,
-            reinvest_tokens: reinvest,
+            reinvest_nfts: true,
+            reinvest_tokens: true,
         },
         ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
             asset_recipient: asset_account.clone(),
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(600u64),
-            delta: Uint128::from(60u64),
+            delta: Uint128::from(600u64),
             finders_fee_bps,
             swap_fee_bps,
-            reinvest_nfts: reinvest,
-            reinvest_tokens: reinvest,
+            reinvest_nfts: true,
+            reinvest_tokens: true,
         },
         ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
@@ -77,8 +76,8 @@ pub fn get_pool_fixtures(
             delta: Uint128::from(0u64),
             finders_fee_bps,
             swap_fee_bps,
-            reinvest_nfts: reinvest,
-            reinvest_tokens: reinvest,
+            reinvest_nfts: true,
+            reinvest_tokens: true,
         },
         ExecuteMsg::CreateTokenPool {
             collection: collection.to_string(),
@@ -93,7 +92,7 @@ pub fn get_pool_fixtures(
             asset_recipient: asset_account.clone(),
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(900u64),
-            delta: Uint128::from(90u64),
+            delta: Uint128::from(900u64),
             finders_fee_bps,
         },
         ExecuteMsg::CreateNftPool {
@@ -109,7 +108,7 @@ pub fn get_pool_fixtures(
             asset_recipient: asset_account.clone(),
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(1100u64),
-            delta: Uint128::from(110u64),
+            delta: Uint128::from(1100u64),
             finders_fee_bps,
         },
         ExecuteMsg::CreateTradePool {
@@ -120,19 +119,19 @@ pub fn get_pool_fixtures(
             delta: Uint128::from(120u64),
             finders_fee_bps,
             swap_fee_bps,
-            reinvest_nfts: reinvest,
-            reinvest_tokens: reinvest,
+            reinvest_nfts: false,
+            reinvest_tokens: false,
         },
         ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
             asset_recipient: asset_account.clone(),
             bonding_curve: BondingCurve::Exponential,
             spot_price: Uint128::from(1300u64),
-            delta: Uint128::from(130u64),
+            delta: Uint128::from(1300u64),
             finders_fee_bps,
             swap_fee_bps,
-            reinvest_nfts: reinvest,
-            reinvest_tokens: reinvest,
+            reinvest_nfts: false,
+            reinvest_tokens: false,
         },
         ExecuteMsg::CreateTradePool {
             collection: collection.to_string(),
@@ -142,8 +141,8 @@ pub fn get_pool_fixtures(
             delta: Uint128::from(0u64),
             finders_fee_bps,
             swap_fee_bps,
-            reinvest_nfts: reinvest,
-            reinvest_tokens: reinvest,
+            reinvest_nfts: false,
+            reinvest_tokens: false,
         },
     ]
 }
@@ -157,14 +156,12 @@ pub fn create_pool_fixtures(
     asset_account: Addr,
     finders_fee_bps: u64,
     swap_fee_bps: u64,
-    reinvest: bool,
 ) -> Vec<Pool> {
     let msgs = get_pool_fixtures(
         &collection,
         &Some(asset_account.to_string()),
         finders_fee_bps,
         swap_fee_bps,
-        reinvest,
     );
     let mut pools = vec![];
     for (usize, msg) in msgs.into_iter().enumerate() {
@@ -187,14 +184,12 @@ pub fn create_and_activate_pool_fixtures(
     asset_account: Addr,
     finders_fee_bps: u64,
     swap_fee_bps: u64,
-    reinvest: bool,
 ) -> Vec<Pool> {
     let msgs = get_pool_fixtures(
         &collection,
         &Some(asset_account.to_string()),
         finders_fee_bps,
         swap_fee_bps,
-        reinvest,
     );
     let mut pools = vec![];
     for msg in msgs.into_iter() {
