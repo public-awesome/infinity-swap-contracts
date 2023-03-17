@@ -1,4 +1,5 @@
-use crate::msg::{ExecuteMsg, NftSwap, QueryMsg, SwapParams, SwapResponse};
+use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, QueryMsg, SwapParams, SwapResponse};
+use crate::state::Pool;
 use crate::testing::helpers::nft_functions::mint_and_approve_many;
 use crate::testing::helpers::pool_functions::prepare_pool_variations;
 use crate::testing::helpers::swap_functions::{
@@ -7,6 +8,7 @@ use crate::testing::helpers::swap_functions::{
 use crate::testing::helpers::utils::get_native_balances;
 use cosmwasm_std::{coins, Addr, Timestamp, Uint128};
 use cw_multi_test::Executor;
+use itertools::Itertools;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
 use test_suite::common_setup::msg::VendingTemplateResponse;
@@ -56,6 +58,15 @@ fn correct_swap_simple() {
         300,
     );
 
+    let chunk_size: u8 = 3;
+    let pool_chunks: Vec<Vec<&Pool>> = pools
+        .iter()
+        .filter(|&p| p.can_sell_nfts())
+        .chunks(chunk_size as usize)
+        .into_iter()
+        .map(|chunk| chunk.collect())
+        .collect();
+
     let finder = Addr::unchecked("finder");
     let mut check_addresses = vec![
         accts.owner.clone(),
@@ -73,25 +84,33 @@ fn correct_swap_simple() {
         check_addresses.push(Addr::unchecked(_royalty_info.payment_address.clone()));
     }
 
-    for pool in pools.iter() {
-        if !pool.can_sell_nfts() {
-            continue;
-        }
-        let num_swaps = 3u8;
-        let nfts_to_swap_for: Vec<NftSwap> = pool
-            .nft_token_ids
-            .clone()
-            .into_iter()
-            .take(num_swaps as usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
-                token_amount: Uint128::from(100_000u128),
-            })
-            .collect();
+    for chunk in pool_chunks {
+        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
+        let mut sender_amount = Uint128::zero();
 
-        let sim_msg = QueryMsg::SimDirectSwapTokensForSpecificNfts {
-            pool_id: pool.id,
-            nfts_to_swap_for: nfts_to_swap_for.clone(),
+        let swaps_per_chunk: u8 = 3;
+        for pool in chunk {
+            pool_nfts_to_swap_for.push(PoolNftSwap {
+                pool_id: pool.id,
+                nft_swaps: pool
+                    .nft_token_ids
+                    .iter()
+                    .take(swaps_per_chunk as usize)
+                    .map(|token_id| {
+                        let nft_swap = NftSwap {
+                            nft_token_id: token_id.to_string(),
+                            token_amount: Uint128::from(100_000u128),
+                        };
+                        sender_amount += nft_swap.token_amount;
+                        nft_swap
+                    })
+                    .collect(),
+            });
+        }
+
+        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+            collection: collection.to_string(),
+            pool_nfts_to_swap_for: pool_nfts_to_swap_for.clone(),
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -106,9 +125,9 @@ fn correct_swap_simple() {
             .query_wasm_smart(infinity_pool.clone(), &sim_msg)
             .unwrap();
 
-        let exec_msg = ExecuteMsg::DirectSwapTokensForSpecificNfts {
-            pool_id: pool.id,
-            nfts_to_swap_for: nfts_to_swap_for.clone(),
+        let exec_msg = ExecuteMsg::SwapTokensForSpecificNfts {
+            collection: collection.to_string(),
+            pool_nfts_to_swap_for: pool_nfts_to_swap_for.clone(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
                 robust: false,
@@ -116,9 +135,6 @@ fn correct_swap_simple() {
                 finder: Some(finder.to_string()),
             },
         };
-        let sender_amount = nfts_to_swap_for
-            .iter()
-            .fold(Uint128::zero(), |acc, nft| acc + nft.token_amount);
 
         let pre_swap_balances = get_native_balances(&router, &check_addresses);
         let exec_res = router
@@ -134,7 +150,7 @@ fn correct_swap_simple() {
         validate_swap_outcome(
             &router,
             &exec_res,
-            num_swaps,
+            chunk_size * swaps_per_chunk,
             &pre_swap_balances,
             &post_swap_balances,
             &pools,
