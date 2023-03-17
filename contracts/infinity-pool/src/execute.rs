@@ -187,7 +187,7 @@ pub fn execute(
             nfts_to_swap,
             swap_params,
         } => {
-            execute_direct_swap_nfts_for_tokens(deps, info, env, pool_id, nfts_to_swap, swap_params)
+            execute_direct_swap_nfts_for_tokens(deps, env, info, pool_id, nfts_to_swap, swap_params)
         }
         ExecuteMsg::SwapNftsForTokens {
             collection,
@@ -195,8 +195,8 @@ pub fn execute(
             swap_params,
         } => execute_swap_nfts_for_tokens(
             deps,
-            info,
             env,
+            info,
             api.addr_validate(&collection)?,
             nfts_to_swap,
             swap_params,
@@ -207,8 +207,8 @@ pub fn execute(
             swap_params,
         } => execute_direct_swap_tokens_for_specific_nfts(
             deps,
-            info,
             env,
+            info,
             pool_id,
             nfts_to_swap_for,
             swap_params,
@@ -219,8 +219,8 @@ pub fn execute(
             swap_params,
         } => execute_swap_tokens_for_specific_nfts(
             deps,
-            info,
             env,
+            info,
             api.addr_validate(&collection)?,
             pool_nfts_to_swap_for,
             swap_params,
@@ -231,8 +231,8 @@ pub fn execute(
             swap_params,
         } => execute_swap_tokens_for_any_nfts(
             deps,
-            info,
             env,
+            info,
             api.addr_validate(&collection)?,
             max_expected_token_input,
             swap_params,
@@ -595,8 +595,8 @@ pub fn execute_remove_pool(
 /// Execute a DirectSwapNftsForTokens message
 pub fn execute_direct_swap_nfts_for_tokens(
     deps: DepsMut,
-    info: MessageInfo,
     env: Env,
+    info: MessageInfo,
     pool_id: u64,
     nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
@@ -621,6 +621,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
     {
         let mut processor = SwapProcessor::new(
             TransactionType::NftsForTokens,
+            env.contract,
             pool.collection.clone(),
             info.sender,
             Uint128::zero(),
@@ -653,8 +654,8 @@ pub fn execute_direct_swap_nfts_for_tokens(
 /// Execute a SwapNftsForTokens message
 pub fn execute_swap_nfts_for_tokens(
     deps: DepsMut,
-    info: MessageInfo,
     env: Env,
+    info: MessageInfo,
     collection: Addr,
     nfts_to_swap: Vec<NftSwap>,
     swap_params: SwapParams,
@@ -677,6 +678,7 @@ pub fn execute_swap_nfts_for_tokens(
     {
         let mut processor = SwapProcessor::new(
             TransactionType::NftsForTokens,
+            env.contract,
             collection,
             info.sender,
             Uint128::zero(),
@@ -709,8 +711,8 @@ pub fn execute_swap_nfts_for_tokens(
 /// Execute a DirectSwapTokensForSpecificNfts message
 pub fn execute_direct_swap_tokens_for_specific_nfts(
     deps: DepsMut,
-    info: MessageInfo,
     env: Env,
+    info: MessageInfo,
     pool_id: u64,
     nfts_to_swap_for: Vec<NftSwap>,
     swap_params: SwapParams,
@@ -718,8 +720,8 @@ pub fn execute_direct_swap_tokens_for_specific_nfts(
     let pool = pools().load(deps.storage, pool_id)?;
     execute_swap_tokens_for_specific_nfts(
         deps,
-        info,
         env,
+        info,
         pool.collection,
         vec![PoolNftSwap {
             pool_id,
@@ -732,8 +734,8 @@ pub fn execute_direct_swap_tokens_for_specific_nfts(
 /// Execute a SwapTokensForSpecificNfts message
 pub fn execute_swap_tokens_for_specific_nfts(
     deps: DepsMut,
-    info: MessageInfo,
     env: Env,
+    info: MessageInfo,
     collection: Addr,
     nfts_to_swap_for: Vec<PoolNftSwap>,
     swap_params: SwapParams,
@@ -755,6 +757,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
     {
         let mut processor = SwapProcessor::new(
             TransactionType::TokensForNfts,
+            env.contract,
             collection,
             info.sender,
             received_amount,
@@ -787,8 +790,8 @@ pub fn execute_swap_tokens_for_specific_nfts(
 /// Execute a SwapTokensForAnyNfts message
 pub fn execute_swap_tokens_for_any_nfts(
     deps: DepsMut,
-    info: MessageInfo,
     env: Env,
+    info: MessageInfo,
     collection: Addr,
     max_expected_token_input: Vec<Uint128>,
     swap_params: SwapParams,
@@ -820,6 +823,7 @@ pub fn execute_swap_tokens_for_any_nfts(
     {
         let mut processor = SwapProcessor::new(
             TransactionType::TokensForNfts,
+            env.contract,
             collection,
             info.sender,
             received_amount,
