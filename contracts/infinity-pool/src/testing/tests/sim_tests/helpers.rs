@@ -364,10 +364,10 @@ pub fn set_pool_active(
 
 pub fn check_nft_sale(scp: NftSaleCheckParams) {
     assert_eq!(scp.swaps[0].spot_price.u128(), scp.expected_spot_price);
-    let expected_nft_payment = Some(NftPayment {
+    let expected_nft_payment = NftPayment {
         nft_token_id: scp.token_id,
         address: scp.expected_nft_payer.to_string(),
-    });
+    };
     assert_eq!(scp.swaps[0].nft_payment, expected_nft_payment);
 
     let network_fee = scp.swaps[0].network_fee.u128();

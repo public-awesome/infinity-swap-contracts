@@ -159,17 +159,12 @@ pub fn prepare_pool_variations(
     is_active: bool,
     finders_fee_bps: u64,
     swap_fee_bps: u64,
-    reinvest: bool,
 ) -> Vec<Pool> {
     let mut nft_token_ids = nft_token_ids;
     let mut pools: Vec<Pool> = vec![];
-    let pool_fixtures = &get_pool_fixtures(
-        collection,
-        asset_account,
-        finders_fee_bps,
-        swap_fee_bps,
-        reinvest,
-    )[0..(num_pools as usize)];
+    let pool_fixtures =
+        &get_pool_fixtures(collection, asset_account, finders_fee_bps, swap_fee_bps)
+            [0..(num_pools as usize)];
 
     for fixt in pool_fixtures {
         let (curr_deposit_tokens_per_pool, curr_nft_token_ids) = match fixt {

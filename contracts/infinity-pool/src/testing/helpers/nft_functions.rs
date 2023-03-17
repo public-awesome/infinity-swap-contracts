@@ -1,4 +1,5 @@
 use cosmwasm_std::{coins, Addr, Empty};
+use cw721::{Cw721QueryMsg, OwnerOfResponse};
 use cw_multi_test::Executor;
 use sg721::ExecuteMsg as Sg721ExecuteMsg;
 use sg721_base::msg::CollectionInfoResponse;
@@ -115,4 +116,18 @@ pub fn mint_and_approve_many(
     }
     approve_all(router, owner, collection, approve_addr);
     token_ids
+}
+
+pub fn validate_nft_owner(router: &StargazeApp, collection: &Addr, token_id: String, owner: &Addr) {
+    let owner_res: OwnerOfResponse = router
+        .wrap()
+        .query_wasm_smart(
+            collection.clone(),
+            &Cw721QueryMsg::OwnerOf {
+                token_id,
+                include_expired: Some(true),
+            },
+        )
+        .unwrap();
+    assert_eq!(owner_res.owner, owner.to_string());
 }

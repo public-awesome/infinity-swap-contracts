@@ -192,7 +192,7 @@ pub fn _minter_two_collections_with_time(
     }
 }
 
-pub fn mock_collection_params_30_pct_fee(
+pub fn _mock_collection_params_30_pct_fee(
     start_trading_time: Option<Timestamp>,
 ) -> CollectionParams {
     CollectionParams {
@@ -220,7 +220,7 @@ pub fn _minter_template_30_pct_fee(num_tokens: u32) -> VendingTemplateResponse<M
     let mut app = custom_mock_app();
     let (owner, bidder, creator) = setup_accounts(&mut app).unwrap();
     let start_time = Timestamp::from_nanos(GENESIS_MINT_START_TIME);
-    let collection_params = mock_collection_params_30_pct_fee(Some(start_time));
+    let collection_params = _mock_collection_params_30_pct_fee(Some(start_time));
     let minter_params = minter_params_token(num_tokens);
     let code_ids = vending_minter_code_ids(&mut app);
     let minter_collection_response: Vec<MinterCollectionResponse> = configure_minter(

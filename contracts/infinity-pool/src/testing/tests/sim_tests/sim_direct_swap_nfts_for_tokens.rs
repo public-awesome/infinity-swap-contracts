@@ -1,7 +1,7 @@
 use crate::msg::{NftSwap, QueryMsg, SwapParams, SwapResponse};
 use crate::testing::helpers::nft_functions::mint_and_approve_many;
 use crate::testing::helpers::pool_functions::prepare_pool_variations;
-use crate::testing::helpers::swap_functions::{setup_swap_test, validate_swap, SwapTestSetup};
+use crate::testing::helpers::swap_functions::{setup_swap_test, validate_swap_fees, SwapTestSetup};
 use crate::testing::setup::setup_accounts::setup_addtl_account;
 use cosmwasm_std::{StdError, StdResult, Timestamp, Uint128};
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
@@ -60,7 +60,6 @@ fn cant_swap_inactive_pool() {
         false,
         0,
         0,
-        true,
     );
 
     for pool in pools {
@@ -151,7 +150,6 @@ fn cant_swap_invalid_pool_type() {
         true,
         0,
         0,
-        true,
     );
 
     for pool in pools {
@@ -242,7 +240,6 @@ fn can_swap_active_pool() {
         true,
         0,
         0,
-        true,
     );
 
     for pool in pools {
@@ -328,7 +325,6 @@ fn insufficient_tokens_error() {
         true,
         0,
         0,
-        true,
     );
 
     for pool in pools {
@@ -419,7 +415,6 @@ fn sale_price_below_min_expected() {
         true,
         0,
         0,
-        true,
     );
 
     for pool in pools {
@@ -510,7 +505,6 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         true,
         0,
         0,
-        true,
     );
 
     for pool in pools {
@@ -606,7 +600,6 @@ fn minimal_fee_tx_is_handled_correctly() {
         true,
         0,
         0,
-        true,
     );
 
     let marketplace_params: ParamsResponse = router
@@ -648,7 +641,7 @@ fn minimal_fee_tx_is_handled_correctly() {
             .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
         for swap in res.unwrap().swaps {
-            validate_swap(
+            validate_swap_fees(
                 &swap,
                 &pool,
                 &marketplace_params,
@@ -710,7 +703,6 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         true,
         250,
         300,
-        true,
     );
 
     let marketplace_params: ParamsResponse = router
@@ -752,7 +744,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
             .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
         for swap in res.unwrap().swaps {
-            validate_swap(
+            validate_swap_fees(
                 &swap,
                 &pool,
                 &marketplace_params,
