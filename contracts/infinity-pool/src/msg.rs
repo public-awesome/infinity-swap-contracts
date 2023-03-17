@@ -236,7 +236,7 @@ pub enum QueryMsg {
     },
     /// Simulate a DirectSwapTokensforSpecificNfts transaction
     /// Return type: `SwapResponse`
-    SimDirectSwapTokensforSpecificNfts {
+    SimDirectSwapTokensForSpecificNfts {
         pool_id: u64,
         nfts_to_swap_for: Vec<NftSwap>,
         sender: String,

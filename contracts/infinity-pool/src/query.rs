@@ -72,7 +72,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             api.addr_validate(&sender)?,
             swap_params,
         )?),
-        QueryMsg::SimDirectSwapTokensforSpecificNfts {
+        QueryMsg::SimDirectSwapTokensForSpecificNfts {
             pool_id,
             nfts_to_swap_for,
             sender,

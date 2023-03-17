@@ -2,7 +2,7 @@ use std::vec;
 
 use crate::msg::PoolNftSwap;
 use crate::msg::QueryMsg::SimDirectSwapNftsForTokens;
-use crate::msg::QueryMsg::SimDirectSwapTokensforSpecificNfts;
+use crate::msg::QueryMsg::SimDirectSwapTokensForSpecificNfts;
 use crate::msg::QueryMsg::SimSwapNftsForTokens;
 use crate::msg::QueryMsg::SimSwapTokensForAnyNfts;
 use crate::msg::QueryMsg::SimSwapTokensForSpecificNfts;
@@ -69,7 +69,7 @@ pub fn get_sim_direct_swap_tokens_for_specific_nfts_msg(
     user2: Addr,
     finder: Option<String>,
 ) -> msg::QueryMsg {
-    SimDirectSwapTokensforSpecificNfts {
+    SimDirectSwapTokensForSpecificNfts {
         pool_id: pool.id,
         nfts_to_swap_for: vec![NftSwap {
             nft_token_id: token_id_1.to_string(),
