@@ -6,7 +6,6 @@ use cosm_orc::orchestrator::ExecResponse;
 use cosm_orc::orchestrator::{ExecReq, SigningKey};
 use itertools::Itertools;
 use sg721_base::ExecuteMsg as SG721ExecuteMsg;
-use std::time::Duration;
 
 const MINTS_PER_TX: usize = 15;
 const TXS_PER_BLOCK: usize = 5;

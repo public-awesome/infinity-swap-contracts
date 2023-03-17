@@ -140,9 +140,7 @@ fn correct_swap_simple() {
             &pools,
             &collection_info.royalty_info,
             &accts.bidder,
-            &Some(finder),
+            &Some(finder.clone()),
         );
-
-        break;
     }
 }
