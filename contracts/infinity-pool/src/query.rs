@@ -15,7 +15,7 @@ const DEFAULT_QUERY_LIMIT: u32 = 10;
 const MAX_QUERY_LIMIT: u32 = 100;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let api = deps.api;
 
     match msg {
@@ -53,6 +53,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_params,
         } => to_binary(&sim_direct_swap_nfts_for_tokens(
             deps,
+            env,
             pool_id,
             nfts_to_swap,
             api.addr_validate(&sender)?,
@@ -65,6 +66,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_params,
         } => to_binary(&sim_swap_nfts_for_tokens(
             deps,
+            env,
             api.addr_validate(&collection)?,
             nfts_to_swap,
             api.addr_validate(&sender)?,
@@ -77,6 +79,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_params,
         } => to_binary(&sim_direct_swap_tokens_for_specific_nfts(
             deps,
+            env,
             pool_id,
             nfts_to_swap_for,
             api.addr_validate(&sender)?,
@@ -89,6 +92,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_params,
         } => to_binary(&sim_swap_tokens_for_specific_nfts(
             deps,
+            env,
             api.addr_validate(&collection)?,
             pool_nfts_to_swap_for,
             api.addr_validate(&sender)?,
@@ -101,6 +105,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_params,
         } => to_binary(&sim_swap_tokens_for_any_nfts(
             deps,
+            env,
             api.addr_validate(&collection)?,
             max_expected_token_input,
             api.addr_validate(&sender)?,
@@ -220,6 +225,7 @@ pub fn query_pool_quotes_by_sell_price(
 
 pub fn sim_direct_swap_nfts_for_tokens(
     deps: Deps,
+    env: Env,
     pool_id: u64,
     nfts_to_swap: Vec<NftSwap>,
     sender: Addr,
@@ -232,6 +238,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
 
     let mut processor = SwapProcessor::new(
         TransactionType::NftsForTokens,
+        env.contract,
         pool.collection.clone(),
         sender,
         Uint128::zero(),
@@ -256,6 +263,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
 
 pub fn sim_swap_nfts_for_tokens(
     deps: Deps,
+    env: Env,
     collection: Addr,
     nfts_to_swap: Vec<NftSwap>,
     sender: Addr,
@@ -266,6 +274,7 @@ pub fn sim_swap_nfts_for_tokens(
 
     let mut processor = SwapProcessor::new(
         TransactionType::NftsForTokens,
+        env.contract,
         collection,
         sender,
         Uint128::zero(),
@@ -290,6 +299,7 @@ pub fn sim_swap_nfts_for_tokens(
 
 pub fn sim_direct_swap_tokens_for_specific_nfts(
     deps: Deps,
+    env: Env,
     pool_id: u64,
     nfts_to_swap_for: Vec<NftSwap>,
     sender: Addr,
@@ -299,6 +309,7 @@ pub fn sim_direct_swap_tokens_for_specific_nfts(
 
     sim_swap_tokens_for_specific_nfts(
         deps,
+        env,
         pool.collection,
         vec![PoolNftSwap {
             pool_id,
@@ -311,6 +322,7 @@ pub fn sim_direct_swap_tokens_for_specific_nfts(
 
 pub fn sim_swap_tokens_for_specific_nfts(
     deps: Deps,
+    env: Env,
     collection: Addr,
     pool_nfts_to_swap_for: Vec<PoolNftSwap>,
     sender: Addr,
@@ -328,6 +340,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
 
     let mut processor = SwapProcessor::new(
         TransactionType::TokensForNfts,
+        env.contract,
         collection,
         sender,
         spend_amount.into(),
@@ -352,6 +365,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
 
 pub fn sim_swap_tokens_for_any_nfts(
     deps: Deps,
+    env: Env,
     collection: Addr,
     max_expected_token_input: Vec<Uint128>,
     sender: Addr,
@@ -364,6 +378,7 @@ pub fn sim_swap_tokens_for_any_nfts(
 
     let mut processor = SwapProcessor::new(
         TransactionType::TokensForNfts,
+        env.contract,
         collection,
         sender,
         total_tokens,
