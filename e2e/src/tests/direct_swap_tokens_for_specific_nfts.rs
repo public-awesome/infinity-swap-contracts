@@ -2,9 +2,9 @@ use crate::helpers::{
     chain::Chain,
     helper::{gen_users, latest_block_time},
     instantiate::instantiate_minter,
-    nft::mint_nfts,
     pool::{create_pools_from_fixtures, pool_execute_message, pool_query_message},
 };
+use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::Uint128;
 use infinity_pool::msg::{
     ExecuteMsg as InfinityPoolExecuteMsg, NftSwap, QueryMsg as InfinityPoolQueryMsg, SwapParams,
@@ -51,26 +51,27 @@ fn swap_small(chain: &mut Chain) {
         300,
     );
 
-    let mut bidder_token_ids = mint_nfts(chain, 10, &taker);
-
     for pool in pools.iter() {
-        if !pool.can_buy_nfts() {
+        if !pool.can_sell_nfts() {
             continue;
         }
-        let num_swaps = 3;
-        let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
-            .drain(0..(num_swaps as usize))
+        let num_swaps = 3u8;
+        let nfts_to_swap_for: Vec<NftSwap> = pool
+            .nft_token_ids
+            .clone()
+            .into_iter()
+            .take(num_swaps as usize)
             .map(|token_id| NftSwap {
                 nft_token_id: token_id.to_string(),
-                token_amount: Uint128::from(10u128),
+                token_amount: Uint128::from(100_000u128),
             })
             .collect();
 
         let sim_res: SwapResponse = pool_query_message(
             chain,
-            InfinityPoolQueryMsg::SimDirectSwapNftsForTokens {
+            InfinityPoolQueryMsg::SimDirectSwapTokensForSpecificNfts {
                 pool_id: pool.id,
-                nfts_to_swap: nfts_to_swap.clone(),
+                nfts_to_swap_for: nfts_to_swap_for.clone(),
                 sender: taker_addr.to_string(),
                 swap_params: SwapParams {
                     deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
@@ -82,11 +83,15 @@ fn swap_small(chain: &mut Chain) {
         );
         assert!(sim_res.swaps.len() > 0);
 
+        let total_amount = nfts_to_swap_for
+            .iter()
+            .fold(Uint128::zero(), |acc, nft_swap| acc + nft_swap.token_amount);
+
         let exec_resp = pool_execute_message(
             chain,
             InfinityPoolExecuteMsg::DirectSwapNftsForTokens {
                 pool_id: pool.id,
-                nfts_to_swap: nfts_to_swap,
+                nfts_to_swap: nfts_to_swap_for,
                 swap_params: SwapParams {
                     deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                     robust: false,
@@ -95,7 +100,10 @@ fn swap_small(chain: &mut Chain) {
                 },
             },
             "infinity-pool-direct-swap-nfts-for-tokens",
-            vec![],
+            vec![OrcCoin {
+                amount: total_amount.u128(),
+                denom: denom.parse().unwrap(),
+            }],
             &taker,
         );
 
@@ -103,6 +111,6 @@ fn swap_small(chain: &mut Chain) {
             .res
             .find_event_tags("wasm-swap".to_string(), "pool_id".to_string());
         println!("{:?}", tags);
-        assert!(tags.len() == num_swaps);
+        assert!(tags.len() == num_swaps as usize);
     }
 }
