@@ -11,7 +11,7 @@ use std::time::Duration;
 const MINTS_PER_TX: usize = 15;
 const TXS_PER_BLOCK: usize = 5;
 
-pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<ExecResponse> {
+pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<String> {
     let denom = &chain.cfg.orc_cfg.chain_cfg.denom;
 
     let mut reqs = vec![];
@@ -31,8 +31,6 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Exe
         });
     }
 
-    let mut responses: Vec<ExecResponse> = vec![];
-
     let chunked_reqs: Vec<Vec<ExecReq>> = reqs
         .into_iter()
         .chunks(MINTS_PER_TX)
@@ -48,6 +46,8 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Exe
         .collect();
 
     let mut mint_ctr = 0;
+    let mut token_ids: Vec<String> = vec![];
+
     for chunked_chunked_req in chunked_chunked_reqs {
         for chunked_req in chunked_chunked_req {
             mint_ctr += chunked_req.len() as u32;
@@ -57,7 +57,15 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Exe
                 .execute_batch("base_minter_batch_mint", chunked_req, user)
                 .unwrap();
 
-            responses.push(resp);
+            let tags = resp
+                .res
+                .find_event_tags("wasm".to_string(), "token_id".to_string());
+            token_ids.append(
+                &mut tags
+                    .iter()
+                    .map(|tag| tag.value.clone())
+                    .collect::<Vec<String>>(),
+            );
         }
 
         println!("Minted {} NFTs", mint_ctr);
@@ -67,7 +75,7 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Exe
         //     .unwrap();
     }
 
-    return responses;
+    token_ids
 }
 
 pub fn approve_all_nfts(
