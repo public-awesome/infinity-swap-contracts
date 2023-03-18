@@ -131,13 +131,8 @@ fn test_small_pool_creation(chain: &mut Chain) {
 
     let resp: PoolsByIdResponse = pool_query_message(
         chain,
-        InfinityPoolQueryMsg::PoolsByOwner {
-            owner: user_addr.to_string(),
-            query_options: QueryOptions {
-                descending: None,
-                limit: None,
-                start_after: None,
-            },
+        InfinityPoolQueryMsg::PoolsById {
+            pool_ids: vec![pool_id],
         },
     );
     let resp_pool = resp.pools[0].1.clone().unwrap();
