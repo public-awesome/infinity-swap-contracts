@@ -52,14 +52,7 @@ fn test_small_pool_creation(chain: &mut Chain) {
 
     let collection = chain.orc.contract_map.address(SG721_NAME).unwrap();
 
-    let resp = mint_nfts(chain, 2, &user);
-    let tag = resp[0]
-        .res
-        .find_event_tags("wasm".to_string(), "token_id".to_string());
-    let token_ids = tag
-        .iter()
-        .map(|tag| tag.value.clone())
-        .collect::<Vec<String>>();
+    let token_ids = mint_nfts(chain, 2, &user);
 
     approve_all_nfts(
         chain,
@@ -239,20 +232,7 @@ fn test_large_pool_creation(chain: &mut Chain) {
 
     let collection = chain.orc.contract_map.address(SG721_NAME).unwrap();
 
-    let resp = mint_nfts(chain, 10_000, &user);
-    let mut token_ids: Vec<String> = vec![];
-
-    for res in resp {
-        let tags = res
-            .res
-            .find_event_tags("wasm".to_string(), "token_id".to_string());
-        token_ids.append(
-            &mut tags
-                .iter()
-                .map(|tag| tag.value.clone())
-                .collect::<Vec<String>>(),
-        );
-    }
+    let token_ids = mint_nfts(chain, 10_000, &user);
 
     approve_all_nfts(
         chain,
@@ -283,7 +263,7 @@ fn test_large_pool_creation(chain: &mut Chain) {
 
     let tag = resp
         .res
-        .find_event_tags("wasm-create-token-pool".to_string(), "id".to_string())[0];
+        .find_event_tags("wasm-create-pool".to_string(), "id".to_string())[0];
 
     let pool_id = tag.value.parse::<u64>().unwrap();
 

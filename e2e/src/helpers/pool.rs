@@ -50,20 +50,7 @@ pub fn create_active_pool(
     let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
     let collection = chain.orc.contract_map.address(SG721_NAME).unwrap();
 
-    let resp = mint_nfts(chain, num_nfts, &user);
-    let mut token_ids: Vec<String> = vec![];
-
-    for res in resp {
-        let tags = res
-            .res
-            .find_event_tags("wasm".to_string(), "token_id".to_string());
-        token_ids.append(
-            &mut tags
-                .iter()
-                .map(|tag| tag.value.clone())
-                .collect::<Vec<String>>(),
-        );
-    }
+    let token_ids = mint_nfts(chain, num_nfts, &user);
 
     approve_all_nfts(
         chain,
