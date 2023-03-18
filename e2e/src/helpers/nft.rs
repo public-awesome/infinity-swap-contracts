@@ -6,6 +6,7 @@ use cosm_orc::orchestrator::ExecResponse;
 use cosm_orc::orchestrator::{ExecReq, SigningKey};
 use itertools::Itertools;
 use sg721_base::ExecuteMsg as SG721ExecuteMsg;
+use std::time::Duration;
 
 const MINTS_PER_TX: usize = 15;
 const TXS_PER_BLOCK: usize = 5;
@@ -60,10 +61,10 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Exe
         }
 
         println!("Minted {} NFTs", mint_ctr);
-        // chain
-        //     .orc
-        //     .poll_for_n_blocks(2, Duration::from_secs(10), true)
-        //     .unwrap();
+        chain
+            .orc
+            .poll_for_n_blocks(1, Duration::from_secs(10), true)
+            .unwrap();
     }
 
     return responses;
