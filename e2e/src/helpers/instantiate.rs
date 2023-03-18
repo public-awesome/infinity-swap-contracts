@@ -129,7 +129,7 @@ pub fn instantiate_marketplace(
             // "max_finders_fee_percent":"2"
             max_finders_fee_bps: 200,
             // "min_price":"5000000"
-            min_price: Uint128::from(5000000u64),
+            min_price: Uint128::from(10u64),
             // "stale_bid_duration":{"time":7776000}
             stale_bid_duration: Duration::Time(7776000),
             // "bid_removal_reward_percent":"0.5"
