@@ -1,7 +1,8 @@
 use crate::helpers::{option_bool_to_order, prep_for_swap};
 use crate::msg::{
-    ConfigResponse, NftSwap, PoolNftSwap, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse,
-    QueryMsg, QueryOptions, SwapParams, SwapResponse, TransactionType,
+    ConfigResponse, NftSwap, NftTokenIdsResponse, PoolNftSwap, PoolQuoteResponse,
+    PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
+    TransactionType,
 };
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, PoolQuote, CONFIG};
 use crate::swap_processor::SwapProcessor;
@@ -30,6 +31,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             api.addr_validate(&owner)?,
             query_options,
         )?),
+        QueryMsg::PoolNftTokenIds {
+            pool_id,
+            query_options,
+        } => to_binary(&query_pool_nft_token_ids(deps, pool_id, query_options)?),
         QueryMsg::PoolQuotesBuy {
             collection,
             query_options,
@@ -167,6 +172,31 @@ pub fn query_pools_by_owner(
         .collect::<StdResult<_>>()?;
 
     Ok(PoolsResponse { pools })
+}
+
+pub fn query_pool_nft_token_ids(
+    deps: Deps,
+    pool_id: u64,
+    query_options: QueryOptions<String>,
+) -> StdResult<NftTokenIdsResponse> {
+    let pool = pools().load(deps.storage, pool_id)?;
+
+    let limit = query_options
+        .limit
+        .unwrap_or(DEFAULT_QUERY_LIMIT)
+        .min(MAX_QUERY_LIMIT) as usize;
+
+    let mut nft_token_ids_iter = pool.nft_token_ids.into_iter();
+
+    if let Some(_start_after) = query_options.start_after {
+        nft_token_ids_iter.find(|nft_token_id| nft_token_id == &_start_after);
+    }
+    let nft_token_ids = nft_token_ids_iter.take(limit).collect();
+
+    Ok(NftTokenIdsResponse {
+        pool_id,
+        nft_token_ids,
+    })
 }
 
 pub fn query_pool_quotes_by_buy_price(

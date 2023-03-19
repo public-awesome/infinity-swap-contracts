@@ -420,7 +420,7 @@ impl Pool {
                 "spot_price",
                 "delta",
                 "total_tokens",
-                "nft_token_ids",
+                "total_nfts",
                 "is_active",
                 "swap_fee_percent",
                 "finders_fee_percent",
@@ -453,19 +453,7 @@ impl Pool {
                 "spot_price" => attr("spot_price", self.spot_price.to_string()),
                 "delta" => attr("delta", self.delta.to_string()),
                 "total_tokens" => attr("total_tokens", self.total_tokens.to_string()),
-                "nft_token_ids" => attr(
-                    "nft_token_ids",
-                    [
-                        String::from("["),
-                        self.nft_token_ids
-                            .iter()
-                            .map(|id| id.to_string())
-                            .collect::<Vec<String>>()
-                            .join(","),
-                        String::from("]"),
-                    ]
-                    .join(""),
-                ),
+                "total_nfts" => attr("total_nfts", self.nft_token_ids.len().to_string()),
                 "is_active" => attr("is_active", self.is_active.to_string()),
                 "swap_fee_percent" => attr("swap_fee_percent", self.swap_fee_percent.to_string()),
                 "finders_fee_percent" => {
