@@ -1,10 +1,13 @@
 use std::vec;
 
 use crate::msg::{
-    ConfigResponse, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions,
+    ConfigResponse, NftTokenIdsResponse, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse,
+    QueryMsg, QueryOptions,
 };
-use crate::state::{Config, PoolQuote};
+use crate::state::{BondingCurve, Config, PoolQuote};
 use crate::testing::helpers::fixtures::{create_and_activate_pool_fixtures, create_pool_fixtures};
+use crate::testing::helpers::nft_functions::mint_and_approve_many;
+use crate::testing::helpers::pool_functions::prepare_swap_pool;
 use crate::testing::setup::setup_accounts::setup_addtl_account;
 use crate::testing::setup::setup_infinity_pool::setup_infinity_pool;
 use crate::testing::setup::setup_marketplace::setup_marketplace;
@@ -349,4 +352,75 @@ fn try_query_pools_by_sell_price() {
     for (id, pq) in res.pool_quotes.iter().enumerate() {
         assert_eq!(pq, &expected_pool_quotes[id]);
     }
+}
+
+#[test]
+fn try_query_pool_nft_token_ids() {
+    let vt = standard_minter_template(5000);
+    let (mut router, creator, _bidder) = (vt.router, vt.accts.creator, vt.accts.bidder);
+    let collection = vt.collection_response_vec[0].collection.clone().unwrap();
+    let minter = vt.collection_response_vec[0].minter.clone().unwrap();
+    let owner = setup_addtl_account(&mut router, USER, 1_000_000_000).unwrap();
+    let _asset_account = Addr::unchecked(ASSET_ACCOUNT);
+
+    let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
+    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
+
+    setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
+
+    let owner_token_ids = mint_and_approve_many(
+        &mut router,
+        &creator,
+        &owner,
+        &minter,
+        &collection,
+        &infinity_pool,
+        500,
+    );
+
+    let pool = prepare_swap_pool(
+        &mut router,
+        &infinity_pool.clone(),
+        &owner,
+        Uint128::from(1_000_000u128),
+        owner_token_ids.clone(),
+        true,
+        crate::msg::ExecuteMsg::CreateTradePool {
+            collection: collection.to_string(),
+            asset_recipient: None,
+            bonding_curve: BondingCurve::ConstantProduct,
+            spot_price: Uint128::zero(),
+            delta: Uint128::zero(),
+            finders_fee_bps: 0,
+            swap_fee_bps: 0,
+            reinvest_tokens: true,
+            reinvest_nfts: true,
+        },
+    )
+    .unwrap();
+
+    let mut expected_token_ids = vec![];
+    let mut start_after = None;
+    loop {
+        let response: NftTokenIdsResponse = router
+            .wrap()
+            .query_wasm_smart(
+                infinity_pool.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: start_after.clone(),
+                        limit: None,
+                    },
+                },
+            )
+            .unwrap();
+        if response.nft_token_ids.is_empty() {
+            break;
+        }
+        start_after = Some(response.nft_token_ids.last().unwrap().to_string());
+        expected_token_ids.extend(response.nft_token_ids);
+    }
+    assert_eq!(expected_token_ids.len(), owner_token_ids.len());
 }
