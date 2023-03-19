@@ -10,7 +10,7 @@ use crate::swap_processor::SwapProcessor;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{coin, Addr, Decimal, DepsMut, Env, MessageInfo, Uint128};
+use cosmwasm_std::{attr, coin, Addr, Decimal, DepsMut, Env, Event, MessageInfo, Uint128};
 use cw_utils::{maybe_addr, must_pay, nonpayable};
 use sg1::fair_burn;
 use sg_std::{Response, NATIVE_DENOM};
@@ -346,13 +346,18 @@ pub fn execute_deposit_nfts(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let event = pool.create_event("deposit-nfts", vec!["id", "spot_price", "nft_token_ids"])?;
+    let event = Event::new("deposit-nfts").add_attributes(vec![
+        attr("pool_id", pool.id.to_string()),
+        attr("total_nfts", pool.nft_token_ids.len().to_string()),
+        attr("nft_token_ids", nft_token_ids.join(",")),
+    ]);
+
     response = response.add_event(event);
     response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
     Ok(response)
 }
 
-/// Execute a WithdrawNfts message
+/// Execute a WithdrawTokens message
 pub fn execute_withdraw_tokens(
     deps: DepsMut,
     info: MessageInfo,
@@ -431,7 +436,11 @@ pub fn execute_withdraw_nfts(
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
-    let event = pool.create_event("withdraw-nfts", vec!["id", "spot_price", "nft_token_ids"])?;
+    let event = Event::new("withdraw-nfts").add_attributes(vec![
+        attr("pool_id", pool.id.to_string()),
+        attr("total_nfts", pool.nft_token_ids.len().to_string()),
+        attr("nft_token_ids", nft_token_ids.join(",")),
+    ]);
     response = response.add_event(event);
     response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
     Ok(response)

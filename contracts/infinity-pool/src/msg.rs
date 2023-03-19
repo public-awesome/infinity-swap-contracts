@@ -206,6 +206,12 @@ pub enum QueryMsg {
         owner: String,
         query_options: QueryOptions<u64>,
     },
+    /// Retrieve the NFT token ids in a pool
+    /// Return type: `NftTokenIdsResponse`
+    PoolNftTokenIds {
+        pool_id: u64,
+        query_options: QueryOptions<String>,
+    },
     /// Retrieve pool quotes sorted by their buy quote price
     /// Return type: `PoolQuoteResponse`
     PoolQuotesBuy {
@@ -273,6 +279,12 @@ pub struct PoolsResponse {
 #[cw_serde]
 pub struct PoolsByIdResponse {
     pub pools: Vec<(u64, Option<Pool>)>,
+}
+
+#[cw_serde]
+pub struct NftTokenIdsResponse {
+    pub pool_id: u64,
+    pub nft_token_ids: Vec<String>,
 }
 
 #[cw_serde]

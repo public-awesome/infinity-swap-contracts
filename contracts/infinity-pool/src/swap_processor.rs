@@ -497,7 +497,7 @@ impl<'a> SwapProcessor<'a> {
                     vec![
                         "id",
                         "spot_price",
-                        "nft_token_ids",
+                        "total_nfts",
                         "total_tokens",
                         "is_active",
                     ],
