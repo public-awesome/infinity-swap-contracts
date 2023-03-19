@@ -61,7 +61,7 @@ fn correct_swap_simple() {
     let pool_chunks: Vec<Vec<&Pool>> = pools
         .iter()
         .filter(|&p| p.can_sell_nfts())
-        .chunks(3 as usize)
+        .chunks(3_usize)
         .into_iter()
         .map(|chunk| chunk.collect())
         .collect();

@@ -90,7 +90,7 @@ fn correct_swap_simple() {
         let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .drain(0..(num_swaps as usize))
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(10u128),
             })
             .collect();

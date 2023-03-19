@@ -18,12 +18,11 @@ pub fn pool_execute_message(
     funds: Vec<OrcCoin>,
     user: &SigningKey,
 ) -> ExecResponse {
-    let mut reqs = vec![];
-    reqs.push(ExecReq {
+    let reqs = vec![ExecReq {
         contract_name: INFINITY_POOL_NAME.to_string(),
         msg: Box::new(execute_msg),
         funds,
-    });
+    }];
 
     chain.orc.execute_batch(op_name, reqs, user).unwrap()
 }
@@ -50,12 +49,12 @@ pub fn create_active_pool(
     let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
     let collection = chain.orc.contract_map.address(SG721_NAME).unwrap();
 
-    let token_ids = mint_nfts(chain, num_nfts, &user);
+    let token_ids = mint_nfts(chain, num_nfts, user);
 
     approve_all_nfts(
         chain,
         chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
-        &user,
+        user,
     );
 
     let resp = pool_execute_message(
@@ -66,7 +65,7 @@ pub fn create_active_pool(
             amount: LISTING_FEE,
             denom: denom.parse().unwrap(),
         }],
-        &user,
+        user,
     );
 
     let tag = resp
@@ -86,12 +85,12 @@ pub fn create_active_pool(
             chain,
             InfinityPoolExecuteMsg::DepositNfts {
                 pool_id,
-                collection: collection.clone(),
-                nft_token_ids: token_ids.clone(),
+                collection,
+                nft_token_ids: token_ids,
             },
             "infinity-pool-deposit-nfts",
             vec![],
-            &user,
+            user,
         );
     }
 
@@ -104,7 +103,7 @@ pub fn create_active_pool(
                 amount: pool_deposit_amount,
                 denom: denom.parse().unwrap(),
             }],
-            &user,
+            user,
         );
     }
 
@@ -116,7 +115,7 @@ pub fn create_active_pool(
         },
         "infinity-pool-activate",
         vec![],
-        &user,
+        user,
     );
 
     let mut resp: PoolsByIdResponse = pool_query_message(
@@ -125,8 +124,7 @@ pub fn create_active_pool(
             pool_ids: vec![pool_id],
         },
     );
-    let pool = resp.pools.pop().unwrap().1.unwrap();
-    pool
+    resp.pools.pop().unwrap().1.unwrap()
 }
 
 pub fn create_pools_from_fixtures(

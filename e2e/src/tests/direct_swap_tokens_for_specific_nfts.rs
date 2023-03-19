@@ -62,7 +62,7 @@ fn swap_small(chain: &mut Chain) {
             .into_iter()
             .take(num_swaps as usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
@@ -81,7 +81,7 @@ fn swap_small(chain: &mut Chain) {
                 },
             },
         );
-        assert!(sim_res.swaps.len() > 0);
+        assert!(!sim_res.swaps.is_empty());
 
         let total_amount = nfts_to_swap_for
             .iter()

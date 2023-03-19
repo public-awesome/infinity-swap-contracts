@@ -68,9 +68,9 @@ fn cant_swap_inactive_pool() {
         }
         let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .to_vec()
-            .drain(0..(3 as usize))
+            .drain(0..3_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
@@ -158,9 +158,9 @@ fn cant_swap_invalid_pool_type() {
         }
         let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .to_vec()
-            .drain(0..(3 as usize))
+            .drain(0..3_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
@@ -248,9 +248,9 @@ fn can_swap_active_pool() {
         }
         let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .to_vec()
-            .drain(0..(3 as usize))
+            .drain(0..3_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(10u128),
             })
             .collect();
@@ -333,9 +333,9 @@ fn insufficient_tokens_error() {
         }
         let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .to_vec()
-            .drain(0..(3 as usize))
+            .drain(0..3_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
@@ -423,9 +423,9 @@ fn sale_price_below_min_expected() {
         }
         let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .to_vec()
-            .drain(0..(3 as usize))
+            .drain(0..3_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(1_000_000u128),
             })
             .collect();
@@ -513,18 +513,18 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         }
         let mut nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .to_vec()
-            .drain(0..(2 as usize))
+            .drain(0..2_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(10u128),
             })
             .collect();
         nfts_to_swap.extend(
             bidder_token_ids
                 .to_vec()
-                .drain(0..(1 as usize))
+                .drain(0..1_usize)
                 .map(|token_id| NftSwap {
-                    nft_token_id: token_id.to_string(),
+                    nft_token_id: token_id,
                     token_amount: Uint128::from(1_000_000u128),
                 })
                 .collect::<Vec<NftSwap>>(),
@@ -604,7 +604,7 @@ fn minimal_fee_tx_is_handled_correctly() {
 
     let marketplace_params: ParamsResponse = router
         .wrap()
-        .query_wasm_smart(marketplace.clone(), &MarketplaceQueryMsg::Params {})
+        .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
         .unwrap();
     let collection_info: CollectionInfoResponse = router
         .wrap()
@@ -617,9 +617,9 @@ fn minimal_fee_tx_is_handled_correctly() {
         }
         let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .to_vec()
-            .drain(0..(3 as usize))
+            .drain(0..3_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(10u128),
             })
             .collect();
@@ -707,7 +707,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
 
     let marketplace_params: ParamsResponse = router
         .wrap()
-        .query_wasm_smart(marketplace.clone(), &MarketplaceQueryMsg::Params {})
+        .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
         .unwrap();
     let collection_info: CollectionInfoResponse = router
         .wrap()
@@ -720,9 +720,9 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         }
         let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
             .to_vec()
-            .drain(0..(3 as usize))
+            .drain(0..3_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(10u128),
             })
             .collect();

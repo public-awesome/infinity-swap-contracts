@@ -71,14 +71,14 @@ fn swap_small(chain: &mut Chain) {
             },
         },
     );
-    assert!(sim_res.swaps.len() > 0);
+    assert!(!sim_res.swaps.is_empty());
 
     let total_amount: Uint128 = max_expected_token_input.iter().sum();
 
     let exec_resp = pool_execute_message(
         chain,
         InfinityPoolExecuteMsg::SwapTokensForAnyNfts {
-            collection: collection.to_string(),
+            collection,
             max_expected_token_input,
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),

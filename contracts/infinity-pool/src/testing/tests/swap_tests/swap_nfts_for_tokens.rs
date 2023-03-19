@@ -88,7 +88,7 @@ fn correct_swap_simple() {
         .to_vec()
         .drain(0..(num_swaps as usize))
         .map(|token_id| NftSwap {
-            nft_token_id: token_id.to_string(),
+            nft_token_id: token_id,
             token_amount: Uint128::from(100u128),
         })
         .collect();
@@ -111,7 +111,7 @@ fn correct_swap_simple() {
 
     let exec_msg = ExecuteMsg::SwapNftsForTokens {
         collection: collection.to_string(),
-        nfts_to_swap: nfts_to_swap.clone(),
+        nfts_to_swap,
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust: false,
@@ -135,6 +135,6 @@ fn correct_swap_simple() {
         &pools,
         &collection_info.royalty_info,
         &accts.bidder,
-        &Some(finder.clone()),
+        &Some(finder),
     );
 }

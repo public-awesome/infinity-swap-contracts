@@ -61,7 +61,7 @@ fn swap_small(chain: &mut Chain) {
         .to_vec()
         .drain(0..(num_swaps as usize))
         .map(|token_id| NftSwap {
-            nft_token_id: token_id.to_string(),
+            nft_token_id: token_id,
             token_amount: Uint128::from(100u128),
         })
         .collect();
@@ -80,13 +80,13 @@ fn swap_small(chain: &mut Chain) {
             },
         },
     );
-    assert!(sim_res.swaps.len() > 0);
+    assert!(!sim_res.swaps.is_empty());
 
     let exec_resp = pool_execute_message(
         chain,
         InfinityPoolExecuteMsg::SwapNftsForTokens {
-            collection: collection.to_string(),
-            nfts_to_swap: nfts_to_swap.clone(),
+            collection,
+            nfts_to_swap,
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                 robust: false,

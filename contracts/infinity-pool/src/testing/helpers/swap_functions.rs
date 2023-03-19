@@ -104,7 +104,7 @@ pub fn validate_swap_fees(
         );
     }
 
-    assert!(swap.nft_payment.nft_token_id.len() > 0);
+    assert!(!swap.nft_payment.nft_token_id.is_empty());
 }
 
 pub fn validate_swap_outcome(
@@ -177,7 +177,7 @@ pub fn validate_swap_outcome(
                 validate_address_paid(
                     pre_swap_balances,
                     post_swap_balances,
-                    &finder.as_ref().unwrap(),
+                    finder.as_ref().unwrap(),
                 );
             }
 
@@ -192,7 +192,7 @@ pub fn validate_swap_outcome(
                 validate_nft_owner(router, &pool.collection, token_id, &pool_owner_account);
 
                 // Verify user received tokens
-                validate_address_paid(pre_swap_balances, post_swap_balances, &sender);
+                validate_address_paid(pre_swap_balances, post_swap_balances, sender);
             } else {
                 // Verify pool owner received tokens
                 let pool_owner_account =
@@ -204,7 +204,7 @@ pub fn validate_swap_outcome(
                 validate_address_paid(pre_swap_balances, post_swap_balances, &pool_owner_account);
 
                 // Verify user received NFT
-                validate_nft_owner(router, &pool.collection, token_id, &sender);
+                validate_nft_owner(router, &pool.collection, token_id, sender);
             }
         }
     }
@@ -251,7 +251,7 @@ pub fn validate_swap_outcome(
     };
     let post_swap_pools: PoolsByIdResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool_addr.clone(), &get_pools_msg)
+        .query_wasm_smart(infinity_pool_addr, &get_pools_msg)
         .unwrap();
     let mut post_swap_pools_map: HashMap<u64, Pool> = HashMap::new();
     for (pool_id, pool) in post_swap_pools.pools {

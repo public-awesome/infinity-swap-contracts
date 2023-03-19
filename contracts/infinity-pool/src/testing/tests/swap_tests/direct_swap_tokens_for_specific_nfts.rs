@@ -84,7 +84,7 @@ fn correct_swap_simple() {
             .into_iter()
             .take(num_swaps as usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
