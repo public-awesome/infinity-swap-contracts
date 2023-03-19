@@ -137,7 +137,7 @@ fn can_swap_active_pools() {
         .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
     assert!(res.is_ok());
-    assert!(res.unwrap().swaps.len() > 0);
+    assert!(!res.unwrap().swaps.is_empty());
 }
 
 #[test]
@@ -324,7 +324,7 @@ fn minimal_fee_tx_is_handled_correctly() {
 
     let marketplace_params: ParamsResponse = router
         .wrap()
-        .query_wasm_smart(marketplace.clone(), &MarketplaceQueryMsg::Params {})
+        .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
         .unwrap();
     let collection_info: CollectionInfoResponse = router
         .wrap()
@@ -355,7 +355,7 @@ fn minimal_fee_tx_is_handled_correctly() {
         let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
         validate_swap_fees(
             &swap,
-            &pool,
+            pool,
             &marketplace_params,
             &collection_info.royalty_info,
         );
@@ -409,7 +409,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
 
     let marketplace_params: ParamsResponse = router
         .wrap()
-        .query_wasm_smart(marketplace.clone(), &MarketplaceQueryMsg::Params {})
+        .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
         .unwrap();
     let collection_info: CollectionInfoResponse = router
         .wrap()
@@ -440,7 +440,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
         validate_swap_fees(
             &swap,
-            &pool,
+            pool,
             &marketplace_params,
             &collection_info.royalty_info,
         );

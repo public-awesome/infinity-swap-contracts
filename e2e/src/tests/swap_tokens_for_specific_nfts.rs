@@ -58,7 +58,7 @@ fn swap_small(chain: &mut Chain) {
     let pool_chunks: Vec<Vec<&Pool>> = pools
         .iter()
         .filter(|&p| p.can_sell_nfts())
-        .chunks(3 as usize)
+        .chunks(3_usize)
         .into_iter()
         .map(|chunk| chunk.collect())
         .collect();
@@ -101,7 +101,7 @@ fn swap_small(chain: &mut Chain) {
                 },
             },
         );
-        assert!(sim_res.swaps.len() > 0);
+        assert!(!sim_res.swaps.is_empty());
 
         let exec_resp = pool_execute_message(
             chain,

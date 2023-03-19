@@ -64,7 +64,7 @@ fn cant_swap_inactive_pool() {
             .into_iter()
             .take(3)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
@@ -146,7 +146,7 @@ fn cant_swap_invalid_pool_type() {
             .into_iter()
             .take(3)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
@@ -228,7 +228,7 @@ fn can_swap_active_pool() {
             .into_iter()
             .take(3)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
@@ -312,7 +312,7 @@ fn incorrect_nfts_error() {
         let nfts_to_swap_for: Vec<NftSwap> = bidder_token_ids
             .drain(0..3)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(100_000u128),
             })
             .collect();
@@ -397,7 +397,7 @@ fn sale_price_above_max_expected() {
             .into_iter()
             .take(3)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
+                nft_token_id: token_id,
                 token_amount: Uint128::from(20u128),
             })
             .collect();
@@ -474,18 +474,18 @@ fn robust_query_does_not_revert_whole_tx() {
         }
         let mut pool_nft_token_ids: Vec<String> = pool.nft_token_ids.into_iter().collect();
         let mut nfts_to_swap_for: Vec<NftSwap> = pool_nft_token_ids
-            .drain(0..(2 as usize))
+            .drain(0..2_usize)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
-                token_amount: Uint128::from(100_00u128),
+                nft_token_id: token_id,
+                token_amount: Uint128::from(100_000_u128),
             })
             .collect();
         nfts_to_swap_for.extend(
             pool_nft_token_ids
-                .drain(0..(1 as usize))
+                .drain(0..1_usize)
                 .map(|token_id| NftSwap {
-                    nft_token_id: token_id.to_string(),
-                    token_amount: Uint128::from(10u128),
+                    nft_token_id: token_id,
+                    token_amount: Uint128::from(10_u128),
                 })
                 .collect::<Vec<NftSwap>>(),
         );
@@ -554,7 +554,7 @@ fn minimal_fee_tx_is_handled_correctly() {
 
     let marketplace_params: ParamsResponse = router
         .wrap()
-        .query_wasm_smart(marketplace.clone(), &MarketplaceQueryMsg::Params {})
+        .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
         .unwrap();
     let collection_info: CollectionInfoResponse = router
         .wrap()
@@ -571,8 +571,8 @@ fn minimal_fee_tx_is_handled_correctly() {
             .into_iter()
             .take(3)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
-                token_amount: Uint128::from(100_000u128),
+                nft_token_id: token_id,
+                token_amount: Uint128::from(100_000_u128),
             })
             .collect();
         let sim_msg = SimDirectSwapTokensForSpecificNfts {
@@ -614,7 +614,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         infinity_pool,
         marketplace,
     } = setup_swap_test(5000).unwrap();
-    let user2 = setup_addtl_account(&mut router, "asset", 100u128).unwrap();
+    let user2 = setup_addtl_account(&mut router, "asset", 100_u128).unwrap();
 
     let collection_resp = &collection_response_vec[0];
     let minter = collection_resp.minter.clone().unwrap();
@@ -630,7 +630,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         100,
     );
 
-    let deposit_tokens_per_pool = Uint128::from(10_000u128);
+    let deposit_tokens_per_pool = Uint128::from(10_000_u128);
     let pools = prepare_pool_variations(
         &mut router,
         7,
@@ -648,7 +648,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
 
     let marketplace_params: ParamsResponse = router
         .wrap()
-        .query_wasm_smart(marketplace.clone(), &MarketplaceQueryMsg::Params {})
+        .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
         .unwrap();
     let collection_info: CollectionInfoResponse = router
         .wrap()
@@ -665,8 +665,8 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
             .into_iter()
             .take(3)
             .map(|token_id| NftSwap {
-                nft_token_id: token_id.to_string(),
-                token_amount: Uint128::from(100_000u128),
+                nft_token_id: token_id,
+                token_amount: Uint128::from(100_000_u128),
             })
             .collect();
         let sim_msg = SimDirectSwapTokensForSpecificNfts {

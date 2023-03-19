@@ -153,7 +153,7 @@ pub fn instantiate_infinity_pools(
         &format!("{}_inst", INFINITY_POOL_NAME),
         &PoolInstantiateMsg {
             denom: denom.to_string(),
-            marketplace_addr: orc.contract_map.address(MARKETPLACE_NAME)?.to_string(),
+            marketplace_addr: orc.contract_map.address(MARKETPLACE_NAME)?,
             developer: None,
         },
         &user.key,

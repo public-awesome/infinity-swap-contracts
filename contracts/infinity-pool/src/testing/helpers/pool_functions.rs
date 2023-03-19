@@ -130,7 +130,7 @@ pub fn prepare_swap_pool(
         )?;
     }
 
-    if nft_token_ids.len() > 0 {
+    if !nft_token_ids.is_empty() {
         deposit_nfts(
             router,
             infinity_pool.clone(),

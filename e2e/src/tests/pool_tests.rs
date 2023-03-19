@@ -132,7 +132,7 @@ fn test_small_pool_creation(chain: &mut Chain) {
         resp_pool,
         Pool {
             id: pool_id,
-            collection: Addr::unchecked(collection.clone()),
+            collection: Addr::unchecked(collection),
             owner: Addr::unchecked(user_addr.to_string()),
             asset_recipient: None,
             pool_type: PoolType::Trade,
@@ -312,7 +312,7 @@ fn test_large_pool_creation(chain: &mut Chain) {
         resp_pool,
         Pool {
             id: 1,
-            collection: Addr::unchecked(collection.clone()),
+            collection: Addr::unchecked(collection),
             owner: Addr::unchecked(user_addr.to_string()),
             asset_recipient: None,
             pool_type: PoolType::Trade,

@@ -76,7 +76,7 @@ fn cant_swap_inactive_pool() {
                     .into_iter()
                     .take(3)
                     .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
+                        nft_token_id: token_id,
                         token_amount: Uint128::from(100_000u128),
                     })
                     .collect(),
@@ -170,7 +170,7 @@ fn cant_swap_invalid_pool_type() {
                     .into_iter()
                     .take(3)
                     .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
+                        nft_token_id: token_id,
                         token_amount: Uint128::from(100_000u128),
                     })
                     .collect(),
@@ -264,7 +264,7 @@ fn can_swap_active_pool() {
                     .into_iter()
                     .take(3)
                     .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
+                        nft_token_id: token_id,
                         token_amount: Uint128::from(100_000u128),
                     })
                     .collect(),
@@ -288,7 +288,7 @@ fn can_swap_active_pool() {
             .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
         assert!(res.is_ok());
-        assert!(res.unwrap().swaps.len() > 0);
+        assert!(!res.unwrap().swaps.is_empty());
     }
 }
 
@@ -361,7 +361,7 @@ fn incorrect_nfts_error() {
                 nft_swaps: bidder_token_ids
                     .drain(0..3)
                     .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
+                        nft_token_id: token_id,
                         token_amount: Uint128::from(100_000u128),
                     })
                     .collect(),
@@ -459,7 +459,7 @@ fn sale_price_above_max_expected() {
                     .into_iter()
                     .take(3)
                     .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
+                        nft_token_id: token_id,
                         token_amount: Uint128::from(10u128),
                     })
                     .collect(),
@@ -548,18 +548,18 @@ fn robust_query_does_not_revert_whole_tx() {
             let mut pool_nft_swap = PoolNftSwap {
                 pool_id: pool.id,
                 nft_swaps: pool_nft_token_ids
-                    .drain(0..(2 as usize))
+                    .drain(0..2_usize)
                     .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
-                        token_amount: Uint128::from(100_00u128),
+                        nft_token_id: token_id,
+                        token_amount: Uint128::from(100_000_u128),
                     })
                     .collect(),
             };
             pool_nft_swap.nft_swaps.extend(
                 pool_nft_token_ids
-                    .drain(0..(1 as usize))
+                    .drain(0..1_usize)
                     .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
+                        nft_token_id: token_id,
                         token_amount: Uint128::from(10u128),
                     })
                     .collect::<Vec<NftSwap>>(),
@@ -584,7 +584,7 @@ fn robust_query_does_not_revert_whole_tx() {
             .query_wasm_smart(infinity_pool.clone(), &sim_msg);
 
         assert!(res.is_ok());
-        assert!(res.unwrap().swaps.len() > 0);
+        assert!(!res.unwrap().swaps.is_empty());
     }
 }
 
@@ -642,7 +642,7 @@ fn trading_fee_is_applied_correctly() {
 
     let marketplace_params: ParamsResponse = router
         .wrap()
-        .query_wasm_smart(marketplace.clone(), &MarketplaceQueryMsg::Params {})
+        .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
         .unwrap();
     let collection_info: CollectionInfoResponse = router
         .wrap()
@@ -686,7 +686,7 @@ fn trading_fee_is_applied_correctly() {
             let pool = chunk.iter().find(|p| p.id == swap.pool_id).unwrap();
             validate_swap_fees(
                 &swap,
-                &pool,
+                pool,
                 &marketplace_params,
                 &collection_info.royalty_info,
             );
@@ -749,7 +749,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
 
     let marketplace_params: ParamsResponse = router
         .wrap()
-        .query_wasm_smart(marketplace.clone(), &MarketplaceQueryMsg::Params {})
+        .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
         .unwrap();
     let collection_info: CollectionInfoResponse = router
         .wrap()
@@ -793,7 +793,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
             let pool = chunk.iter().find(|p| p.id == swap.pool_id).unwrap();
             validate_swap_fees(
                 &swap,
-                &pool,
+                pool,
                 &marketplace_params,
                 &collection_info.royalty_info,
             );

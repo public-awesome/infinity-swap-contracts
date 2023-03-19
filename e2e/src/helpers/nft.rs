@@ -30,15 +30,11 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Str
         });
     }
 
-    let chunked_reqs: Vec<Vec<ExecReq>> = reqs
+    let chunked_chunked_reqs: Vec<Vec<Vec<ExecReq>>> = reqs
         .into_iter()
         .chunks(MINTS_PER_TX)
         .into_iter()
         .map(|chunk| chunk.collect())
-        .collect();
-
-    let chunked_chunked_reqs: Vec<Vec<Vec<ExecReq>>> = chunked_reqs
-        .into_iter()
         .chunks(TXS_PER_BLOCK)
         .into_iter()
         .map(|chunk| chunk.collect())
@@ -82,15 +78,14 @@ pub fn approve_all_nfts(
     approve_addr: String,
     user: &SigningKey,
 ) -> ExecResponse {
-    let mut reqs = vec![];
-    reqs.push(ExecReq {
+    let reqs = vec![ExecReq {
         contract_name: SG721_NAME.to_string(),
         msg: Box::new(SG721ExecuteMsg::ApproveAll {
-            operator: approve_addr.clone(),
+            operator: approve_addr,
             expires: None,
         }),
         funds: vec![],
-    });
+    }];
 
     chain
         .orc
