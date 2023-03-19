@@ -22,7 +22,7 @@ fn swap_small(chain: &mut Chain) {
 
     let pool_deposit_amount = 1_000_000;
     let balance = 1_000_000_000;
-    let mut users = gen_users(chain, 1, balance);
+    let mut users = gen_users(chain, 2, balance);
     let maker = users.pop().unwrap();
     let maker_addr = maker.to_addr(&prefix).unwrap();
     let taker = users.pop().unwrap();
