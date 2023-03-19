@@ -199,6 +199,11 @@ export type QueryMsg = {
     query_options: QueryOptionsForUint64;
   };
 } | {
+  pool_nft_token_ids: {
+    pool_id: number;
+    query_options: QueryOptionsForString;
+  };
+} | {
   pool_quotes_buy: {
     collection: string;
     query_options: QueryOptionsForTupleOfUint128AndUint64;
@@ -223,7 +228,7 @@ export type QueryMsg = {
     swap_params: SwapParams;
   };
 } | {
-  sim_direct_swap_tokensfor_specific_nfts: {
+  sim_direct_swap_tokens_for_specific_nfts: {
     nfts_to_swap_for: NftSwap[];
     pool_id: number;
     sender: string;
@@ -249,19 +254,24 @@ export interface QueryOptionsForUint64 {
   limit?: number | null;
   start_after?: number | null;
 }
+export interface QueryOptionsForString {
+  descending?: boolean | null;
+  limit?: number | null;
+  start_after?: string | null;
+}
 export interface QueryOptionsForTupleOfUint128AndUint64 {
   descending?: boolean | null;
   limit?: number | null;
   start_after?: [Uint128, number] | null;
 }
-export type TransactionType = "sell" | "buy";
+export type TransactionType = "nfts_for_tokens" | "tokens_for_nfts";
 export interface SwapResponse {
   swaps: Swap[];
 }
 export interface Swap {
   finder_payment?: TokenPayment | null;
   network_fee: Uint128;
-  nft_payment?: NftPayment | null;
+  nft_payment: NftPayment;
   pool_id: number;
   royalty_payment?: TokenPayment | null;
   seller_payment?: TokenPayment | null;
