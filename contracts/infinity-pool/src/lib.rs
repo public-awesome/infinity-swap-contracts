@@ -10,6 +10,5 @@ pub mod swap_processor;
 
 mod error;
 mod helpers;
-mod testing;
 
 pub use error::ContractError;

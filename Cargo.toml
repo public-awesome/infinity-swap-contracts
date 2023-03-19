@@ -1,5 +1,5 @@
 [workspace]
-members = ["contracts/*",  "e2e"]
+members = ["contracts/*",  "test/*"]
 
 [workspace.package]
 version = "0.1.0"
@@ -7,6 +7,24 @@ edition = "2021"
 repository = "https://github.com/tasiov/infinity-pool"
 description = "An NFT AMM protocol written for CosmWasm"
 license = "BUSL-1.1"
+
+[workspace.dependencies]
+cosmwasm-std = "1.1.9"
+cosmwasm-schema = { version = "1.1.9" }
+cosmwasm-storage = { version = "1.0.0" }
+cw-storage-plus = "0.16.0"
+cw-utils = "0.16.0"
+cw2 = "0.16.0"
+cw721-base = { version = "0.16.0", features = ["library"] }
+cw721 = "0.16.0"
+sg1 = "0.21.8"
+sg2 = "0.21.8"
+sg721-base = { version = "0.21.8", features = ["library"] }
+sg721 = { version = "0.21.8", features = ["library"] }
+sg-std = "0.21.8"
+sg-marketplace = { git = "https://github.com/public-awesome/marketplace", features = ["library"] }
+thiserror = { version = "1.0.31" }
+anyhow = "1.0.51"
 
 [profile.release.package.infinity-pool]
 codegen-units = 1

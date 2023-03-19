@@ -1,3 +1,2 @@
 ignore:
-  - "contracts/infinity-pool/src/testing/*"
-  - "e2e/*"
+  - "test/.*"
