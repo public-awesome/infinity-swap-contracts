@@ -37,6 +37,7 @@
       "type": "object",
       "required": [
         "network_fee",
+        "nft_payment",
         "pool_id",
         "spot_price",
         "transaction_type"
@@ -56,14 +57,7 @@
           "$ref": "#/definitions/Uint128"
         },
         "nft_payment": {
-          "anyOf": [
-            {
-              "$ref": "#/definitions/NftPayment"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/definitions/NftPayment"
         },
         "pool_id": {
           "type": "integer",
@@ -120,8 +114,8 @@
       "description": "Defines whether the end user is buying or selling NFTs",
       "type": "string",
       "enum": [
-        "sell",
-        "buy"
+        "nfts_for_tokens",
+        "tokens_for_nfts"
       ]
     },
     "Uint128": {

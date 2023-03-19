@@ -8,7 +8,7 @@ import { Coin } from "@cosmjs/amino";
 import { MsgExecuteContractEncodeObject } from "cosmwasm";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolType, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolType, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForString, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
 export interface InfinityPoolMessage {
   contractAddress: string;
   sender: string;

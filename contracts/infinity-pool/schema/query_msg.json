@@ -92,6 +92,34 @@
       "additionalProperties": false
     },
     {
+      "description": "Retrieve the NFT token ids in a pool Return type: `NftTokenIdsResponse`",
+      "type": "object",
+      "required": [
+        "pool_nft_token_ids"
+      ],
+      "properties": {
+        "pool_nft_token_ids": {
+          "type": "object",
+          "required": [
+            "pool_id",
+            "query_options"
+          ],
+          "properties": {
+            "pool_id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "query_options": {
+              "$ref": "#/definitions/QueryOptions_for_String"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
       "description": "Retrieve pool quotes sorted by their buy quote price Return type: `PoolQuoteResponse`",
       "type": "object",
       "required": [
@@ -223,10 +251,10 @@
       "description": "Simulate a DirectSwapTokensforSpecificNfts transaction Return type: `SwapResponse`",
       "type": "object",
       "required": [
-        "sim_direct_swap_tokensfor_specific_nfts"
+        "sim_direct_swap_tokens_for_specific_nfts"
       ],
       "properties": {
-        "sim_direct_swap_tokensfor_specific_nfts": {
+        "sim_direct_swap_tokens_for_specific_nfts": {
           "type": "object",
           "required": [
             "nfts_to_swap_for",
@@ -377,6 +405,35 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        }
+      },
+      "additionalProperties": false
+    },
+    "QueryOptions_for_String": {
+      "description": "QueryOptions are used to paginate contract queries",
+      "type": "object",
+      "properties": {
+        "descending": {
+          "description": "Whether to sort items in ascending or descending order",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "limit": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "start_after": {
+          "description": "The key to start the query after",
+          "type": [
+            "string",
+            "null"
+          ]
         }
       },
       "additionalProperties": false

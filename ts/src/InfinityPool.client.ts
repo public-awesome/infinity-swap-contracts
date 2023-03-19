@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolType, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
+import { Addr, ConfigResponse, Config, ExecuteMsg, BondingCurve, Uint128, Timestamp, Uint64, NftSwap, SwapParams, PoolNftSwap, InstantiateMsg, PoolQuoteResponse, PoolQuote, Decimal, PoolType, PoolsByIdResponse, Pool, PoolsResponse, QueryMsg, QueryOptionsForUint64, QueryOptionsForString, QueryOptionsForTupleOfUint128AndUint64, TransactionType, SwapResponse, Swap, TokenPayment, NftPayment } from "./InfinityPool.types";
 export interface InfinityPoolReadOnlyInterface {
   contractAddress: string;
   config: () => Promise<ConfigResponse>;
@@ -27,6 +27,13 @@ export interface InfinityPoolReadOnlyInterface {
     owner: string;
     queryOptions: QueryOptions_for_uint64;
   }) => Promise<PoolsByOwnerResponse>;
+  poolNftTokenIds: ({
+    poolId,
+    queryOptions
+  }: {
+    poolId: number;
+    queryOptions: QueryOptionsForString;
+  }) => Promise<PoolNftTokenIdsResponse>;
   poolQuotesBuy: ({
     collection,
     queryOptions
@@ -63,7 +70,7 @@ export interface InfinityPoolReadOnlyInterface {
     sender: string;
     swapParams: SwapParams;
   }) => Promise<SimSwapNftsForTokensResponse>;
-  simDirectSwapTokensforSpecificNfts: ({
+  simDirectSwapTokensForSpecificNfts: ({
     nftsToSwapFor,
     poolId,
     sender,
@@ -73,7 +80,7 @@ export interface InfinityPoolReadOnlyInterface {
     poolId: number;
     sender: string;
     swapParams: SwapParams;
-  }) => Promise<SimDirectSwapTokensforSpecificNftsResponse>;
+  }) => Promise<SimDirectSwapTokensForSpecificNftsResponse>;
   simSwapTokensForSpecificNfts: ({
     collection,
     poolNftsToSwapFor,
@@ -108,11 +115,12 @@ export class InfinityPoolQueryClient implements InfinityPoolReadOnlyInterface {
     this.pools = this.pools.bind(this);
     this.poolsById = this.poolsById.bind(this);
     this.poolsByOwner = this.poolsByOwner.bind(this);
+    this.poolNftTokenIds = this.poolNftTokenIds.bind(this);
     this.poolQuotesBuy = this.poolQuotesBuy.bind(this);
     this.poolQuotesSell = this.poolQuotesSell.bind(this);
     this.simDirectSwapNftsForTokens = this.simDirectSwapNftsForTokens.bind(this);
     this.simSwapNftsForTokens = this.simSwapNftsForTokens.bind(this);
-    this.simDirectSwapTokensforSpecificNfts = this.simDirectSwapTokensforSpecificNfts.bind(this);
+    this.simDirectSwapTokensForSpecificNfts = this.simDirectSwapTokensForSpecificNfts.bind(this);
     this.simSwapTokensForSpecificNfts = this.simSwapTokensForSpecificNfts.bind(this);
     this.simSwapTokensForAnyNfts = this.simSwapTokensForAnyNfts.bind(this);
   }
@@ -154,6 +162,20 @@ export class InfinityPoolQueryClient implements InfinityPoolReadOnlyInterface {
     return this.client.queryContractSmart(this.contractAddress, {
       pools_by_owner: {
         owner,
+        query_options: queryOptions
+      }
+    });
+  };
+  poolNftTokenIds = async ({
+    poolId,
+    queryOptions
+  }: {
+    poolId: number;
+    queryOptions: QueryOptionsForString;
+  }): Promise<PoolNftTokenIdsResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      pool_nft_token_ids: {
+        pool_id: poolId,
         query_options: queryOptions
       }
     });
@@ -226,7 +248,7 @@ export class InfinityPoolQueryClient implements InfinityPoolReadOnlyInterface {
       }
     });
   };
-  simDirectSwapTokensforSpecificNfts = async ({
+  simDirectSwapTokensForSpecificNfts = async ({
     nftsToSwapFor,
     poolId,
     sender,
@@ -236,9 +258,9 @@ export class InfinityPoolQueryClient implements InfinityPoolReadOnlyInterface {
     poolId: number;
     sender: string;
     swapParams: SwapParams;
-  }): Promise<SimDirectSwapTokensforSpecificNftsResponse> => {
+  }): Promise<SimDirectSwapTokensForSpecificNftsResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      sim_direct_swap_tokensfor_specific_nfts: {
+      sim_direct_swap_tokens_for_specific_nfts: {
         nfts_to_swap_for: nftsToSwapFor,
         pool_id: poolId,
         sender,
