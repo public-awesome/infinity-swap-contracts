@@ -59,10 +59,10 @@ jobs:
         run: make e2e-test
 
       - name: Combine Test Gas Reports
-        run: cd e2e/ && jq -rs 'reduce .[] as $item ({}; . * $item)' gas_reports/*.json > gas_report.json
+        run: cd test/e2e/ && jq -rs 'reduce .[] as $item ({}; . * $item)' gas_reports/*.json > gas_report.json
 
       - name: Raw Gas Report
-        run: cat e2e/gas_report.json
+        run: cat test/e2e/gas_report.json
 
       - name: Set GIT_BRANCH
         run: echo "GIT_BRANCH=$(echo ${{ github.ref }} | sed 's|/|-|g')" >> $GITHUB_ENV
@@ -72,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: infinity-pool-gas-report-${{ env.GIT_BRANCH }}
-          path: e2e/gas_report.json
+          path: test/e2e/gas_report.json
           retention-days: 90
 
       - name: Download main gas report
@@ -95,5 +95,5 @@ jobs:
         uses: de-husk/cosm-orc-gas-diff-action@v0.6.3
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          current_json: e2e/gas_report.json
+          current_json: test/e2e/gas_report.json
           old_json: gas_report.json
