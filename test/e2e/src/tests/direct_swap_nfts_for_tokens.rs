@@ -52,7 +52,7 @@ fn swap_small(chain: &mut Chain) {
         300,
     );
 
-    let mut bidder_token_ids = mint_and_transfer_nfts(chain, 50, &maker, &taker_addr.to_string());
+    let mut bidder_token_ids = mint_and_transfer_nfts(chain, 50, &maker, taker_addr.as_ref());
     approve_all_nfts(
         chain,
         chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
