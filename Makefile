@@ -60,10 +60,10 @@ deploy-local-arm:
 dl-artifacts: dl-launchpad-artifacts dl-marketplace-artifacts
 
 e2e-test: deploy-local
-	RUST_LOG=info CONFIG=configs/cosm-orc.yaml cargo integration-test $(TEST_NAME)
+	RUST_LOG=info CONFIG=configs/cosm-orc.yaml RUST_BACKTRACE=1 cargo integration-test $(TEST_NAME)
 
 e2e-test-arm: deploy-local-arm
-	RUST_LOG=info CONFIG=configs/cosm-orc.yaml cargo integration-test $(TEST_NAME)
+	RUST_LOG=info CONFIG=configs/cosm-orc.yaml RUST_BACKTRACE=1 cargo integration-test $(TEST_NAME)
 
 e2e-test-full: dl-artifacts optimize e2e-test
 

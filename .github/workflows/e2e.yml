@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GAS_OUT_DIR: gas_reports
-      ENABLE_LARGE_TESTS: false
       GAS_LIMIT: 75000000
     steps:
       - name: Checkout sources

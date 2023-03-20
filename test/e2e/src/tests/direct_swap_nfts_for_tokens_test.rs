@@ -2,7 +2,7 @@ use crate::helpers::{
     chain::Chain,
     helper::{gen_users, latest_block_time},
     instantiate::instantiate_minter,
-    nft::mint_nfts,
+    nft::mint_and_transfer_nfts,
     pool::{create_pools_from_fixtures, pool_execute_message, pool_query_message},
 };
 use cosmwasm_std::Uint128;
@@ -51,7 +51,7 @@ fn swap_small(chain: &mut Chain) {
         300,
     );
 
-    let mut bidder_token_ids = mint_nfts(chain, 10, &taker);
+    let mut bidder_token_ids = mint_and_transfer_nfts(chain, 10, &maker, &taker_addr.to_string());
 
     for pool in pools.iter() {
         if !pool.can_buy_nfts() {

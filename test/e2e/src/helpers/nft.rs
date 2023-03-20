@@ -6,8 +6,9 @@ use cosm_orc::orchestrator::ExecResponse;
 use cosm_orc::orchestrator::{ExecReq, SigningKey};
 use itertools::Itertools;
 use sg721_base::ExecuteMsg as SG721ExecuteMsg;
+use std::time::Duration;
 
-const MINTS_PER_TX: usize = 15;
+const MSGS_PER_TX: usize = 15;
 const TXS_PER_BLOCK: usize = 5;
 
 pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<String> {
@@ -32,7 +33,7 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Str
 
     let chunked_chunked_reqs: Vec<Vec<Vec<ExecReq>>> = reqs
         .into_iter()
-        .chunks(MINTS_PER_TX)
+        .chunks(MSGS_PER_TX)
         .into_iter()
         .map(|chunk| chunk.collect())
         .chunks(TXS_PER_BLOCK)
@@ -64,10 +65,57 @@ pub fn mint_nfts(chain: &mut Chain, num_nfts: u32, user: &SigningKey) -> Vec<Str
         }
 
         println!("Minted {} NFTs", mint_ctr);
-        // chain
-        //     .orc
-        //     .poll_for_n_blocks(1, Duration::from_secs(10), true)
-        //     .unwrap();
+        chain
+            .orc
+            .poll_for_n_blocks(1, Duration::from_secs(10), true)
+            .unwrap();
+    }
+
+    token_ids
+}
+
+pub fn mint_and_transfer_nfts(
+    chain: &mut Chain,
+    num_nfts: u32,
+    user: &SigningKey,
+    transfer_to: &str,
+) -> Vec<String> {
+    let token_ids = mint_nfts(chain, num_nfts, user);
+
+    let mut reqs = vec![];
+    for token_id in token_ids.iter() {
+        reqs.push(ExecReq {
+            contract_name: SG721_NAME.to_string(),
+            msg: Box::new(SG721ExecuteMsg::TransferNft {
+                recipient: transfer_to.to_string(),
+                token_id: token_id.to_string(),
+            }),
+            funds: vec![],
+        });
+    }
+
+    let chunked_chunked_reqs: Vec<Vec<Vec<ExecReq>>> = reqs
+        .into_iter()
+        .chunks(MSGS_PER_TX)
+        .into_iter()
+        .map(|chunk| chunk.collect())
+        .chunks(TXS_PER_BLOCK)
+        .into_iter()
+        .map(|chunk| chunk.collect())
+        .collect();
+
+    for chunked_chunked_req in chunked_chunked_reqs {
+        for chunked_req in chunked_chunked_req {
+            let _resp = chain
+                .orc
+                .execute_batch("sg721_batch_transfer", chunked_req, user)
+                .unwrap();
+        }
+
+        chain
+            .orc
+            .poll_for_n_blocks(1, Duration::from_secs(10), true)
+            .unwrap();
     }
 
     token_ids
