@@ -813,6 +813,12 @@ pub fn execute_swap_tokens_for_any_nfts(
         &swap_params,
     )?;
 
+    if max_expected_token_input.is_empty() {
+        return Err(ContractError::InvalidInput(
+            "max expected token input must not be empty".to_string(),
+        ));
+    }
+
     // User must send enough tokens to cover the swap
     // Should be the sum of all the token amounts in max_expected_token_input
     let received_amount = must_pay(&info, NATIVE_DENOM)?;

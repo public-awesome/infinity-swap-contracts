@@ -358,6 +358,11 @@ pub fn validate_nft_swaps_for_sell(
     collection: &Addr,
     nft_swaps: &[NftSwap],
 ) -> Result<(), ContractError> {
+    if nft_swaps.is_empty() {
+        return Err(ContractError::InvalidInput(
+            "nft swaps must not be empty".to_string(),
+        ));
+    }
     for (idx, nft_swap) in nft_swaps.iter().enumerate() {
         only_nft_owner(deps, info, collection, &nft_swap.nft_token_id)?;
 
@@ -379,6 +384,11 @@ pub fn validate_nft_swaps_for_buy(
     denom: &str,
     pool_nft_swaps: &Vec<PoolNftSwap>,
 ) -> Result<Uint128, ContractError> {
+    if pool_nft_swaps.is_empty() {
+        return Err(ContractError::InvalidInput(
+            "pool nft swaps must not be empty".to_string(),
+        ));
+    }
     let mut expected_amount = Uint128::zero();
     for pool_nft_swap in pool_nft_swaps {
         for (idx, nft_swap) in pool_nft_swap.nft_swaps.iter().enumerate() {
