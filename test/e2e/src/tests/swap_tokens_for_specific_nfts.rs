@@ -78,7 +78,7 @@ fn swap_small(chain: &mut Chain) {
                     .map(|token_id| {
                         let nft_swap = NftSwap {
                             nft_token_id: token_id.to_string(),
-                            token_amount: Uint128::from(100_000u128),
+                            token_amount: Uint128::from(1_000_000u128),
                         };
                         sender_amount += nft_swap.token_amount;
                         nft_swap

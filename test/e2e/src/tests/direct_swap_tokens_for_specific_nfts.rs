@@ -89,9 +89,9 @@ fn swap_small(chain: &mut Chain) {
 
         let exec_resp = pool_execute_message(
             chain,
-            InfinityPoolExecuteMsg::DirectSwapNftsForTokens {
+            InfinityPoolExecuteMsg::DirectSwapTokensForSpecificNfts {
                 pool_id: pool.id,
-                nfts_to_swap: nfts_to_swap_for,
+                nfts_to_swap_for,
                 swap_params: SwapParams {
                     deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                     robust: false,
@@ -99,7 +99,7 @@ fn swap_small(chain: &mut Chain) {
                     finder: None,
                 },
             },
-            "infinity-pool-direct-swap-nfts-for-tokens",
+            "infinity-pool-direct-swap-tokens-for-specific-nfts",
             vec![OrcCoin {
                 amount: total_amount.u128(),
                 denom: denom.parse().unwrap(),
