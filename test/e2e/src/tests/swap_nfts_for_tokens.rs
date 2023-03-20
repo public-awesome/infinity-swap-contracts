@@ -1,9 +1,9 @@
 use crate::helpers::{
     chain::Chain,
-    constants::SG721_NAME,
+    constants::{INFINITY_POOL_NAME, SG721_NAME},
     helper::{gen_users, latest_block_time},
     instantiate::instantiate_minter,
-    nft::mint_and_transfer_nfts,
+    nft::{approve_all_nfts, mint_and_transfer_nfts},
     pool::{create_pools_from_fixtures, pool_execute_message, pool_query_message},
 };
 use cosmwasm_std::Uint128;
@@ -54,6 +54,11 @@ fn swap_small(chain: &mut Chain) {
     );
 
     let bidder_token_ids = mint_and_transfer_nfts(chain, 10, &maker, &taker_addr.to_string());
+    approve_all_nfts(
+        chain,
+        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
+        &taker,
+    );
 
     let num_swaps: u8 = 10;
 
