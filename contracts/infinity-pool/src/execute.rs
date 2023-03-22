@@ -339,7 +339,7 @@ pub fn execute_deposit_nfts(
             collection.as_ref(),
             &mut response,
         )?;
-        store_nft_deposit(deps.storage, pool.id, &nft_token_id)?;
+        store_nft_deposit(deps.storage, pool.id, nft_token_id)?;
     }
     // Track the NFTs that have been deposited into the pool
     pool.deposit_nfts(&nft_token_ids)?;

@@ -72,7 +72,7 @@ fn swap_small(chain: &mut Chain) {
             let nft_token_ids_res: NftTokenIdsResponse = pool_query_message(
                 chain,
                 InfinityPoolQueryMsg::PoolNftTokenIds {
-                    pool_id: pool.id.clone(),
+                    pool_id: pool.id,
                     query_options: QueryOptions {
                         descending: None,
                         start_after: None,

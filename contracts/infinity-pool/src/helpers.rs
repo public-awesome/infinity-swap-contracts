@@ -261,7 +261,7 @@ pub fn get_nft_deposit(
 pub fn update_nft_deposits(
     storage: &mut dyn Storage,
     contract: &Addr,
-    swaps: &Vec<Swap>,
+    swaps: &[Swap],
 ) -> Result<(), ContractError> {
     for swap in swaps.iter() {
         match swap.transaction_type {
