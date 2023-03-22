@@ -171,13 +171,13 @@ export interface Pool {
   finders_fee_percent: Decimal;
   id: number;
   is_active: boolean;
-  nft_token_ids: string[];
   owner: Addr;
   pool_type: PoolType;
   reinvest_nfts: boolean;
   reinvest_tokens: boolean;
   spot_price: Uint128;
   swap_fee_percent: Decimal;
+  total_nfts: number;
   total_tokens: Uint128;
 }
 export interface PoolsResponse {
