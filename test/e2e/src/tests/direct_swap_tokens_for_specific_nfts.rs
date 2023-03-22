@@ -122,7 +122,6 @@ fn swap_small(chain: &mut Chain) {
         let tags = exec_resp
             .res
             .find_event_tags("wasm-swap".to_string(), "pool_id".to_string());
-        println!("{:?}", tags);
         assert!(tags.len() == num_swaps as usize);
     }
 }

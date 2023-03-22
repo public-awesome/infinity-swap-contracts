@@ -242,13 +242,15 @@ pub fn verify_nft_deposit(
 }
 
 /// Grab the first NFT in a pool
-pub fn get_first_nft_deposit(
+pub fn get_nft_deposit(
     storage: &dyn Storage,
     pool_id: u64,
+    offset: u32,
 ) -> Result<Option<String>, ContractError> {
     let mut nft_token_id: Vec<String> = NFT_DEPOSITS
         .prefix(pool_id)
         .range(storage, None, None, Order::Ascending)
+        .skip(offset as usize)
         .take(1)
         .map(|item| item.map(|(nft_token_id, _)| nft_token_id))
         .collect::<StdResult<_>>()?;
