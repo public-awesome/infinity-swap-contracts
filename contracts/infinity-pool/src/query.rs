@@ -184,10 +184,7 @@ pub fn query_pool_nft_token_ids(
         .unwrap_or(DEFAULT_QUERY_LIMIT)
         .min(MAX_QUERY_LIMIT) as usize;
 
-    let start = query_options
-        .start_after
-        .as_ref()
-        .map(|offset| Bound::exclusive(offset));
+    let start = query_options.start_after.as_ref().map(Bound::exclusive);
     let order = option_bool_to_order(query_options.descending, Order::Ascending);
 
     let nft_token_ids: Vec<String> = NFT_DEPOSITS
