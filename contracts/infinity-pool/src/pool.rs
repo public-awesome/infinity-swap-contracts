@@ -3,7 +3,6 @@ use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
 use cosmwasm_std::{attr, Addr, Attribute, Decimal, Event, OverflowError, StdError, Uint128};
 use sg_marketplace::msg::ParamsResponse;
-use std::collections::BTreeSet;
 
 /// 100% represented as basis points
 const MAX_BASIS_POINTS: u128 = 10000u128;
@@ -36,7 +35,7 @@ impl Pool {
             spot_price,
             delta,
             total_tokens: Uint128::zero(),
-            nft_token_ids: BTreeSet::new(),
+            total_nfts: 0u64,
             finders_fee_percent,
             swap_fee_percent,
             is_active: false,
@@ -60,9 +59,9 @@ impl Pool {
 
         match &self.pool_type {
             PoolType::Token => {
-                if !self.nft_token_ids.is_empty() {
+                if self.total_nfts != 0 {
                     return Err(ContractError::InvalidPool(
-                        "nft_token_ids must be empty for token pool".to_string(),
+                        "total_nfts must be zero for token pool".to_string(),
                     ));
                 }
                 if self.spot_price == Uint128::zero() {
@@ -168,9 +167,7 @@ impl Pool {
                 "cannot deposit nfts into token pool".to_string(),
             ));
         }
-        for nft_token_id in nft_token_ids {
-            self.nft_token_ids.insert(nft_token_id.clone());
-        }
+        self.total_nfts += nft_token_ids.len() as u64;
         Ok(())
     }
 
@@ -199,13 +196,12 @@ impl Pool {
                 "cannot withdraw nfts from token pool".to_string(),
             ));
         }
-        for nft_token_id in nft_token_ids {
-            if !self.nft_token_ids.remove(nft_token_id) {
-                return Err(ContractError::InvalidPool(
-                    "nft_token_id not found in pool".to_string(),
-                ));
-            }
+        if self.total_nfts < nft_token_ids.len() as u64 {
+            return Err(ContractError::InternalError(
+                "pool NFT overdraw".to_string(),
+            ));
         }
+        self.total_nfts -= nft_token_ids.len() as u64;
         Ok(())
     }
 
@@ -246,7 +242,7 @@ impl Pool {
                 }
                 BondingCurve::ConstantProduct => self
                     .total_tokens
-                    .checked_div(Uint128::from(self.nft_token_ids.len() as u64 + 1))
+                    .checked_div(Uint128::from(self.total_nfts + 1))
                     .map_err(|e| ContractError::Std(StdError::divide_by_zero(e))),
             },
         }?;
@@ -266,17 +262,17 @@ impl Pool {
             ));
         }
         // If the pool has no NFTs to sell, return None
-        if self.nft_token_ids.is_empty() {
+        if self.total_nfts == 0 {
             return Ok(None);
         }
         let sell_price = match self.bonding_curve {
             BondingCurve::Linear | BondingCurve::Exponential => self.spot_price,
             BondingCurve::ConstantProduct => {
-                if self.nft_token_ids.len() < 2 {
+                if self.total_nfts < 2 {
                     return Ok(None);
                 }
                 self.total_tokens
-                    .checked_div(Uint128::from(self.nft_token_ids.len() as u64 - 1))
+                    .checked_div(Uint128::from(self.total_nfts - 1))
                     .unwrap()
             }
         };
@@ -308,13 +304,13 @@ impl Pool {
             ));
         }
 
-        // Remove the nft_token_id from the pool
-        // Also, if pool does not own the NFT, return an error
-        if !self.nft_token_ids.remove(&nft_swap.nft_token_id) {
-            return Err(ContractError::SwapError(format!(
-                "pool does not own NFT {}",
-                nft_swap.nft_token_id
-            )));
+        // Decrement total_nfts on pool
+        if self.total_nfts == 0 {
+            return Err(ContractError::SwapError(
+                "pool does not own any NFTS".to_string(),
+            ));
+        } else {
+            self.total_nfts -= 1;
         }
 
         Ok(())
@@ -369,7 +365,7 @@ impl Pool {
                 }
                 BondingCurve::ConstantProduct => self
                     .total_tokens
-                    .checked_div(Uint128::from(self.nft_token_ids.len() as u64))
+                    .checked_div(Uint128::from(self.total_nfts))
                     .map_err(|e| StdError::DivideByZero { source: e }),
             },
             TransactionType::NftsForTokens => match self.bonding_curve {
@@ -390,7 +386,7 @@ impl Pool {
                 }
                 BondingCurve::ConstantProduct => self
                     .total_tokens
-                    .checked_div(Uint128::from(self.nft_token_ids.len() as u64))
+                    .checked_div(Uint128::from(self.total_nfts))
                     .map_err(|e| StdError::DivideByZero { source: e }),
             },
         };
@@ -453,7 +449,7 @@ impl Pool {
                 "spot_price" => attr("spot_price", self.spot_price.to_string()),
                 "delta" => attr("delta", self.delta.to_string()),
                 "total_tokens" => attr("total_tokens", self.total_tokens.to_string()),
-                "total_nfts" => attr("total_nfts", self.nft_token_ids.len().to_string()),
+                "total_nfts" => attr("total_nfts", self.total_nfts.to_string()),
                 "is_active" => attr("is_active", self.is_active.to_string()),
                 "swap_fee_percent" => attr("swap_fee_percent", self.swap_fee_percent.to_string()),
                 "finders_fee_percent" => {

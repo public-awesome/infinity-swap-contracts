@@ -1,13 +1,11 @@
 use crate::error::ContractError;
-use crate::helpers::{transfer_nft, transfer_token};
+use crate::helpers::{get_first_nft_deposit, transfer_nft, transfer_token, verify_nft_deposit};
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType};
 
 use core::cmp::Ordering;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{
-    attr, coin, Addr, ContractInfo, Decimal, Event, Order, StdResult, Storage, Uint128,
-};
+use cosmwasm_std::{attr, coin, Addr, Decimal, Event, Order, StdResult, Storage, Uint128};
 use sg1::fair_burn;
 use sg721::RoyaltyInfoResponse;
 use sg_std::{Response, NATIVE_DENOM};
@@ -122,8 +120,8 @@ type IterResults = StdResult<(u64, PoolQuote)>;
 pub struct SwapProcessor<'a> {
     /// The type of transaction (buy or sell)
     tx_type: TransactionType,
-    /// Contract info for this contract
-    contract_info: ContractInfo,
+    /// The address of this contract
+    contract: Addr,
     /// The address of the NFT collection
     collection: Addr,
     /// The sender address
@@ -160,7 +158,7 @@ impl<'a> SwapProcessor<'a> {
     /// Creates a new SwapProcessor object
     pub fn new(
         tx_type: TransactionType,
-        contract_info: ContractInfo,
+        contract: Addr,
         collection: Addr,
         sender: Addr,
         remaining_balance: Uint128,
@@ -173,7 +171,7 @@ impl<'a> SwapProcessor<'a> {
     ) -> Self {
         Self {
             tx_type,
-            contract_info,
+            contract,
             collection,
             sender,
             remaining_balance,
@@ -264,14 +262,14 @@ impl<'a> SwapProcessor<'a> {
     ) -> Result<(PoolQueueItem, bool), ContractError> {
         let mut pool_queue_item = pool_queue_item;
 
-        // Withdraw assets from the pool
+        // Manage pool assets for swap
         let result = match self.tx_type {
-            TransactionType::TokensForNfts => pool_queue_item
-                .pool
-                .buy_nft_from_pool(&nft_swap, pool_queue_item.quote_price),
             TransactionType::NftsForTokens => pool_queue_item
                 .pool
                 .sell_nft_to_pool(&nft_swap, pool_queue_item.quote_price),
+            TransactionType::TokensForNfts => pool_queue_item
+                .pool
+                .buy_nft_from_pool(&nft_swap, pool_queue_item.quote_price),
         };
         match result {
             Ok(_) => {}
@@ -305,7 +303,7 @@ impl<'a> SwapProcessor<'a> {
             } else if self.tx_type == TransactionType::NftsForTokens
                 && pool_queue_item.pool.reinvest_nfts
             {
-                swap.nft_payment.address = self.contract_info.address.to_string();
+                swap.nft_payment.address = self.contract.to_string();
                 pool_queue_item
                     .pool
                     .deposit_nfts(&vec![swap.nft_payment.nft_token_id.clone()])?;
@@ -644,6 +642,20 @@ impl<'a> SwapProcessor<'a> {
             for nft_swap in pool_nfts.nft_swaps {
                 let pool_queue_item = pool_queue_item_map.remove(&pool_nfts.pool_id).unwrap();
 
+                // Check if specified NFT is deposited into pool
+                let pool_owns_nft =
+                    verify_nft_deposit(storage, pool_nfts.pool_id, &nft_swap.nft_token_id)?;
+                if !pool_owns_nft {
+                    if swap_params.robust {
+                        break;
+                    } else {
+                        return Err(ContractError::SwapError(format!(
+                            "pool {} does not own NFT {}",
+                            pool_queue_item.pool.id, nft_swap.nft_token_id
+                        )));
+                    }
+                }
+
                 let (pool_queue_item, success) =
                     self.process_swap(pool_queue_item, nft_swap, swap_params.robust)?;
 
@@ -691,17 +703,18 @@ impl<'a> SwapProcessor<'a> {
             let pool_queue_item = pool_queue_item_option.unwrap();
             {
                 // Grab first NFT from the pool
-                let nft_token_id = pool_queue_item
-                    .pool
-                    .nft_token_ids
-                    .first()
-                    .unwrap()
-                    .to_string();
+                let nft_token_id = get_first_nft_deposit(storage, pool_queue_item.pool.id)?;
+                if nft_token_id.is_none() {
+                    return Err(ContractError::SwapError(format!(
+                        "pool {} does not own any NFTs",
+                        pool_queue_item.pool.id
+                    )));
+                }
 
                 let (pool_queue_item, success) = self.process_swap(
                     pool_queue_item,
                     NftSwap {
-                        nft_token_id,
+                        nft_token_id: nft_token_id.unwrap(),
                         token_amount,
                     },
                     swap_params.robust,

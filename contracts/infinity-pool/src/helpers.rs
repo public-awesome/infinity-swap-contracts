@@ -1,7 +1,9 @@
-use crate::msg::{NftSwap, PoolNftSwap, SwapParams};
+use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
 use crate::state::{
-    buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Pool, PoolQuote, CONFIG, POOL_COUNTER,
+    buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Pool, PoolQuote, CONFIG, NFT_DEPOSITS,
+    POOL_COUNTER,
 };
+use crate::swap_processor::Swap;
 use crate::ContractError;
 use cosmwasm_std::{
     to_binary, Addr, BankMsg, BlockInfo, Coin, Deps, Empty, Event, MessageInfo, Order, StdResult,
@@ -15,6 +17,7 @@ use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::Response;
+use std::collections::BTreeSet;
 use std::marker::PhantomData;
 
 /// Load the marketplace params for use within the contract
@@ -153,11 +156,13 @@ pub fn update_sell_pool_quotes(
 pub fn force_property_values(pool: &mut Pool) -> Result<(), ContractError> {
     if pool.bonding_curve == BondingCurve::ConstantProduct {
         pool.delta = Uint128::zero();
-        let num_nfts = Uint128::from(pool.nft_token_ids.len() as u64);
-        if num_nfts == Uint128::zero() {
+        if pool.total_nfts == 0u64 {
             pool.spot_price = Uint128::zero();
         } else {
-            pool.spot_price = pool.total_tokens.checked_div(num_nfts).unwrap();
+            pool.spot_price = pool
+                .total_tokens
+                .checked_div(Uint128::from(pool.total_nfts))
+                .unwrap();
         }
     };
     Ok(())
@@ -210,6 +215,65 @@ pub fn remove_pool(
     pools().remove(store, pool.id)?;
 
     Ok(response)
+}
+
+/// Store NFT deposit
+pub fn store_nft_deposit(
+    storage: &mut dyn Storage,
+    pool_id: u64,
+    nft_token_id: &str,
+) -> StdResult<()> {
+    NFT_DEPOSITS.save(storage, (pool_id, nft_token_id.to_string()), &true)
+}
+
+/// Remove NFT deposit
+pub fn remove_nft_deposit(storage: &mut dyn Storage, pool_id: u64, nft_token_id: &str) {
+    NFT_DEPOSITS.remove(storage, (pool_id, nft_token_id.to_string()))
+}
+
+/// Verify NFT is deposited into pool
+pub fn verify_nft_deposit(
+    storage: &dyn Storage,
+    pool_id: u64,
+    nft_token_id: &str,
+) -> Result<bool, ContractError> {
+    let result = NFT_DEPOSITS.may_load(storage, (pool_id, nft_token_id.to_string()))?;
+    Ok(result.is_some())
+}
+
+/// Grab the first NFT in a pool
+pub fn get_first_nft_deposit(
+    storage: &dyn Storage,
+    pool_id: u64,
+) -> Result<Option<String>, ContractError> {
+    let mut nft_token_id: Vec<String> = NFT_DEPOSITS
+        .prefix(pool_id)
+        .range(storage, None, None, Order::Ascending)
+        .take(1)
+        .map(|item| item.map(|(nft_token_id, _)| nft_token_id))
+        .collect::<StdResult<_>>()?;
+    Ok(nft_token_id.pop())
+}
+
+/// Process swaps for NFT deposit changes
+pub fn update_nft_deposits(
+    storage: &mut dyn Storage,
+    contract: &Addr,
+    swaps: &Vec<Swap>,
+) -> Result<(), ContractError> {
+    for swap in swaps.iter() {
+        match swap.transaction_type {
+            TransactionType::NftsForTokens => {
+                if &swap.nft_payment.address == contract {
+                    store_nft_deposit(storage, swap.pool_id, &swap.nft_payment.nft_token_id)?;
+                }
+            }
+            TransactionType::TokensForNfts => {
+                remove_nft_deposit(storage, swap.pool_id, &swap.nft_payment.nft_token_id)
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Push the transfer NFT message on the NFT collection contract
@@ -363,8 +427,15 @@ pub fn validate_nft_swaps_for_sell(
             "nft swaps must not be empty".to_string(),
         ));
     }
+    let mut uniq_nft_token_ids: BTreeSet<String> = BTreeSet::new();
     for (idx, nft_swap) in nft_swaps.iter().enumerate() {
         only_nft_owner(deps, info, collection, &nft_swap.nft_token_id)?;
+        if uniq_nft_token_ids.contains(&nft_swap.nft_token_id) {
+            return Err(ContractError::InvalidInput(
+                "found duplicate nft token id".to_string(),
+            ));
+        }
+        uniq_nft_token_ids.insert(nft_swap.nft_token_id.clone());
 
         if idx == 0 {
             continue;
@@ -390,8 +461,17 @@ pub fn validate_nft_swaps_for_buy(
         ));
     }
     let mut expected_amount = Uint128::zero();
+    let mut uniq_nft_token_ids: BTreeSet<String> = BTreeSet::new();
+
     for pool_nft_swap in pool_nft_swaps {
         for (idx, nft_swap) in pool_nft_swap.nft_swaps.iter().enumerate() {
+            if uniq_nft_token_ids.contains(&nft_swap.nft_token_id) {
+                return Err(ContractError::InvalidInput(
+                    "found duplicate nft token id".to_string(),
+                ));
+            }
+            uniq_nft_token_ids.insert(nft_swap.nft_token_id.clone());
+
             expected_amount += nft_swap.token_amount;
             if idx == 0 {
                 continue;
@@ -403,6 +483,7 @@ pub fn validate_nft_swaps_for_buy(
             }
         }
     }
+
     let received_amount = must_pay(info, denom)?;
     if received_amount != expected_amount {
         return Err(ContractError::InsufficientFunds(format!(
