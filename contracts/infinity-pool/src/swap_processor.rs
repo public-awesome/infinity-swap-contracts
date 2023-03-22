@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::helpers::{get_first_nft_deposit, transfer_nft, transfer_token, verify_nft_deposit};
+use crate::helpers::{get_nft_deposit, transfer_nft, transfer_token, verify_nft_deposit};
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
 use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType};
 
@@ -18,10 +18,16 @@ pub struct PoolQueueItem {
     pub pool: Pool,
     /// The price at which to perform the swap
     pub quote_price: Uint128,
-    /// When true, the pool will be saved to storage at the end of the transaction
-    pub needs_saving: bool,
     /// Used to indicate whether the pool can continue to process swaps
     pub usable: bool,
+    /// Number of swaps processed
+    pub num_swaps: u32,
+}
+
+impl PoolQueueItem {
+    fn needs_saving(&self) -> bool {
+        self.num_swaps > 0
+    }
 }
 
 impl Ord for PoolQueueItem {
@@ -312,7 +318,7 @@ impl<'a> SwapProcessor<'a> {
         self.swaps.push(swap);
 
         // Pool needs saving past this point
-        pool_queue_item.needs_saving = true;
+        pool_queue_item.num_swaps += 1;
 
         // Update the pool spot price
         let result = pool_queue_item.pool.update_spot_price(&self.tx_type);
@@ -408,7 +414,7 @@ impl<'a> SwapProcessor<'a> {
     fn move_pools(&mut self) {
         let mut pool_queue_item = self.pool_queue.pop_first();
         while let Some(_pool_queue_item) = pool_queue_item {
-            if _pool_queue_item.needs_saving {
+            if _pool_queue_item.needs_saving() {
                 self.pools_to_save
                     .insert(_pool_queue_item.pool.id, _pool_queue_item.pool);
             }
@@ -452,11 +458,10 @@ impl<'a> SwapProcessor<'a> {
                 })?;
 
                 self.pool_queue.insert(PoolQueueItem {
-                    // Recently fetched pools do not need saving yet
                     pool,
                     quote_price: pool_quote.quote_price,
-                    needs_saving: false,
                     usable: true,
+                    num_swaps: 0,
                 });
                 self.latest = Some(pool_id);
             }
@@ -524,8 +529,8 @@ impl<'a> SwapProcessor<'a> {
         let mut pool_queue_item = PoolQueueItem {
             pool,
             quote_price: quote_price.unwrap(),
-            needs_saving: false,
             usable: true,
+            num_swaps: 0,
         };
         let mut success: bool;
 
@@ -538,7 +543,7 @@ impl<'a> SwapProcessor<'a> {
                 break;
             }
         }
-        if pool_queue_item.needs_saving {
+        if pool_queue_item.needs_saving() {
             self.pools_to_save
                 .insert(pool_queue_item.pool.id, pool_queue_item.pool);
         }
@@ -632,8 +637,8 @@ impl<'a> SwapProcessor<'a> {
                     PoolQueueItem {
                         pool,
                         quote_price: quote_price.unwrap(),
-                        needs_saving: false,
                         usable: true,
+                        num_swaps: 0,
                     },
                 );
             }
@@ -678,7 +683,7 @@ impl<'a> SwapProcessor<'a> {
 
         // Move all pools that need saving from pool_queue_item_map into pools_to_save
         for (_, pool_queue_item) in pool_queue_item_map.into_iter() {
-            if pool_queue_item.needs_saving {
+            if pool_queue_item.needs_saving() {
                 self.pools_to_save
                     .insert(pool_queue_item.pool.id, pool_queue_item.pool);
             }
@@ -703,7 +708,8 @@ impl<'a> SwapProcessor<'a> {
             let pool_queue_item = pool_queue_item_option.unwrap();
             {
                 // Grab first NFT from the pool
-                let nft_token_id = get_first_nft_deposit(storage, pool_queue_item.pool.id)?;
+                let nft_token_id =
+                    get_nft_deposit(storage, pool_queue_item.pool.id, pool_queue_item.num_swaps)?;
                 if nft_token_id.is_none() {
                     return Err(ContractError::SwapError(format!(
                         "pool {} does not own any NFTs",

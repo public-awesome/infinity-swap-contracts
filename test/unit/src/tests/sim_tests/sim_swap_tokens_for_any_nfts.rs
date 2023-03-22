@@ -604,6 +604,5 @@ fn constant_product_pools_with_little_nfts() {
         &exec_msg,
         &coins(funds.u128(), NATIVE_DENOM),
     );
-
     assert!(exec_res.is_ok());
 }

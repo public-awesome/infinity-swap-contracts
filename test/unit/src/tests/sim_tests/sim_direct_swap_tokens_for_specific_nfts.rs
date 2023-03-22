@@ -378,8 +378,8 @@ fn incorrect_nfts_error() {
             res.unwrap_err(),
             StdError::GenericErr {
                 msg: format!(
-                    "Querier contract error: Generic error: Swap error: pool does not own NFT {}",
-                    nfts_to_swap_for[0].nft_token_id
+                    "Querier contract error: Generic error: Swap error: pool {} does not own NFT {}",
+                    pool.id, nfts_to_swap_for[0].nft_token_id
                 )
                 .to_string()
             }
