@@ -4,7 +4,10 @@ use crate::helpers::swap_functions::{setup_swap_test, validate_swap_outcome, Swa
 use crate::helpers::utils::get_native_balances;
 use cosmwasm_std::{coins, Addr, Timestamp, Uint128};
 use cw_multi_test::Executor;
-use infinity_pool::msg::{ExecuteMsg, NftSwap, PoolNftSwap, QueryMsg, SwapParams, SwapResponse};
+use infinity_pool::msg::{
+    ExecuteMsg, NftSwap, NftTokenIdsResponse, PoolNftSwap, QueryMsg, QueryOptions, SwapParams,
+    SwapResponse,
+};
 use infinity_pool::state::Pool;
 use itertools::Itertools;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
@@ -87,12 +90,26 @@ fn correct_swap_simple() {
 
         let swaps_per_chunk: u8 = 3;
         for pool in &chunk {
+            let nft_token_ids_response: NftTokenIdsResponse = router
+                .wrap()
+                .query_wasm_smart(
+                    infinity_pool.clone(),
+                    &QueryMsg::PoolNftTokenIds {
+                        pool_id: pool.id,
+                        query_options: QueryOptions {
+                            descending: None,
+                            start_after: None,
+                            limit: Some(swaps_per_chunk as u32),
+                        },
+                    },
+                )
+                .unwrap();
+
             pool_nfts_to_swap_for.push(PoolNftSwap {
                 pool_id: pool.id,
-                nft_swaps: pool
+                nft_swaps: nft_token_ids_response
                     .nft_token_ids
                     .iter()
-                    .take(swaps_per_chunk as usize)
                     .map(|token_id| {
                         let nft_swap = NftSwap {
                             nft_token_id: token_id.to_string(),

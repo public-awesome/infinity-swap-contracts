@@ -4,7 +4,9 @@ use crate::helpers::swap_functions::{setup_swap_test, validate_swap_outcome, Swa
 use crate::helpers::utils::get_native_balances;
 use cosmwasm_std::{coins, Addr, Timestamp, Uint128};
 use cw_multi_test::Executor;
-use infinity_pool::msg::{ExecuteMsg, NftSwap, QueryMsg, SwapParams, SwapResponse};
+use infinity_pool::msg::{
+    ExecuteMsg, NftSwap, NftTokenIdsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
+};
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
 use test_suite::common_setup::msg::VendingTemplateResponse;
@@ -76,7 +78,21 @@ fn correct_swap_simple() {
             continue;
         }
         let num_swaps = 3u8;
-        let nfts_to_swap_for: Vec<NftSwap> = pool
+        let nft_token_ids_response: NftTokenIdsResponse = router
+            .wrap()
+            .query_wasm_smart(
+                infinity_pool.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(num_swaps as u32),
+                    },
+                },
+            )
+            .unwrap();
+        let nfts_to_swap_for: Vec<NftSwap> = nft_token_ids_response
             .nft_token_ids
             .clone()
             .into_iter()

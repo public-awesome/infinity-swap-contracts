@@ -14,7 +14,7 @@ use infinity_pool::msg::{
 };
 use infinity_pool::state::Pool;
 use infinity_pool::state::{BondingCurve, PoolType};
-use std::{collections::BTreeSet, env};
+use std::env;
 use test_context::test_context;
 
 #[test_context(Chain)]
@@ -140,7 +140,7 @@ fn test_small_pool_creation(chain: &mut Chain) {
             spot_price: Uint128::from(500_000u128),
             delta: Uint128::zero(),
             total_tokens: Uint128::new(1000000u128),
-            nft_token_ids: BTreeSet::from_iter(token_ids.into_iter()),
+            total_nfts: token_ids.len() as u64,
             finders_fee_percent: Decimal::zero(),
             swap_fee_percent: Decimal::new(Uint128::from(1000000000000000000u128)),
             is_active: true,
@@ -320,7 +320,7 @@ fn test_large_pool_creation(chain: &mut Chain) {
             spot_price: Uint128::new(pool_deposit_amount) / Uint128::from(token_ids.len() as u64),
             delta: Uint128::zero(),
             total_tokens: Uint128::new(pool_deposit_amount),
-            nft_token_ids: BTreeSet::from_iter(token_ids.into_iter()),
+            total_nfts: token_ids.len() as u64,
             finders_fee_percent: Decimal::zero(),
             swap_fee_percent: Decimal::new(Uint128::from(100u64)),
             is_active: true,

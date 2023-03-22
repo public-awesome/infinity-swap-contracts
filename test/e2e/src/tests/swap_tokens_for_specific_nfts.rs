@@ -8,8 +8,8 @@ use crate::helpers::{
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::Uint128;
 use infinity_pool::msg::{
-    ExecuteMsg as InfinityPoolExecuteMsg, NftSwap, PoolNftSwap, QueryMsg as InfinityPoolQueryMsg,
-    SwapParams, SwapResponse,
+    ExecuteMsg as InfinityPoolExecuteMsg, NftSwap, NftTokenIdsResponse, PoolNftSwap,
+    QueryMsg as InfinityPoolQueryMsg, QueryOptions, SwapParams, SwapResponse,
 };
 use infinity_pool::state::Pool;
 use itertools::Itertools;
@@ -69,9 +69,21 @@ fn swap_small(chain: &mut Chain) {
 
         let swaps_per_chunk: u8 = 3;
         for pool in &chunk {
+            let nft_token_ids_res: NftTokenIdsResponse = pool_query_message(
+                chain,
+                InfinityPoolQueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id.clone(),
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(swaps_per_chunk as u32),
+                    },
+                },
+            );
+
             pool_nfts_to_swap_for.push(PoolNftSwap {
                 pool_id: pool.id,
-                nft_swaps: pool
+                nft_swaps: nft_token_ids_res
                     .nft_token_ids
                     .iter()
                     .take(swaps_per_chunk as usize)
