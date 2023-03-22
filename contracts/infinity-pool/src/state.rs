@@ -1,7 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex};
-use std::collections::BTreeSet;
+use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use std::fmt;
 
 /// An incrementing uint used as the primary key for pools
@@ -78,8 +77,8 @@ pub struct Pool {
     pub delta: Uint128,
     /// The total amount of tokens held by the pool
     pub total_tokens: Uint128,
-    /// The token ids of the NFTs held by the pool    
-    pub nft_token_ids: BTreeSet<String>,
+    /// The total number of NFTs held by the pool
+    pub total_nfts: u64,
     /// The percentage of the swap that will be paid to the finder of a trade
     pub finders_fee_percent: Decimal,
     /// The percentage of the swap that will be paid to the pool owner
@@ -175,3 +174,9 @@ pub fn sell_pool_quotes<'a>() -> IndexedMap<'a, u64, PoolQuote, SellPoolQuoteInd
     };
     IndexedMap::new("sell_pool_quotes", indexes)
 }
+
+/// NftDepositKey is comprised of the pool id and the token id
+pub type NftDepositKey = (u64, String);
+
+/// Nft deposits are used to track the NFTs that have been deposited into a pool
+pub const NFT_DEPOSITS: Map<NftDepositKey, bool> = Map::new("nft_deposits");

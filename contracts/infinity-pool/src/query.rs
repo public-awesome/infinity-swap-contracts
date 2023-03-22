@@ -4,7 +4,7 @@ use crate::msg::{
     PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
     TransactionType,
 };
-use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, PoolQuote, CONFIG};
+use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, PoolQuote, CONFIG, NFT_DEPOSITS};
 use crate::swap_processor::SwapProcessor;
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, Deps, Env, Order, StdError, StdResult, Uint128,
@@ -179,19 +179,23 @@ pub fn query_pool_nft_token_ids(
     pool_id: u64,
     query_options: QueryOptions<String>,
 ) -> StdResult<NftTokenIdsResponse> {
-    let pool = pools().load(deps.storage, pool_id)?;
-
     let limit = query_options
         .limit
         .unwrap_or(DEFAULT_QUERY_LIMIT)
         .min(MAX_QUERY_LIMIT) as usize;
 
-    let mut nft_token_ids_iter = pool.nft_token_ids.into_iter();
+    let start = query_options
+        .start_after
+        .as_ref()
+        .map(|offset| Bound::exclusive(offset));
+    let order = option_bool_to_order(query_options.descending, Order::Ascending);
 
-    if let Some(_start_after) = query_options.start_after {
-        nft_token_ids_iter.find(|nft_token_id| nft_token_id == &_start_after);
-    }
-    let nft_token_ids = nft_token_ids_iter.take(limit).collect();
+    let nft_token_ids: Vec<String> = NFT_DEPOSITS
+        .prefix(pool_id)
+        .range(deps.storage, start, None, order)
+        .take(limit)
+        .map(|item| item.map(|(nft_token_id, _)| nft_token_id))
+        .collect::<StdResult<_>>()?;
 
     Ok(NftTokenIdsResponse {
         pool_id,
@@ -268,7 +272,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
 
     let mut processor = SwapProcessor::new(
         TransactionType::NftsForTokens,
-        env.contract,
+        env.contract.address,
         pool.collection.clone(),
         sender,
         Uint128::zero(),
@@ -304,7 +308,7 @@ pub fn sim_swap_nfts_for_tokens(
 
     let mut processor = SwapProcessor::new(
         TransactionType::NftsForTokens,
-        env.contract,
+        env.contract.address,
         collection,
         sender,
         Uint128::zero(),
@@ -370,7 +374,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
 
     let mut processor = SwapProcessor::new(
         TransactionType::TokensForNfts,
-        env.contract,
+        env.contract.address,
         collection,
         sender,
         spend_amount.into(),
@@ -408,7 +412,7 @@ pub fn sim_swap_tokens_for_any_nfts(
 
     let mut processor = SwapProcessor::new(
         TransactionType::TokensForNfts,
-        env.contract,
+        env.contract.address,
         collection,
         sender,
         total_tokens,

@@ -1,12 +1,13 @@
 use crate::error::ContractError;
 use crate::helpers::{
-    get_next_pool_counter, load_marketplace_params, only_nft_owner, only_owner, prep_for_swap,
-    remove_pool, save_pool, save_pools, transfer_nft, transfer_token, validate_nft_swaps_for_buy,
-    validate_nft_swaps_for_sell,
+    get_next_pool_counter, load_marketplace_params, only_owner, prep_for_swap, remove_nft_deposit,
+    remove_pool, save_pool, save_pools, store_nft_deposit, transfer_nft, transfer_token,
+    update_nft_deposits, validate_nft_swaps_for_buy, validate_nft_swaps_for_sell,
 };
-use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, SwapParams, TransactionType};
+use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, QueryOptions, SwapParams, TransactionType};
+use crate::query::query_pool_nft_token_ids;
 use crate::state::{pools, BondingCurve, Pool, PoolType, CONFIG};
-use crate::swap_processor::SwapProcessor;
+use crate::swap_processor::{Swap, SwapProcessor};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -332,13 +333,13 @@ pub fn execute_deposit_nfts(
     // Push the NFT transfer messages
     let mut response = Response::new();
     for nft_token_id in &nft_token_ids {
-        only_nft_owner(deps.as_ref(), &info, &collection, nft_token_id)?;
         transfer_nft(
             nft_token_id,
             env.contract.address.as_ref(),
             collection.as_ref(),
             &mut response,
         )?;
+        store_nft_deposit(deps.storage, pool.id, &nft_token_id)?;
     }
     // Track the NFTs that have been deposited into the pool
     pool.deposit_nfts(&nft_token_ids)?;
@@ -348,7 +349,7 @@ pub fn execute_deposit_nfts(
 
     let event = Event::new("deposit-nfts").add_attributes(vec![
         attr("pool_id", pool.id.to_string()),
-        attr("total_nfts", pool.nft_token_ids.len().to_string()),
+        attr("total_nfts", pool.total_nfts.to_string()),
         attr("nft_token_ids", nft_token_ids.join(",")),
     ]);
 
@@ -429,6 +430,7 @@ pub fn execute_withdraw_nfts(
             pool.collection.as_ref(),
             &mut response,
         )?;
+        remove_nft_deposit(deps.storage, pool_id, nft_token_id);
     }
     // Track the NFTs that have been withdrawn from the pool
     pool.withdraw_nfts(&nft_token_ids)?;
@@ -438,7 +440,7 @@ pub fn execute_withdraw_nfts(
 
     let event = Event::new("withdraw-nfts").add_attributes(vec![
         attr("pool_id", pool.id.to_string()),
-        attr("total_nfts", pool.nft_token_ids.len().to_string()),
+        attr("total_nfts", pool.total_nfts.to_string()),
         attr("nft_token_ids", nft_token_ids.join(",")),
     ]);
     response = response.add_event(event);
@@ -453,16 +455,24 @@ pub fn execute_withdraw_all_nfts(
     pool_id: u64,
     asset_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
-    let pool = pools().load(deps.storage, pool_id)?;
-
     let withdrawal_batch_size: u8 = 10;
-    let nft_token_ids = pool
-        .nft_token_ids
-        .into_iter()
-        .take(withdrawal_batch_size as usize)
-        .collect();
+    let token_id_response = query_pool_nft_token_ids(
+        deps.as_ref(),
+        pool_id,
+        QueryOptions {
+            descending: None,
+            start_after: None,
+            limit: Some(withdrawal_batch_size as u32),
+        },
+    )?;
 
-    execute_withdraw_nfts(deps, info, pool_id, nft_token_ids, asset_recipient)
+    execute_withdraw_nfts(
+        deps,
+        info,
+        pool_id,
+        token_id_response.nft_token_ids,
+        asset_recipient,
+    )
 }
 
 /// Execute an UpdatePoolConfig message
@@ -566,16 +576,10 @@ pub fn execute_remove_pool(
     only_owner(&info, &pool)?;
 
     // Pools that hold NFTs cannot be removed
-    if !pool.nft_token_ids.is_empty() {
-        let all_nft_token_ids = pool
-            .nft_token_ids
-            .iter()
-            .map(|id| id.to_string())
-            .collect::<Vec<String>>()
-            .join(",");
+    if pool.total_nfts > 0 {
         return Err(ContractError::UnableToRemovePool(format!(
-            "pool {} still has NFTs: {}",
-            pool_id, all_nft_token_ids
+            "pool {} still has NFTs",
+            pool_id
         )));
     }
 
@@ -626,11 +630,12 @@ pub fn execute_direct_swap_nfts_for_tokens(
 
     let mut response = Response::new();
     let mut pools_to_save: Vec<Pool>;
+    let swaps: Vec<Swap>;
 
     {
         let mut processor = SwapProcessor::new(
             TransactionType::NftsForTokens,
-            env.contract,
+            env.contract.address.clone(),
             pool.collection.clone(),
             info.sender,
             Uint128::zero(),
@@ -647,9 +652,11 @@ pub fn execute_direct_swap_nfts_for_tokens(
         processor.direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)?;
         processor.finalize_transaction(&mut response)?;
         response = response.add_events(processor.get_transaction_events());
+        swaps = processor.swaps;
         pools_to_save = processor.pools_to_save.into_values().collect();
     }
 
+    update_nft_deposits(deps.storage, &env.contract.address, &swaps)?;
     response = save_pools(
         deps.storage,
         pools_to_save.iter_mut().collect(),
@@ -683,11 +690,12 @@ pub fn execute_swap_nfts_for_tokens(
 
     let mut response = Response::new();
     let mut pools_to_save: Vec<Pool>;
+    let swaps: Vec<Swap>;
 
     {
         let mut processor = SwapProcessor::new(
             TransactionType::NftsForTokens,
-            env.contract,
+            env.contract.address.clone(),
             collection,
             info.sender,
             Uint128::zero(),
@@ -704,9 +712,11 @@ pub fn execute_swap_nfts_for_tokens(
         processor.swap_nfts_for_tokens(deps.as_ref().storage, nfts_to_swap, swap_params)?;
         processor.finalize_transaction(&mut response)?;
         response = response.add_events(processor.get_transaction_events());
+        swaps = processor.swaps;
         pools_to_save = processor.pools_to_save.into_values().collect();
     }
 
+    update_nft_deposits(deps.storage, &env.contract.address, &swaps)?;
     response = save_pools(
         deps.storage,
         pools_to_save.iter_mut().collect(),
@@ -762,11 +772,12 @@ pub fn execute_swap_tokens_for_specific_nfts(
 
     let mut response = Response::new();
     let mut pools_to_save: Vec<Pool>;
+    let swaps: Vec<Swap>;
 
     {
         let mut processor = SwapProcessor::new(
             TransactionType::TokensForNfts,
-            env.contract,
+            env.contract.address.clone(),
             collection,
             info.sender,
             received_amount,
@@ -783,9 +794,11 @@ pub fn execute_swap_tokens_for_specific_nfts(
         processor.swap_tokens_for_specific_nfts(deps.storage, nfts_to_swap_for, swap_params)?;
         processor.finalize_transaction(&mut response)?;
         response = response.add_events(processor.get_transaction_events());
+        swaps = processor.swaps;
         pools_to_save = processor.pools_to_save.into_values().collect();
     }
 
+    update_nft_deposits(deps.storage, &env.contract.address, &swaps)?;
     response = save_pools(
         deps.storage,
         pools_to_save.iter_mut().collect(),
@@ -834,11 +847,12 @@ pub fn execute_swap_tokens_for_any_nfts(
 
     let mut response = Response::new();
     let mut pools_to_save: Vec<Pool>;
+    let swaps: Vec<Swap>;
 
     {
         let mut processor = SwapProcessor::new(
             TransactionType::TokensForNfts,
-            env.contract,
+            env.contract.address.clone(),
             collection,
             info.sender,
             received_amount,
@@ -855,9 +869,11 @@ pub fn execute_swap_tokens_for_any_nfts(
         processor.swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)?;
         processor.finalize_transaction(&mut response)?;
         response = response.add_events(processor.get_transaction_events());
+        swaps = processor.swaps;
         pools_to_save = processor.pools_to_save.into_values().collect();
     }
 
+    update_nft_deposits(deps.storage, &env.contract.address, &swaps)?;
     response = save_pools(
         deps.storage,
         pools_to_save.iter_mut().collect(),
