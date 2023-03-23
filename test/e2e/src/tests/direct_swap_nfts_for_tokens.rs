@@ -8,7 +8,7 @@ use crate::helpers::{
 };
 use cosmwasm_std::Uint128;
 use infinity_swap::msg::{
-    ExecuteMsg as InfinityPoolExecuteMsg, NftSwap, QueryMsg as InfinityPoolQueryMsg, SwapParams,
+    ExecuteMsg as InfinitySwapExecuteMsg, NftSwap, QueryMsg as InfinitySwapQueryMsg, SwapParams,
     SwapResponse,
 };
 use test_context::test_context;
@@ -74,7 +74,7 @@ fn swap_small(chain: &mut Chain) {
 
         let sim_res: SwapResponse = pool_query_message(
             chain,
-            InfinityPoolQueryMsg::SimDirectSwapNftsForTokens {
+            InfinitySwapQueryMsg::SimDirectSwapNftsForTokens {
                 pool_id: pool.id,
                 nfts_to_swap: nfts_to_swap.clone(),
                 sender: taker_addr.to_string(),
@@ -90,7 +90,7 @@ fn swap_small(chain: &mut Chain) {
 
         let exec_resp = pool_execute_message(
             chain,
-            InfinityPoolExecuteMsg::DirectSwapNftsForTokens {
+            InfinitySwapExecuteMsg::DirectSwapNftsForTokens {
                 pool_id: pool.id,
                 nfts_to_swap,
                 swap_params: SwapParams {

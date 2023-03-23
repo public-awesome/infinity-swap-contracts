@@ -7,8 +7,8 @@ use crate::helpers::{
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::Uint128;
 use infinity_swap::msg::{
-    ExecuteMsg as InfinityPoolExecuteMsg, NftSwap, NftTokenIdsResponse,
-    QueryMsg as InfinityPoolQueryMsg, QueryOptions, SwapParams, SwapResponse,
+    ExecuteMsg as InfinitySwapExecuteMsg, NftSwap, NftTokenIdsResponse,
+    QueryMsg as InfinitySwapQueryMsg, QueryOptions, SwapParams, SwapResponse,
 };
 use test_context::test_context;
 
@@ -59,7 +59,7 @@ fn swap_small(chain: &mut Chain) {
 
         let nft_token_ids_res: NftTokenIdsResponse = pool_query_message(
             chain,
-            InfinityPoolQueryMsg::PoolNftTokenIds {
+            InfinitySwapQueryMsg::PoolNftTokenIds {
                 pool_id: pool.id,
                 query_options: QueryOptions {
                     descending: None,
@@ -81,7 +81,7 @@ fn swap_small(chain: &mut Chain) {
 
         let sim_res: SwapResponse = pool_query_message(
             chain,
-            InfinityPoolQueryMsg::SimDirectSwapTokensForSpecificNfts {
+            InfinitySwapQueryMsg::SimDirectSwapTokensForSpecificNfts {
                 pool_id: pool.id,
                 nfts_to_swap_for: nfts_to_swap_for.clone(),
                 sender: taker_addr.to_string(),
@@ -101,7 +101,7 @@ fn swap_small(chain: &mut Chain) {
 
         let exec_resp = pool_execute_message(
             chain,
-            InfinityPoolExecuteMsg::DirectSwapTokensForSpecificNfts {
+            InfinitySwapExecuteMsg::DirectSwapTokensForSpecificNfts {
                 pool_id: pool.id,
                 nfts_to_swap_for,
                 swap_params: SwapParams {

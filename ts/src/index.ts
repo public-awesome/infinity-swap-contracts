@@ -4,11 +4,11 @@
 * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
 */
 
-import * as _0 from "./InfinityPool.types";
-import * as _1 from "./InfinityPool.client";
-import * as _2 from "./InfinityPool.message-composer";
+import * as _0 from "./InfinitySwap.types";
+import * as _1 from "./InfinitySwap.client";
+import * as _2 from "./InfinitySwap.message-composer";
 export namespace contracts {
-  export const InfinityPool = { ..._0,
+  export const InfinitySwap = { ..._0,
     ..._1,
     ..._2
   };
