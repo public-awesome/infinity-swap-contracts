@@ -2,15 +2,15 @@ use std::vec;
 
 use crate::helpers::nft_functions::{approve, mint};
 use crate::helpers::pool_functions::create_pool;
-use crate::setup::setup_infinity_pool::setup_infinity_pool;
+use crate::setup::setup_infinity_swap::setup_infinity_swap;
 use crate::setup::setup_marketplace::setup_marketplace_trading_fee;
 use crate::swap_processor::{NftPayment, Swap, TokenPayment};
 use cosmwasm_std::{coins, Addr, Uint128};
 use cw_multi_test::Executor;
-use infinity_pool::msg::ExecuteMsg;
-use infinity_pool::state::BondingCurve;
-use infinity_pool::state::Pool;
-use infinity_pool::state::PoolType;
+use infinity_swap::msg::ExecuteMsg;
+use infinity_swap::state::BondingCurve;
+use infinity_swap::state::Pool;
+use infinity_swap::state::PoolType;
 use sg_multi_test::StargazeApp;
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
@@ -24,7 +24,7 @@ pub struct SwapPoolResult {
     pub creator: Addr,
     pub minter: Addr,
     pub collection: Addr,
-    pub infinity_pool: Addr,
+    pub infinity_swap: Addr,
     pub pool: Pool,
 }
 
@@ -45,7 +45,7 @@ pub struct VendingTemplateSetup<'a> {
 pub struct ProcessSwapPoolResultsResponse {
     pub minter: Addr,
     pub collection: Addr,
-    pub infinity_pool: Addr,
+    pub infinity_swap: Addr,
     pub pool: Pool,
     pub creator: Addr,
     pub user1: Addr,
@@ -81,12 +81,12 @@ pub fn setup_swap_pool(
     let marketplace = setup_marketplace_trading_fee(router, creator.clone(), trading_fee).unwrap();
 
     setup_block_time(router, GENESIS_MINT_START_TIME, None);
-    let infinity_pool = setup_infinity_pool(router, creator.clone(), marketplace).unwrap();
+    let infinity_swap = setup_infinity_swap(router, creator.clone(), marketplace).unwrap();
 
     let mut results: Vec<Result<SwapPoolResult, anyhow::Error>> = vec![];
 
     for swap_pool_config in swap_pool_configs {
-        let infinity_pool = infinity_pool.clone();
+        let infinity_swap = infinity_swap.clone();
         let creator = creator.clone();
         let user1 = user1.clone();
         let user2 = user2.clone();
@@ -126,7 +126,7 @@ pub fn setup_swap_pool(
         // Can create a Linear Nft Pool
         let pool_result = create_pool(
             router,
-            infinity_pool.clone(),
+            infinity_swap.clone(),
             creator.clone(),
             create_pool_msg,
         );
@@ -137,7 +137,7 @@ pub fn setup_swap_pool(
                 creator,
                 minter,
                 collection,
-                infinity_pool,
+                infinity_swap,
                 pool: result,
             }),
             Err(err) => Err(err),
@@ -155,7 +155,7 @@ pub fn deposit_nfts_and_tokens(
     router: &mut StargazeApp,
     minter: Addr,
     collection: Addr,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     pool: Pool,
     creator: Addr,
     deposit_amount: u128,
@@ -164,11 +164,11 @@ pub fn deposit_nfts_and_tokens(
         router,
         minter,
         collection,
-        infinity_pool.clone(),
+        infinity_swap.clone(),
         pool.clone(),
         creator.clone(),
     );
-    let _ = deposit_tokens(router, deposit_amount, infinity_pool, pool, creator);
+    let _ = deposit_tokens(router, deposit_amount, infinity_swap, pool, creator);
     DepositNftsResult {
         token_id_1: tokens.token_id_1,
         token_id_2: tokens.token_id_2,
@@ -179,20 +179,20 @@ pub fn deposit_nfts(
     router: &mut StargazeApp,
     minter: Addr,
     collection: Addr,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     pool: Pool,
     creator: Addr,
 ) -> DepositNftsResult {
     let token_id_1 = mint(router, &creator, &minter);
-    approve(router, &creator, &collection, &infinity_pool, token_id_1);
+    approve(router, &creator, &collection, &infinity_swap, token_id_1);
     let token_id_2 = mint(router, &creator, &minter);
-    approve(router, &creator, &collection, &infinity_pool, token_id_2);
+    approve(router, &creator, &collection, &infinity_swap, token_id_2);
     let msg = ExecuteMsg::DepositNfts {
         pool_id: pool.id,
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string(), token_id_2.to_string()],
     };
-    let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    let _ = router.execute_contract(creator, infinity_swap, &msg, &[]);
 
     DepositNftsResult {
         token_id_1,
@@ -204,26 +204,26 @@ pub fn deposit_one_nft(
     router: &mut StargazeApp,
     minter: Addr,
     collection: Addr,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     pool: Pool,
     creator: Addr,
 ) -> u32 {
     let token_id_1 = mint(router, &creator, &minter);
-    approve(router, &creator, &collection, &infinity_pool, token_id_1);
+    approve(router, &creator, &collection, &infinity_swap, token_id_1);
 
     let msg = ExecuteMsg::DepositNfts {
         pool_id: pool.id,
         collection: collection.to_string(),
         nft_token_ids: vec![token_id_1.to_string()],
     };
-    let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    let _ = router.execute_contract(creator, infinity_swap, &msg, &[]);
     token_id_1
 }
 
 pub fn deposit_tokens(
     router: &mut StargazeApp,
     deposit_amount: u128,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     pool: Pool,
     creator: Addr,
 ) -> Result<(), anyhow::Error> {
@@ -232,7 +232,7 @@ pub fn deposit_tokens(
     let msg = ExecuteMsg::DepositTokens { pool_id: pool.id };
     let res = router.execute_contract(
         creator,
-        infinity_pool,
+        infinity_swap,
         &msg,
         &coins(deposit_amount_1, NATIVE_DENOM),
     );
@@ -255,11 +255,11 @@ fn process_swap_result(
         true,
         r.pool.clone(),
         r.creator.clone(),
-        r.infinity_pool.clone(),
+        r.infinity_swap.clone(),
     );
     let minter = r.minter.clone();
     let collection = r.collection.clone();
-    let infinity_pool = r.infinity_pool.clone();
+    let infinity_swap = r.infinity_swap.clone();
     let pool = r.pool.clone();
     let creator = r.creator.clone();
     let user1 = r.user1.clone();
@@ -269,7 +269,7 @@ fn process_swap_result(
             router,
             minter.clone(),
             collection.clone(),
-            infinity_pool.clone(),
+            infinity_swap.clone(),
             pool.clone(),
             creator.clone(),
         ),
@@ -278,7 +278,7 @@ fn process_swap_result(
     let _ = deposit_tokens(
         router,
         deposit_amount,
-        r.infinity_pool.clone(),
+        r.infinity_swap.clone(),
         r.pool.clone(),
         r.creator.clone(),
     );
@@ -287,7 +287,7 @@ fn process_swap_result(
         token_id,
         minter,
         collection,
-        infinity_pool,
+        infinity_swap,
         pool,
         creator,
         user1,
@@ -320,7 +320,7 @@ pub fn process_swap_results(
     let mut swap_results: Vec<Result<SwapPoolResult, anyhow::Error>> =
         setup_swap_pool(router, vts, swap_pool_configs, trading_fee);
     let swap_result = swap_results.pop().unwrap();
-    let (token_id, minter, collection, infinity_pool, pool, creator, user1, user2) =
+    let (token_id, minter, collection, infinity_swap, pool, creator, user1, user2) =
         process_swap_result(
             router,
             &swap_result,
@@ -339,7 +339,7 @@ pub fn process_swap_results(
     ProcessSwapPoolResultsResponse {
         minter,
         collection,
-        infinity_pool,
+        infinity_swap,
         pool,
         creator,
         user1,
@@ -353,13 +353,13 @@ pub fn set_pool_active(
     is_active: bool,
     pool: Pool,
     creator: Addr,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
 ) {
     let msg = ExecuteMsg::SetActivePool {
         is_active,
         pool_id: pool.id,
     };
-    let _ = router.execute_contract(creator, infinity_pool, &msg, &[]);
+    let _ = router.execute_contract(creator, infinity_swap, &msg, &[]);
 }
 
 pub fn check_nft_sale(scp: NftSaleCheckParams) {

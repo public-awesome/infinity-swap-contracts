@@ -1,7 +1,7 @@
 {
-  "name": "@tasiov/infinity-pool",
+  "name": "@tasiov/infinity-swap",
   "version": "0.7.0",
-  "description": "Infinity Pool Typescript Types",
+  "description": "Infinity Swap Typescript Types",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

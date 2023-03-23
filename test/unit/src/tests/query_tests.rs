@@ -4,15 +4,15 @@ use crate::helpers::fixtures::{create_and_activate_pool_fixtures, create_pool_fi
 use crate::helpers::nft_functions::mint_and_approve_many;
 use crate::helpers::pool_functions::prepare_swap_pool;
 use crate::setup::setup_accounts::setup_addtl_account;
-use crate::setup::setup_infinity_swap::setup_infinity_pool;
+use crate::setup::setup_infinity_swap::setup_infinity_swap;
 use crate::setup::setup_marketplace::setup_marketplace;
 use crate::setup::templates::standard_minter_template;
 use cosmwasm_std::{Addr, Uint128};
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ConfigResponse, ExecuteMsg, NftTokenIdsResponse, PoolQuoteResponse, PoolsByIdResponse,
     PoolsResponse, QueryMsg, QueryOptions,
 };
-use infinity_pool::state::{BondingCurve, Config, PoolQuote};
+use infinity_swap::state::{BondingCurve, Config, PoolQuote};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
@@ -27,13 +27,13 @@ fn try_query_config() {
     let _asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool = setup_infinity_pool(&mut router, creator, marketplace.clone()).unwrap();
+    let infinity_swap = setup_infinity_swap(&mut router, creator, marketplace.clone()).unwrap();
 
     let config_query = QueryMsg::Config {};
 
     let res: ConfigResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool, &config_query)
+        .query_wasm_smart(infinity_swap, &config_query)
         .unwrap();
 
     assert_eq!(
@@ -55,11 +55,11 @@ fn try_query_pools() {
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
+    let infinity_swap = setup_infinity_swap(&mut router, creator.clone(), marketplace).unwrap();
 
     let pools = create_pool_fixtures(
         &mut router,
-        infinity_pool.clone(),
+        infinity_swap.clone(),
         collection,
         creator,
         user,
@@ -78,7 +78,7 @@ fn try_query_pools() {
 
     let res: PoolsResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool, &pool_query)
+        .query_wasm_smart(infinity_swap, &pool_query)
         .unwrap();
     assert_eq!(res.pools.len(), 2);
     assert_eq!(res.pools[0], pools[3].clone());
@@ -94,11 +94,11 @@ fn try_query_pools_by_id() {
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
+    let infinity_swap = setup_infinity_swap(&mut router, creator.clone(), marketplace).unwrap();
 
     let pools = create_pool_fixtures(
         &mut router,
-        infinity_pool.clone(),
+        infinity_swap.clone(),
         collection,
         creator,
         user,
@@ -113,7 +113,7 @@ fn try_query_pools_by_id() {
 
     let res: PoolsByIdResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool, &pool_query)
+        .query_wasm_smart(infinity_swap, &pool_query)
         .unwrap();
     assert_eq!(res.pools[0], (1, Some(pools[0].clone())));
     assert_eq!(res.pools[1], (2, Some(pools[1].clone())));
@@ -129,11 +129,11 @@ fn try_query_pools_by_owner() {
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
+    let infinity_swap = setup_infinity_swap(&mut router, creator.clone(), marketplace).unwrap();
 
     let pools = create_pool_fixtures(
         &mut router,
-        infinity_pool.clone(),
+        infinity_swap.clone(),
         collection,
         creator,
         user.clone(),
@@ -153,7 +153,7 @@ fn try_query_pools_by_owner() {
 
     let res: PoolsResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool, &pool_query)
+        .query_wasm_smart(infinity_swap, &pool_query)
         .unwrap();
     assert_eq!(res.pools.len(), 3);
     assert_eq!(res.pools[0], pools[9].clone());
@@ -170,13 +170,13 @@ fn try_query_pools_by_buy_price() {
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
+    let infinity_swap = setup_infinity_swap(&mut router, creator.clone(), marketplace).unwrap();
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
 
     let _pools = create_and_activate_pool_fixtures(
         &mut router,
-        infinity_pool.clone(),
+        infinity_swap.clone(),
         minter,
         collection.clone(),
         creator,
@@ -196,7 +196,7 @@ fn try_query_pools_by_buy_price() {
 
     let res: PoolQuoteResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool, &pool_query)
+        .query_wasm_smart(infinity_swap, &pool_query)
         .unwrap();
 
     assert_eq!(res.pool_quotes.len(), 10);
@@ -268,13 +268,13 @@ fn try_query_pools_by_sell_price() {
     let asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
+    let infinity_swap = setup_infinity_swap(&mut router, creator.clone(), marketplace).unwrap();
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
 
     let _pools = create_and_activate_pool_fixtures(
         &mut router,
-        infinity_pool.clone(),
+        infinity_swap.clone(),
         minter,
         collection.clone(),
         creator,
@@ -294,7 +294,7 @@ fn try_query_pools_by_sell_price() {
 
     let res: PoolQuoteResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool, &pool_query)
+        .query_wasm_smart(infinity_swap, &pool_query)
         .unwrap();
     assert_eq!(res.pool_quotes.len(), 10);
     let expected_pool_quotes = vec![
@@ -364,7 +364,7 @@ fn try_query_pool_nft_token_ids() {
     let _asset_account = Addr::unchecked(ASSET_ACCOUNT);
 
     let marketplace = setup_marketplace(&mut router, creator.clone()).unwrap();
-    let infinity_pool = setup_infinity_pool(&mut router, creator.clone(), marketplace).unwrap();
+    let infinity_swap = setup_infinity_swap(&mut router, creator.clone(), marketplace).unwrap();
 
     setup_block_time(&mut router, GENESIS_MINT_START_TIME, None);
 
@@ -374,13 +374,13 @@ fn try_query_pool_nft_token_ids() {
         &owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         500,
     );
 
     let pool = prepare_swap_pool(
         &mut router,
-        &infinity_pool.clone(),
+        &infinity_swap.clone(),
         &owner,
         Uint128::from(1_000_000u128),
         owner_token_ids.clone(),
@@ -405,7 +405,7 @@ fn try_query_pool_nft_token_ids() {
         let response: NftTokenIdsResponse = router
             .wrap()
             .query_wasm_smart(
-                infinity_pool.clone(),
+                infinity_swap.clone(),
                 &QueryMsg::PoolNftTokenIds {
                     pool_id: pool.id,
                     query_options: QueryOptions {

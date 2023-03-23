@@ -851,7 +851,7 @@ dependencies = [
  "cw721",
  "cw721-base",
  "env_logger",
- "infinity-pool",
+ "infinity-swap",
  "itertools",
  "once_cell",
  "rand",
@@ -1389,7 +1389,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "infinity-pool"
+name = "infinity-swap"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -3131,7 +3131,7 @@ dependencies = [
  "cw2 0.16.0",
  "cw721",
  "cw721-base",
- "infinity-pool",
+ "infinity-swap",
  "itertools",
  "sg-marketplace",
  "sg-multi-test",

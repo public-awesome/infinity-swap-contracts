@@ -4,11 +4,11 @@ use crate::helpers::swap_functions::{setup_swap_test, validate_swap_outcome, Swa
 use crate::helpers::utils::get_native_balances;
 use cosmwasm_std::{coins, Addr, Timestamp, Uint128};
 use cw_multi_test::Executor;
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ExecuteMsg, NftSwap, NftTokenIdsResponse, PoolNftSwap, QueryMsg, QueryOptions, SwapParams,
     SwapResponse,
 };
-use infinity_pool::state::Pool;
+use infinity_swap::state::Pool;
 use itertools::Itertools;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
@@ -24,7 +24,7 @@ fn correct_swap_simple() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         ..
     } = setup_swap_test(5000).unwrap();
 
@@ -38,7 +38,7 @@ fn correct_swap_simple() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -48,7 +48,7 @@ fn correct_swap_simple() {
         &mut router,
         7,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -72,7 +72,7 @@ fn correct_swap_simple() {
         accts.owner.clone(),
         accts.bidder.clone(),
         finder.clone(),
-        infinity_pool.clone(),
+        infinity_swap.clone(),
     ];
 
     let collection_info: CollectionInfoResponse = router
@@ -93,7 +93,7 @@ fn correct_swap_simple() {
             let nft_token_ids_response: NftTokenIdsResponse = router
                 .wrap()
                 .query_wasm_smart(
-                    infinity_pool.clone(),
+                    infinity_swap.clone(),
                     &QueryMsg::PoolNftTokenIds {
                         pool_id: pool.id,
                         query_options: QueryOptions {
@@ -136,7 +136,7 @@ fn correct_swap_simple() {
 
         let _sim_res: SwapResponse = router
             .wrap()
-            .query_wasm_smart(infinity_pool.clone(), &sim_msg)
+            .query_wasm_smart(infinity_swap.clone(), &sim_msg)
             .unwrap();
 
         let exec_msg = ExecuteMsg::SwapTokensForSpecificNfts {
@@ -154,7 +154,7 @@ fn correct_swap_simple() {
         let exec_res = router
             .execute_contract(
                 accts.bidder.clone(),
-                infinity_pool.clone(),
+                infinity_swap.clone(),
                 &exec_msg,
                 &coins(sender_amount.u128(), NATIVE_DENOM),
             )

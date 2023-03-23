@@ -4,7 +4,7 @@ use crate::helpers::swap_functions::{setup_swap_test, validate_swap_outcome, Swa
 use crate::helpers::utils::get_native_balances;
 use cosmwasm_std::{Addr, Timestamp, Uint128};
 use cw_multi_test::Executor;
-use infinity_pool::msg::{ExecuteMsg, NftSwap, QueryMsg, SwapParams, SwapResponse};
+use infinity_swap::msg::{ExecuteMsg, NftSwap, QueryMsg, SwapParams, SwapResponse};
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_std::GENESIS_MINT_START_TIME;
 use test_suite::common_setup::msg::VendingTemplateResponse;
@@ -19,7 +19,7 @@ fn correct_swap_simple() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         ..
     } = setup_swap_test(5000).unwrap();
 
@@ -33,7 +33,7 @@ fn correct_swap_simple() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
     let mut bidder_token_ids = mint_and_approve_many(
@@ -42,7 +42,7 @@ fn correct_swap_simple() {
         &accts.bidder,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -52,7 +52,7 @@ fn correct_swap_simple() {
         &mut router,
         7,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -68,7 +68,7 @@ fn correct_swap_simple() {
         accts.owner.clone(),
         accts.bidder.clone(),
         finder.clone(),
-        infinity_pool.clone(),
+        infinity_swap.clone(),
     ];
 
     let collection_info: CollectionInfoResponse = router
@@ -107,7 +107,7 @@ fn correct_swap_simple() {
 
         let _sim_res: SwapResponse = router
             .wrap()
-            .query_wasm_smart(infinity_pool.clone(), &sim_msg)
+            .query_wasm_smart(infinity_swap.clone(), &sim_msg)
             .unwrap();
 
         let exec_msg = ExecuteMsg::DirectSwapNftsForTokens {
@@ -123,7 +123,7 @@ fn correct_swap_simple() {
 
         let pre_swap_balances = get_native_balances(&router, &check_addresses);
         let exec_res = router
-            .execute_contract(accts.bidder.clone(), infinity_pool.clone(), &exec_msg, &[])
+            .execute_contract(accts.bidder.clone(), infinity_swap.clone(), &exec_msg, &[])
             .unwrap();
         let post_swap_balances = get_native_balances(&router, &check_addresses);
 

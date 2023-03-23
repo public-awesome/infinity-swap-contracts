@@ -71,7 +71,7 @@ jobs:
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: actions/upload-artifact@v3
         with:
-          name: infinity-pool-gas-report-${{ env.GIT_BRANCH }}
+          name: infinity-swap-gas-report-${{ env.GIT_BRANCH }}
           path: test/e2e/gas_report.json
           retention-days: 90
 
@@ -88,7 +88,7 @@ jobs:
         with:
           branch: main
           workflow: e2e.yml
-          name: infinity-pool-gas-report-refs-heads-main
+          name: infinity-swap-gas-report-refs-heads-main
 
       - name: Post gas diff to PR
         if: ${{ github.ref != 'refs/heads/main' && steps.download_gas.outputs.found_artifact == 'true' }}

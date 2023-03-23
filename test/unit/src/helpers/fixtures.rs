@@ -1,8 +1,8 @@
 use crate::helpers::nft_functions::{approve, mint};
 use crate::helpers::pool_functions::create_pool;
 use cosmwasm_std::{Addr, Uint128};
-use infinity_pool::msg::ExecuteMsg;
-use infinity_pool::state::{BondingCurve, Pool};
+use infinity_swap::msg::ExecuteMsg;
+use infinity_swap::state::{BondingCurve, Pool};
 use sg_multi_test::StargazeApp;
 
 use super::pool_functions::{activate, deposit_nfts, deposit_tokens};
@@ -149,7 +149,7 @@ pub fn get_pool_fixtures(
 
 pub fn create_pool_fixtures(
     router: &mut StargazeApp,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     collection: Addr,
     creator: Addr,
     user: Addr,
@@ -170,14 +170,14 @@ pub fn create_pool_fixtures(
         } else {
             user.clone()
         };
-        pools.push(create_pool(router, infinity_pool.clone(), sender.clone(), msg).unwrap());
+        pools.push(create_pool(router, infinity_swap.clone(), sender.clone(), msg).unwrap());
     }
     pools
 }
 
 pub fn create_and_activate_pool_fixtures(
     router: &mut StargazeApp,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     minter: Addr,
     collection: Addr,
     creator: Addr,
@@ -193,7 +193,7 @@ pub fn create_and_activate_pool_fixtures(
     );
     let mut pools = vec![];
     for msg in msgs.into_iter() {
-        let pool = create_pool(router, infinity_pool.clone(), creator.clone(), msg).unwrap();
+        let pool = create_pool(router, infinity_swap.clone(), creator.clone(), msg).unwrap();
         if pool.can_buy_nfts() {
             let deposit_amount = if pool.bonding_curve == BondingCurve::ConstantProduct {
                 Uint128::from(3_000u64)
@@ -202,7 +202,7 @@ pub fn create_and_activate_pool_fixtures(
             };
             deposit_tokens(
                 router,
-                infinity_pool.clone(),
+                infinity_swap.clone(),
                 pool.owner.clone(),
                 pool.id,
                 deposit_amount,
@@ -211,12 +211,12 @@ pub fn create_and_activate_pool_fixtures(
         }
         if pool.can_sell_nfts() {
             let token_id_1 = mint(router, &pool.owner, &minter);
-            approve(router, &pool.owner, &collection, &infinity_pool, token_id_1);
+            approve(router, &pool.owner, &collection, &infinity_swap, token_id_1);
             let token_id_2 = mint(router, &pool.owner, &minter);
-            approve(router, &pool.owner, &collection, &infinity_pool, token_id_2);
+            approve(router, &pool.owner, &collection, &infinity_swap, token_id_2);
             deposit_nfts(
                 router,
-                infinity_pool.clone(),
+                infinity_swap.clone(),
                 pool.owner.clone(),
                 pool.id,
                 pool.collection.clone(),
@@ -227,7 +227,7 @@ pub fn create_and_activate_pool_fixtures(
             )
             .unwrap();
         }
-        let pool = activate(router, &infinity_pool, &pool.owner, pool.id, true).unwrap();
+        let pool = activate(router, &infinity_swap, &pool.owner, pool.id, true).unwrap();
         pools.push(pool);
     }
     pools

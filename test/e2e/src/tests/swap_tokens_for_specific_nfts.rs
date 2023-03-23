@@ -7,11 +7,11 @@ use crate::helpers::{
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::Uint128;
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ExecuteMsg as InfinityPoolExecuteMsg, NftSwap, NftTokenIdsResponse, PoolNftSwap,
     QueryMsg as InfinityPoolQueryMsg, QueryOptions, SwapParams, SwapResponse,
 };
-use infinity_pool::state::Pool;
+use infinity_swap::state::Pool;
 use itertools::Itertools;
 use test_context::test_context;
 
@@ -127,7 +127,7 @@ fn swap_small(chain: &mut Chain) {
                     finder: None,
                 },
             },
-            "infinity-pool-swap-tokens-for-specific-nfts",
+            "infinity-swap-swap-tokens-for-specific-nfts",
             vec![OrcCoin {
                 amount: sender_amount.u128(),
                 denom: denom.parse().unwrap(),

@@ -1,6 +1,6 @@
 use crate::helpers::{
     chain::Chain,
-    constants::{INFINITY_POOL_NAME, LISTING_FEE, SG721_NAME},
+    constants::{INFINITY_SWAP_NAME, LISTING_FEE, SG721_NAME},
     helper::{gen_users, latest_block_time},
     instantiate::instantiate_minter,
     nft::{approve_all_nfts, mint_nfts},
@@ -8,12 +8,12 @@ use crate::helpers::{
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ExecuteMsg as InfinityPoolExecuteMsg, PoolsByIdResponse, QueryMsg as InfinityPoolQueryMsg,
     SwapParams,
 };
-use infinity_pool::state::Pool;
-use infinity_pool::state::{BondingCurve, PoolType};
+use infinity_swap::state::Pool;
+use infinity_swap::state::{BondingCurve, PoolType};
 use std::env;
 use test_context::test_context;
 
@@ -54,7 +54,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
 
     approve_all_nfts(
         chain,
-        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
+        chain.orc.contract_map.address(INFINITY_SWAP_NAME).unwrap(),
         &user,
     );
 
@@ -71,7 +71,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
             reinvest_tokens: true,
             reinvest_nfts: true,
         },
-        "infinity-pool-create-pool",
+        "infinity-swap-create-pool",
         vec![OrcCoin {
             amount: LISTING_FEE,
             denom: denom.parse().unwrap(),
@@ -92,7 +92,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
             collection: collection.clone(),
             nft_token_ids: token_ids.clone(),
         },
-        "infinity-pool-deposit-nfts",
+        "infinity-swap-deposit-nfts",
         vec![],
         &user,
     );
@@ -100,7 +100,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
     pool_execute_message(
         chain,
         InfinityPoolExecuteMsg::DepositTokens { pool_id },
-        "infinity-pool-deposit-tokens",
+        "infinity-swap-deposit-tokens",
         vec![OrcCoin {
             amount: pool_deposit_amount,
             denom: denom.parse().unwrap(),
@@ -114,7 +114,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
             is_active: true,
             pool_id,
         },
-        "infinity-pool-activate",
+        "infinity-swap-activate",
         vec![],
         &user,
     );
@@ -162,7 +162,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
                 finder: None,
             },
         },
-        "infinity-pool-swap-tokens-for-any-nfts",
+        "infinity-swap-swap-tokens-for-any-nfts",
         vec![OrcCoin {
             amount: send_amount.u128(),
             denom: denom.parse().unwrap(),
@@ -205,7 +205,7 @@ fn large_many_pool_token_for_nft_swap(chain: &mut Chain) {
 
     approve_all_nfts(
         chain,
-        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
+        chain.orc.contract_map.address(INFINITY_SWAP_NAME).unwrap(),
         &user,
     );
 
@@ -241,7 +241,7 @@ fn large_many_pool_token_for_nft_swap(chain: &mut Chain) {
                 finder: None,
             },
         },
-        "infinity-pool-swap-tokens-for-any-nfts",
+        "infinity-swap-swap-tokens-for-any-nfts",
         vec![OrcCoin {
             amount: send_amount.u128(),
             denom: denom.parse().unwrap(),

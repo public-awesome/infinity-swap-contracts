@@ -3,7 +3,7 @@ workflows:
   version: 2
   test:
     jobs:
-      - contract_infinity_pool
+      - contract_infinity_swap
       - lint
       - wasm-build
   deploy:
@@ -16,10 +16,10 @@ workflows:
               ignore: /.*/
 
 jobs:
-  contract_infinity_pool:
+  contract_infinity_swap:
     docker:
       - image: rust:1.66.1
-    working_directory: ~/project/contracts/infinity-pool
+    working_directory: ~/project/contracts/infinity-swap
     steps:
       - checkout:
           path: ~/project
@@ -28,7 +28,7 @@ jobs:
           command: rustc --version; cargo --version; rustup --version
       - restore_cache:
           keys:
-            - cargocache-infinity-pool-rust:1.66.1-{{ checksum "~/project/Cargo.lock" }}
+            - cargocache-infinity-swap-rust:1.66.1-{{ checksum "~/project/Cargo.lock" }}
       - run:
           name: Unit Tests
           environment:
@@ -50,7 +50,7 @@ jobs:
           paths:
             - /usr/local/cargo/registry
             - target
-          key: cargocache-infinity-pool-rust:1.66.1-{{ checksum "~/project/Cargo.lock" }}
+          key: cargocache-infinity-swap-rust:1.66.1-{{ checksum "~/project/Cargo.lock" }}
 
   lint:
     docker:

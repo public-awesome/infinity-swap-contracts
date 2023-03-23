@@ -9,7 +9,7 @@ use cw2::set_contract_version;
 use cw_utils::maybe_addr;
 use sg_std::Response;
 
-pub const CONTRACT_NAME: &str = "crates.io:infinity-pool";
+pub const CONTRACT_NAME: &str = "crates.io:infinity-swap";
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]

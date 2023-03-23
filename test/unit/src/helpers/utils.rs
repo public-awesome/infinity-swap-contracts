@@ -1,7 +1,7 @@
 use anyhow::Error;
 use cosmwasm_std::{Addr, Coin};
 use cw_multi_test::AppResponse;
-use infinity_pool::ContractError;
+use infinity_swap::ContractError;
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
 use std::collections::HashMap;
