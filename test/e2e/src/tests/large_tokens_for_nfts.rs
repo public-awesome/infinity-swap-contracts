@@ -17,10 +17,13 @@ use infinity_pool::state::{BondingCurve, PoolType};
 use std::env;
 use test_context::test_context;
 
+#[allow(dead_code)]
+const LARGE_NUM_SWAPS: usize = 250;
+
 #[test_context(Chain)]
 #[test]
 #[ignore]
-fn test_large_pool_creation(chain: &mut Chain) {
+fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
     if env::var("ENABLE_LARGE_TESTS").is_err() {
         return;
     }
@@ -145,7 +148,7 @@ fn test_large_pool_creation(chain: &mut Chain) {
         }
     );
 
-    let max_expected_token_input = [Uint128::from(10_000u64); 50];
+    let max_expected_token_input = [Uint128::from(10_000u64); LARGE_NUM_SWAPS];
     let send_amount: Uint128 = max_expected_token_input.iter().sum();
     let exec_res = pool_execute_message(
         chain,
@@ -173,7 +176,7 @@ fn test_large_pool_creation(chain: &mut Chain) {
 #[test_context(Chain)]
 #[test]
 #[ignore]
-fn test_many_pool_swap(chain: &mut Chain) {
+fn large_many_pool_token_for_nft_swap(chain: &mut Chain) {
     if env::var("ENABLE_LARGE_TESTS").is_err() {
         return;
     }
@@ -206,9 +209,8 @@ fn test_many_pool_swap(chain: &mut Chain) {
         &user,
     );
 
-    const NUM_POOLS: usize = 100;
     let mut pools: Vec<Pool> = vec![];
-    for _ in 0..NUM_POOLS {
+    for _ in 0..LARGE_NUM_SWAPS {
         pools.push(create_active_pool(
             chain,
             &user,
@@ -225,7 +227,7 @@ fn test_many_pool_swap(chain: &mut Chain) {
         ));
     }
 
-    let max_expected_token_input = [Uint128::from(10_000u64); NUM_POOLS];
+    let max_expected_token_input = [Uint128::from(10_000u64); LARGE_NUM_SWAPS];
     let send_amount: Uint128 = max_expected_token_input.iter().sum();
     let exec_res = pool_execute_message(
         chain,
