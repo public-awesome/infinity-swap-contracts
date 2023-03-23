@@ -1,6 +1,6 @@
 use crate::helpers::nft_functions::validate_nft_owner;
 use crate::setup::msg::MarketAccounts;
-use crate::setup::setup_infinity_pool::setup_infinity_pool;
+use crate::setup::setup_infinity_swap::setup_infinity_pool;
 use crate::setup::setup_marketplace::setup_marketplace;
 use crate::setup::templates::standard_minter_template;
 use infinity_pool::msg::{PoolsByIdResponse, QueryMsg, TransactionType};
