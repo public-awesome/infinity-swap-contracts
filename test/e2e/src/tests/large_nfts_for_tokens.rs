@@ -192,14 +192,17 @@ fn large_many_pool_nft_for_token_swap(chain: &mut Chain) {
 
     let pool_deposit_amount = 10_000_000;
     let balance = pool_deposit_amount * 10_000;
-    let user = gen_users(chain, 1, balance)[0].clone();
-    let user_addr = user.to_addr(&prefix).unwrap();
+    let mut users = gen_users(chain, 2, balance);
+    let maker = users.pop().unwrap();
+    let _maker_addr = maker.to_addr(&prefix).unwrap();
+    let taker = users.pop().unwrap();
+    let taker_addr = taker.to_addr(&prefix).unwrap();
 
     // init minter
     instantiate_minter(
         &mut chain.orc,
         // set creator address as user to allow for minting on base minter
-        user_addr.to_string(),
+        taker_addr.to_string(),
         &master_account.key,
         &denom,
     )
@@ -207,20 +210,14 @@ fn large_many_pool_nft_for_token_swap(chain: &mut Chain) {
 
     let collection = chain.orc.contract_map.address(SG721_NAME).unwrap();
 
-    approve_all_nfts(
-        chain,
-        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
-        &user,
-    );
-
     let mut pools: Vec<Pool> = vec![];
     for _ in 0..LARGE_NUM_SWAPS {
         pools.push(create_active_pool(
             chain,
-            &user,
+            &maker,
             pool_deposit_amount,
-            2,
-            InfinityPoolExecuteMsg::CreateNftPool {
+            0,
+            InfinityPoolExecuteMsg::CreateTokenPool {
                 collection: collection.to_string(),
                 asset_recipient: None,
                 bonding_curve: BondingCurve::Linear,
@@ -231,7 +228,7 @@ fn large_many_pool_nft_for_token_swap(chain: &mut Chain) {
         ));
     }
 
-    let bidder_token_ids = mint_nfts(chain, LARGE_NUM_SWAPS as u32, &user);
+    let bidder_token_ids = mint_nfts(chain, LARGE_NUM_SWAPS as u32, &taker);
     let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
         .into_iter()
         .map(|token_id| NftSwap {
@@ -239,6 +236,12 @@ fn large_many_pool_nft_for_token_swap(chain: &mut Chain) {
             token_amount: Uint128::from(10u128),
         })
         .collect();
+
+    approve_all_nfts(
+        chain,
+        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
+        &taker,
+    );
 
     let exec_res = pool_execute_message(
         chain,
@@ -254,7 +257,7 @@ fn large_many_pool_nft_for_token_swap(chain: &mut Chain) {
         },
         "infinity-pool-swap-nfts-for-tokens",
         vec![],
-        &user,
+        &taker,
     );
     println!("gas_wanted {:?}", exec_res.res.gas_wanted);
     println!("gas_used {:?}", exec_res.res.gas_used);
