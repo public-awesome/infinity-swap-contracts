@@ -28,19 +28,10 @@ fn test_large_pool_creation(chain: &mut Chain) {
     let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
     let prefix = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
 
-    // create minter with master account
     let master_account = chain.cfg.users[1].clone();
 
-    // gen user that will:
-    // * init minter
-    // * mint 10_000 NFT
-    // * create Trade pool
-    // * deposit 10_000 NFT
-    // * deposit 1_000_000_000_000 tokens
-    // * activate pool
-    // Min balance: MINT_PRICE + LISTING_FEE + 1_000_000_000_000 tokens
-    let pool_deposit_amount = 1_000_000_000_000;
-    let balance = (MINT_PRICE + LISTING_FEE + pool_deposit_amount) * 2;
+    let pool_deposit_amount = 10_000_000;
+    let balance = pool_deposit_amount * 10_000;
     let user = gen_users(chain, 1, balance)[0].clone();
     let user_addr = user.to_addr(&prefix).unwrap();
 
@@ -133,7 +124,7 @@ fn test_large_pool_creation(chain: &mut Chain) {
     );
     let resp_pool = resp.pools[0].1.clone().unwrap();
 
-    let max_expected_token_input = [Uint128::MAX; 50];
+    let max_expected_token_input = [Uint128::from(10_000u64); 50];
     let send_amount: Uint128 = max_expected_token_input.iter().sum();
     pool_execute_message(
         chain,
