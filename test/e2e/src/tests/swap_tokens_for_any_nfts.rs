@@ -8,7 +8,7 @@ use crate::helpers::{
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::Uint128;
 use infinity_swap::msg::{
-    ExecuteMsg as InfinityPoolExecuteMsg, QueryMsg as InfinityPoolQueryMsg, SwapParams,
+    ExecuteMsg as InfinitySwapExecuteMsg, QueryMsg as InfinitySwapQueryMsg, SwapParams,
     SwapResponse,
 };
 use test_context::test_context;
@@ -59,7 +59,7 @@ fn swap_small(chain: &mut Chain) {
 
     let sim_res: SwapResponse = pool_query_message(
         chain,
-        InfinityPoolQueryMsg::SimSwapTokensForAnyNfts {
+        InfinitySwapQueryMsg::SimSwapTokensForAnyNfts {
             collection: collection.to_string(),
             max_expected_token_input: max_expected_token_input.clone(),
             sender: taker_addr.to_string(),
@@ -77,7 +77,7 @@ fn swap_small(chain: &mut Chain) {
 
     let exec_resp = pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::SwapTokensForAnyNfts {
+        InfinitySwapExecuteMsg::SwapTokensForAnyNfts {
             collection,
             max_expected_token_input,
             swap_params: SwapParams {

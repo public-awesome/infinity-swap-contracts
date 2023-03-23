@@ -2,7 +2,7 @@ use crate::setup::setup_marketplace::LISTING_FEE;
 use anyhow::Error;
 use cosmwasm_std::{coins, Addr, Uint128};
 use cw_multi_test::Executor;
-use infinity_swap::msg::{ExecuteMsg as InfinityPoolExecuteMsg, PoolsByIdResponse, QueryMsg};
+use infinity_swap::msg::{ExecuteMsg as InfinitySwapExecuteMsg, PoolsByIdResponse, QueryMsg};
 use infinity_swap::state::Pool;
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
@@ -13,7 +13,7 @@ pub fn create_pool(
     router: &mut StargazeApp,
     infinity_swap: Addr,
     owner: Addr,
-    msg: InfinityPoolExecuteMsg,
+    msg: InfinitySwapExecuteMsg,
 ) -> Result<Pool, Error> {
     let res = router.execute_contract(
         owner,
@@ -46,7 +46,7 @@ pub fn deposit_tokens(
     pool_id: u64,
     deposit_amount: Uint128,
 ) -> Result<u128, Error> {
-    let msg = InfinityPoolExecuteMsg::DepositTokens { pool_id };
+    let msg = InfinitySwapExecuteMsg::DepositTokens { pool_id };
     let res = router.execute_contract(
         owner,
         infinity_swap,
@@ -70,7 +70,7 @@ pub fn deposit_nfts(
     collection: Addr,
     nft_token_ids: Vec<String>,
 ) -> Result<String, Error> {
-    let msg = InfinityPoolExecuteMsg::DepositNfts {
+    let msg = InfinitySwapExecuteMsg::DepositNfts {
         pool_id,
         collection: collection.to_string(),
         nft_token_ids,
@@ -89,7 +89,7 @@ pub fn activate(
     pool_id: u64,
     is_active: bool,
 ) -> Result<Pool, Error> {
-    let msg = InfinityPoolExecuteMsg::SetActivePool { pool_id, is_active };
+    let msg = InfinitySwapExecuteMsg::SetActivePool { pool_id, is_active };
     let res = router.execute_contract(owner.clone(), infinity_swap.clone(), &msg, &[]);
     assert!(res.is_ok());
     let query_msg = QueryMsg::PoolsById {
@@ -111,7 +111,7 @@ pub fn prepare_swap_pool(
     num_deposit_tokens: Uint128,
     nft_token_ids: Vec<String>,
     is_active: bool,
-    create_pool_msg: InfinityPoolExecuteMsg,
+    create_pool_msg: InfinitySwapExecuteMsg,
 ) -> Result<Pool, Error> {
     let pool = create_pool(
         router,
@@ -168,13 +168,13 @@ pub fn prepare_pool_variations(
 
     for fixt in pool_fixtures {
         let (curr_deposit_tokens_per_pool, curr_nft_token_ids) = match fixt {
-            InfinityPoolExecuteMsg::CreateTokenPool { .. } => (deposit_tokens_per_pool, vec![]),
-            InfinityPoolExecuteMsg::CreateNftPool { .. } => {
+            InfinitySwapExecuteMsg::CreateTokenPool { .. } => (deposit_tokens_per_pool, vec![]),
+            InfinitySwapExecuteMsg::CreateNftPool { .. } => {
                 let nft_token_ids_slice: Vec<String> =
                     nft_token_ids.drain(0..(nfts_per_pool as usize)).collect();
                 (Uint128::zero(), nft_token_ids_slice)
             }
-            InfinityPoolExecuteMsg::CreateTradePool { .. } => {
+            InfinitySwapExecuteMsg::CreateTradePool { .. } => {
                 let nft_token_ids_slice: Vec<String> =
                     nft_token_ids.drain(0..(nfts_per_pool as usize)).collect();
                 (deposit_tokens_per_pool, nft_token_ids_slice)

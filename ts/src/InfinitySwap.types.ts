@@ -150,6 +150,10 @@ export interface InstantiateMsg {
   developer?: string | null;
   marketplace_addr: string;
 }
+export interface NftTokenIdsResponse {
+  nft_token_ids: string[];
+  pool_id: number;
+}
 export interface PoolQuoteResponse {
   pool_quotes: PoolQuote[];
 }

@@ -3,7 +3,7 @@ import codegen from "@cosmwasm/ts-codegen"
 codegen({
   contracts: [
     {
-      name: "InfinityPool",
+      name: "InfinitySwap",
       dir: "../contracts/infinity-swap/schema"
     }
   ],

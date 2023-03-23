@@ -9,7 +9,7 @@ use crate::helpers::{
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use infinity_swap::msg::{
-    ExecuteMsg as InfinityPoolExecuteMsg, PoolsByIdResponse, QueryMsg as InfinityPoolQueryMsg,
+    ExecuteMsg as InfinitySwapExecuteMsg, PoolsByIdResponse, QueryMsg as InfinitySwapQueryMsg,
     SwapParams,
 };
 use infinity_swap::state::Pool;
@@ -60,7 +60,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
 
     let resp = pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::CreateTradePool {
+        InfinitySwapExecuteMsg::CreateTradePool {
             collection: collection.clone(),
             asset_recipient: None,
             bonding_curve: BondingCurve::ConstantProduct,
@@ -87,7 +87,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
 
     pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::DepositNfts {
+        InfinitySwapExecuteMsg::DepositNfts {
             pool_id,
             collection: collection.clone(),
             nft_token_ids: token_ids.clone(),
@@ -99,7 +99,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
 
     pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::DepositTokens { pool_id },
+        InfinitySwapExecuteMsg::DepositTokens { pool_id },
         "infinity-swap-deposit-tokens",
         vec![OrcCoin {
             amount: pool_deposit_amount,
@@ -110,7 +110,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
 
     pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::SetActivePool {
+        InfinitySwapExecuteMsg::SetActivePool {
             is_active: true,
             pool_id,
         },
@@ -121,7 +121,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
 
     let resp: PoolsByIdResponse = pool_query_message(
         chain,
-        InfinityPoolQueryMsg::PoolsById {
+        InfinitySwapQueryMsg::PoolsById {
             pool_ids: vec![pool_id],
         },
     );
@@ -152,7 +152,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
     let send_amount: Uint128 = max_expected_token_input.iter().sum();
     let exec_res = pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::SwapTokensForAnyNfts {
+        InfinitySwapExecuteMsg::SwapTokensForAnyNfts {
             collection,
             max_expected_token_input: max_expected_token_input.to_vec(),
             swap_params: SwapParams {
@@ -216,7 +216,7 @@ fn large_many_pool_token_for_nft_swap(chain: &mut Chain) {
             &user,
             pool_deposit_amount,
             2,
-            InfinityPoolExecuteMsg::CreateNftPool {
+            InfinitySwapExecuteMsg::CreateNftPool {
                 collection: collection.to_string(),
                 asset_recipient: None,
                 bonding_curve: BondingCurve::Linear,
@@ -231,7 +231,7 @@ fn large_many_pool_token_for_nft_swap(chain: &mut Chain) {
     let send_amount: Uint128 = max_expected_token_input.iter().sum();
     let exec_res = pool_execute_message(
         chain,
-        InfinityPoolExecuteMsg::SwapTokensForAnyNfts {
+        InfinitySwapExecuteMsg::SwapTokensForAnyNfts {
             collection,
             max_expected_token_input: max_expected_token_input.to_vec(),
             swap_params: SwapParams {
