@@ -153,7 +153,7 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
     let exec_res = pool_execute_message(
         chain,
         InfinityPoolExecuteMsg::SwapTokensForAnyNfts {
-            collection: collection.clone(),
+            collection,
             max_expected_token_input: max_expected_token_input.to_vec(),
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
@@ -232,7 +232,7 @@ fn large_many_pool_token_for_nft_swap(chain: &mut Chain) {
     let exec_res = pool_execute_message(
         chain,
         InfinityPoolExecuteMsg::SwapTokensForAnyNfts {
-            collection: collection.clone(),
+            collection,
             max_expected_token_input: max_expected_token_input.to_vec(),
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
