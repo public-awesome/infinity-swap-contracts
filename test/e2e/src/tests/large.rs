@@ -1,10 +1,10 @@
 use crate::helpers::{
     chain::Chain,
-    constants::{INFINITY_POOL_NAME, LISTING_FEE, MINT_PRICE, SG721_NAME},
+    constants::{INFINITY_POOL_NAME, LISTING_FEE, SG721_NAME},
     helper::{gen_users, latest_block_time},
     instantiate::instantiate_minter,
     nft::{approve_all_nfts, mint_nfts},
-    pool::{pool_execute_message, pool_query_message},
+    pool::{create_active_pool, pool_execute_message, pool_query_message},
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::{Addr, Decimal, Uint128};
@@ -124,9 +124,30 @@ fn test_large_pool_creation(chain: &mut Chain) {
     );
     let resp_pool = resp.pools[0].1.clone().unwrap();
 
+    assert_eq!(
+        resp_pool,
+        Pool {
+            id: 1,
+            collection: Addr::unchecked(collection.clone()),
+            owner: Addr::unchecked(user_addr.to_string()),
+            asset_recipient: None,
+            pool_type: PoolType::Trade,
+            bonding_curve: BondingCurve::ConstantProduct,
+            spot_price: Uint128::new(pool_deposit_amount) / Uint128::from(token_ids.len() as u64),
+            delta: Uint128::zero(),
+            total_tokens: Uint128::new(pool_deposit_amount),
+            total_nfts: token_ids.len() as u64,
+            finders_fee_percent: Decimal::zero(),
+            swap_fee_percent: Decimal::zero(),
+            is_active: true,
+            reinvest_tokens: true,
+            reinvest_nfts: true,
+        }
+    );
+
     let max_expected_token_input = [Uint128::from(10_000u64); 50];
     let send_amount: Uint128 = max_expected_token_input.iter().sum();
-    pool_execute_message(
+    let exec_res = pool_execute_message(
         chain,
         InfinityPoolExecuteMsg::SwapTokensForAnyNfts {
             collection: collection.clone(),
@@ -145,25 +166,86 @@ fn test_large_pool_creation(chain: &mut Chain) {
         }],
         &user,
     );
+    println!("gas_wanted {:?}", exec_res.res.gas_wanted);
+    println!("gas_used {:?}", exec_res.res.gas_used);
+}
 
-    assert_eq!(
-        resp_pool,
-        Pool {
-            id: 1,
-            collection: Addr::unchecked(collection),
-            owner: Addr::unchecked(user_addr.to_string()),
-            asset_recipient: None,
-            pool_type: PoolType::Trade,
-            bonding_curve: BondingCurve::ConstantProduct,
-            spot_price: Uint128::new(pool_deposit_amount) / Uint128::from(token_ids.len() as u64),
-            delta: Uint128::zero(),
-            total_tokens: Uint128::new(pool_deposit_amount),
-            total_nfts: token_ids.len() as u64,
-            finders_fee_percent: Decimal::zero(),
-            swap_fee_percent: Decimal::zero(),
-            is_active: true,
-            reinvest_tokens: true,
-            reinvest_nfts: true,
-        }
+#[test_context(Chain)]
+#[test]
+#[ignore]
+fn test_many_pool_swap(chain: &mut Chain) {
+    if env::var("ENABLE_LARGE_TESTS").is_err() {
+        return;
+    }
+
+    let denom = chain.cfg.orc_cfg.chain_cfg.denom.clone();
+    let prefix = chain.cfg.orc_cfg.chain_cfg.prefix.clone();
+
+    let master_account = chain.cfg.users[1].clone();
+
+    let pool_deposit_amount = 10_000_000;
+    let balance = pool_deposit_amount * 10_000;
+    let user = gen_users(chain, 1, balance)[0].clone();
+    let user_addr = user.to_addr(&prefix).unwrap();
+
+    // init minter
+    instantiate_minter(
+        &mut chain.orc,
+        // set creator address as user to allow for minting on base minter
+        user_addr.to_string(),
+        &master_account.key,
+        &denom,
+    )
+    .unwrap();
+
+    let collection = chain.orc.contract_map.address(SG721_NAME).unwrap();
+
+    approve_all_nfts(
+        chain,
+        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
+        &user,
     );
+
+    const NUM_POOLS: usize = 100;
+    let mut pools: Vec<Pool> = vec![];
+    for _ in 0..NUM_POOLS {
+        pools.push(create_active_pool(
+            chain,
+            &user,
+            pool_deposit_amount,
+            2,
+            InfinityPoolExecuteMsg::CreateNftPool {
+                collection: collection.to_string(),
+                asset_recipient: None,
+                bonding_curve: BondingCurve::Linear,
+                spot_price: Uint128::from(100u64),
+                delta: Uint128::from(10u64),
+                finders_fee_bps: 0,
+            },
+        ));
+    }
+
+    let max_expected_token_input = [Uint128::from(10_000u64); NUM_POOLS];
+    let send_amount: Uint128 = max_expected_token_input.iter().sum();
+    let exec_res = pool_execute_message(
+        chain,
+        InfinityPoolExecuteMsg::SwapTokensForAnyNfts {
+            collection: collection.clone(),
+            max_expected_token_input: max_expected_token_input.to_vec(),
+            swap_params: SwapParams {
+                deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
+                robust: false,
+                asset_recipient: None,
+                finder: None,
+            },
+        },
+        "infinity-pool-swap-tokens-for-any-nfts",
+        vec![OrcCoin {
+            amount: send_amount.u128(),
+            denom: denom.parse().unwrap(),
+        }],
+        &user,
+    );
+    println!("gas_wanted {:?}", exec_res.res.gas_wanted);
+    println!("gas_used {:?}", exec_res.res.gas_used);
 }
