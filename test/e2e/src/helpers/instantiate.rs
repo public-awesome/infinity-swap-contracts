@@ -1,6 +1,6 @@
 use super::chain::SigningAccount;
 use super::constants::{
-    BASE_FACTORY_NAME, BASE_MINTER_NAME, CREATION_FEE, INFINITY_POOL_NAME, LISTING_FEE,
+    BASE_FACTORY_NAME, BASE_MINTER_NAME, CREATION_FEE, INFINITY_SWAP_NAME, LISTING_FEE,
     MARKETPLACE_NAME, MINT_PRICE, SG721_NAME,
 };
 use base_factory::msg::ExecuteMsg as BaseFactoryExecuteMsg;
@@ -13,7 +13,7 @@ use cosm_orc::orchestrator::{
 };
 use cosmwasm_std::{Coin, Empty, Uint128};
 use cw_utils::Duration;
-use infinity_pool::msg::InstantiateMsg as PoolInstantiateMsg;
+use infinity_swap::msg::InstantiateMsg as PoolInstantiateMsg;
 use sg2::msg::{CollectionParams, CreateMinterMsg};
 use sg721::CollectionInfo;
 use sg_marketplace::msg::InstantiateMsg as MarketplaceInstantiateMsg;
@@ -143,14 +143,14 @@ pub fn instantiate_marketplace(
     )
 }
 
-pub fn instantiate_infinity_pools(
+pub fn instantiate_infinity_swap(
     orc: &mut CosmOrc<CosmosgRPC>,
     denom: &str,
     user: &SigningAccount,
 ) -> Result<InstantiateResponse, ProcessError> {
     orc.instantiate(
-        INFINITY_POOL_NAME,
-        &format!("{}_inst", INFINITY_POOL_NAME),
+        INFINITY_SWAP_NAME,
+        &format!("{}_inst", INFINITY_SWAP_NAME),
         &PoolInstantiateMsg {
             denom: denom.to_string(),
             marketplace_addr: orc.contract_map.address(MARKETPLACE_NAME)?,

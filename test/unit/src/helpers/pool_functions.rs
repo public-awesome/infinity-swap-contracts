@@ -2,8 +2,8 @@ use crate::setup::setup_marketplace::LISTING_FEE;
 use anyhow::Error;
 use cosmwasm_std::{coins, Addr, Uint128};
 use cw_multi_test::Executor;
-use infinity_pool::msg::{ExecuteMsg as InfinityPoolExecuteMsg, PoolsByIdResponse, QueryMsg};
-use infinity_pool::state::Pool;
+use infinity_swap::msg::{ExecuteMsg as InfinityPoolExecuteMsg, PoolsByIdResponse, QueryMsg};
+use infinity_swap::state::Pool;
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
 
@@ -11,13 +11,13 @@ use super::fixtures::get_pool_fixtures;
 
 pub fn create_pool(
     router: &mut StargazeApp,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     owner: Addr,
     msg: InfinityPoolExecuteMsg,
 ) -> Result<Pool, Error> {
     let res = router.execute_contract(
         owner,
-        infinity_pool.clone(),
+        infinity_swap.clone(),
         &msg,
         &coins(LISTING_FEE, NATIVE_DENOM),
     );
@@ -32,7 +32,7 @@ pub fn create_pool(
     };
     let res: PoolsByIdResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool, &query_msg)
+        .query_wasm_smart(infinity_swap, &query_msg)
         .unwrap();
 
     let pool = res.pools[0].1.clone().unwrap();
@@ -41,7 +41,7 @@ pub fn create_pool(
 
 pub fn deposit_tokens(
     router: &mut StargazeApp,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     owner: Addr,
     pool_id: u64,
     deposit_amount: Uint128,
@@ -49,7 +49,7 @@ pub fn deposit_tokens(
     let msg = InfinityPoolExecuteMsg::DepositTokens { pool_id };
     let res = router.execute_contract(
         owner,
-        infinity_pool,
+        infinity_swap,
         &msg,
         &coins(deposit_amount.u128(), NATIVE_DENOM),
     );
@@ -64,7 +64,7 @@ pub fn deposit_tokens(
 
 pub fn deposit_nfts(
     router: &mut StargazeApp,
-    infinity_pool: Addr,
+    infinity_swap: Addr,
     owner: Addr,
     pool_id: u64,
     collection: Addr,
@@ -75,7 +75,7 @@ pub fn deposit_nfts(
         collection: collection.to_string(),
         nft_token_ids,
     };
-    let res = router.execute_contract(owner, infinity_pool, &msg, &[]);
+    let res = router.execute_contract(owner, infinity_swap, &msg, &[]);
     assert!(res.is_ok());
     let nft_token_ids = res.unwrap().events[1].attributes[2].value.clone();
 
@@ -84,20 +84,20 @@ pub fn deposit_nfts(
 
 pub fn activate(
     router: &mut StargazeApp,
-    infinity_pool: &Addr,
+    infinity_swap: &Addr,
     owner: &Addr,
     pool_id: u64,
     is_active: bool,
 ) -> Result<Pool, Error> {
     let msg = InfinityPoolExecuteMsg::SetActivePool { pool_id, is_active };
-    let res = router.execute_contract(owner.clone(), infinity_pool.clone(), &msg, &[]);
+    let res = router.execute_contract(owner.clone(), infinity_swap.clone(), &msg, &[]);
     assert!(res.is_ok());
     let query_msg = QueryMsg::PoolsById {
         pool_ids: vec![pool_id],
     };
     let res: PoolsByIdResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool, &query_msg)
+        .query_wasm_smart(infinity_swap, &query_msg)
         .unwrap();
 
     let pool = res.pools[0].1.clone().unwrap();
@@ -106,7 +106,7 @@ pub fn activate(
 
 pub fn prepare_swap_pool(
     router: &mut StargazeApp,
-    infinity_pool: &Addr,
+    infinity_swap: &Addr,
     owner: &Addr,
     num_deposit_tokens: Uint128,
     nft_token_ids: Vec<String>,
@@ -115,7 +115,7 @@ pub fn prepare_swap_pool(
 ) -> Result<Pool, Error> {
     let pool = create_pool(
         router,
-        infinity_pool.clone(),
+        infinity_swap.clone(),
         owner.clone(),
         create_pool_msg,
     )?;
@@ -123,7 +123,7 @@ pub fn prepare_swap_pool(
     if num_deposit_tokens > Uint128::zero() {
         deposit_tokens(
             router,
-            infinity_pool.clone(),
+            infinity_swap.clone(),
             owner.clone(),
             pool.id,
             num_deposit_tokens,
@@ -133,7 +133,7 @@ pub fn prepare_swap_pool(
     if !nft_token_ids.is_empty() {
         deposit_nfts(
             router,
-            infinity_pool.clone(),
+            infinity_swap.clone(),
             owner.clone(),
             pool.id,
             pool.collection.clone(),
@@ -141,7 +141,7 @@ pub fn prepare_swap_pool(
         )?;
     }
 
-    let pool = activate(router, infinity_pool, owner, pool.id, is_active)?;
+    let pool = activate(router, infinity_swap, owner, pool.id, is_active)?;
 
     Ok(pool)
 }
@@ -150,7 +150,7 @@ pub fn prepare_pool_variations(
     router: &mut StargazeApp,
     num_pools: u8,
     asset_account: &Option<String>,
-    infinity_pool: &Addr,
+    infinity_swap: &Addr,
     collection: &Addr,
     owner: &Addr,
     deposit_tokens_per_pool: Uint128,
@@ -184,7 +184,7 @@ pub fn prepare_pool_variations(
 
         let pool = prepare_swap_pool(
             router,
-            infinity_pool,
+            infinity_swap,
             owner,
             curr_deposit_tokens_per_pool,
             curr_nft_token_ids.clone(),

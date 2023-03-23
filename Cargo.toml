@@ -4,7 +4,7 @@ members = ["contracts/*",  "test/*"]
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
-repository = "https://github.com/tasiov/infinity-pool"
+repository = "https://github.com/tasiov/infinity-swap"
 description = "An NFT AMM protocol written for CosmWasm"
 license = "BUSL-1.1"
 
@@ -26,7 +26,7 @@ sg-marketplace = { git = "https://github.com/public-awesome/marketplace", featur
 thiserror = { version = "1.0.31" }
 anyhow = "1.0.51"
 
-[profile.release.package.infinity-pool]
+[profile.release.package.infinity-swap]
 codegen-units = 1
 incremental = false
 

@@ -7,7 +7,7 @@ use crate::helpers::{
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::Uint128;
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ExecuteMsg as InfinityPoolExecuteMsg, QueryMsg as InfinityPoolQueryMsg, SwapParams,
     SwapResponse,
 };
@@ -87,7 +87,7 @@ fn swap_small(chain: &mut Chain) {
                 finder: None,
             },
         },
-        "infinity-pool-swap-nfts-for-tokens",
+        "infinity-swap-swap-nfts-for-tokens",
         vec![OrcCoin {
             amount: total_amount.u128(),
             denom: denom.parse().unwrap(),

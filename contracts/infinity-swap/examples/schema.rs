@@ -1,6 +1,6 @@
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 use cosmwasm_std::Uint128;
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, NftSwap, PoolNftSwap, PoolQuoteResponse,
     PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
 };

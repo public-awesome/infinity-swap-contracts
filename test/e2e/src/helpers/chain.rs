@@ -11,7 +11,7 @@ use std::time::Duration;
 use test_context::TestContext;
 
 use super::instantiate::{
-    instantiate_base_factory, instantiate_infinity_pools, instantiate_marketplace,
+    instantiate_base_factory, instantiate_infinity_swap, instantiate_marketplace,
 };
 
 static CONFIG: OnceCell<Cfg> = OnceCell::new();
@@ -135,5 +135,5 @@ fn save_gas_report(orc: &CosmOrc<CosmosgRPC>, gas_report_dir: &str) {
 fn prep_base_contracts(orc: &mut CosmOrc<CosmosgRPC>, creator: &SigningAccount, denom: &str) {
     instantiate_base_factory(orc, creator, denom).unwrap();
     instantiate_marketplace(orc, creator).unwrap();
-    instantiate_infinity_pools(orc, denom, creator).unwrap();
+    instantiate_infinity_swap(orc, denom, creator).unwrap();
 }

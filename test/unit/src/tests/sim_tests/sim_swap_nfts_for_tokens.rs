@@ -3,7 +3,7 @@ use crate::helpers::pool_functions::prepare_pool_variations;
 use crate::helpers::swap_functions::{setup_swap_test, validate_swap_fees, SwapTestSetup};
 use crate::setup::setup_accounts::setup_addtl_account;
 use cosmwasm_std::{StdError, StdResult, Timestamp, Uint128};
-use infinity_pool::msg::{NftSwap, QueryMsg, SwapParams, SwapResponse};
+use infinity_swap::msg::{NftSwap, QueryMsg, SwapParams, SwapResponse};
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::GENESIS_MINT_START_TIME;
@@ -19,7 +19,7 @@ fn cant_swap_inactive_pools() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         ..
     } = setup_swap_test(5000).unwrap();
 
@@ -33,7 +33,7 @@ fn cant_swap_inactive_pools() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
     let bidder_token_ids = mint_and_approve_many(
@@ -42,7 +42,7 @@ fn cant_swap_inactive_pools() {
         &accts.bidder,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -51,7 +51,7 @@ fn cant_swap_inactive_pools() {
         &mut router,
         7,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -84,7 +84,7 @@ fn cant_swap_inactive_pools() {
 
     let res: StdResult<SwapResponse> = router
         .wrap()
-        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     assert!(res.unwrap().swaps.is_empty());
 }
@@ -99,7 +99,7 @@ fn can_swap_active_pools() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         ..
     } = setup_swap_test(5000).unwrap();
 
@@ -113,7 +113,7 @@ fn can_swap_active_pools() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
     let bidder_token_ids = mint_and_approve_many(
@@ -122,7 +122,7 @@ fn can_swap_active_pools() {
         &accts.bidder,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -131,7 +131,7 @@ fn can_swap_active_pools() {
         &mut router,
         7,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -164,7 +164,7 @@ fn can_swap_active_pools() {
 
     let res: StdResult<SwapResponse> = router
         .wrap()
-        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     assert!(res.is_ok());
     assert!(!res.unwrap().swaps.is_empty());
@@ -180,7 +180,7 @@ fn sale_price_below_min_expected() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         ..
     } = setup_swap_test(5000).unwrap();
 
@@ -194,7 +194,7 @@ fn sale_price_below_min_expected() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
     let bidder_token_ids = mint_and_approve_many(
@@ -203,7 +203,7 @@ fn sale_price_below_min_expected() {
         &accts.bidder,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -212,7 +212,7 @@ fn sale_price_below_min_expected() {
         &mut router,
         7,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -245,7 +245,7 @@ fn sale_price_below_min_expected() {
 
     let res: StdResult<SwapResponse> = router
         .wrap()
-        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     assert_eq!(
             res.unwrap_err(),
@@ -266,7 +266,7 @@ fn robust_query_does_not_revert_whole_tx() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         ..
     } = setup_swap_test(5000).unwrap();
 
@@ -280,7 +280,7 @@ fn robust_query_does_not_revert_whole_tx() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
     let bidder_token_ids = mint_and_approve_many(
@@ -289,7 +289,7 @@ fn robust_query_does_not_revert_whole_tx() {
         &accts.bidder,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -298,7 +298,7 @@ fn robust_query_does_not_revert_whole_tx() {
         &mut router,
         7,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -331,7 +331,7 @@ fn robust_query_does_not_revert_whole_tx() {
 
     let res: StdResult<SwapResponse> = router
         .wrap()
-        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     assert!(res.is_ok());
     assert_eq!(res.unwrap().swaps.len(), 2);
@@ -347,7 +347,7 @@ fn minimal_fee_tx_is_handled_correctly() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         marketplace,
     } = setup_swap_test(5000).unwrap();
 
@@ -361,7 +361,7 @@ fn minimal_fee_tx_is_handled_correctly() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
     let bidder_token_ids = mint_and_approve_many(
@@ -370,7 +370,7 @@ fn minimal_fee_tx_is_handled_correctly() {
         &accts.bidder,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -379,7 +379,7 @@ fn minimal_fee_tx_is_handled_correctly() {
         &mut router,
         7,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -421,7 +421,7 @@ fn minimal_fee_tx_is_handled_correctly() {
 
     let res: StdResult<SwapResponse> = router
         .wrap()
-        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     for swap in res.unwrap().swaps {
         let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
@@ -444,7 +444,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         marketplace,
     } = setup_swap_test(5000).unwrap();
     let user2 = setup_addtl_account(&mut router, "asset", 100u128).unwrap();
@@ -459,7 +459,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
     let bidder_token_ids = mint_and_approve_many(
@@ -468,7 +468,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         &accts.bidder,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -477,7 +477,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         &mut router,
         7,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -519,7 +519,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
 
     let res: StdResult<SwapResponse> = router
         .wrap()
-        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     for swap in res.unwrap().swaps {
         let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
@@ -542,7 +542,7 @@ fn trades_are_routed_correctly() {
                 collection_response_vec,
                 ..
             },
-        infinity_pool,
+        infinity_swap,
         ..
     } = setup_swap_test(5000).unwrap();
 
@@ -556,7 +556,7 @@ fn trades_are_routed_correctly() {
         &accts.owner,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
     let bidder_token_ids = mint_and_approve_many(
@@ -565,7 +565,7 @@ fn trades_are_routed_correctly() {
         &accts.bidder,
         &minter,
         &collection,
-        &infinity_pool,
+        &infinity_swap,
         100,
     );
 
@@ -574,7 +574,7 @@ fn trades_are_routed_correctly() {
         &mut router,
         14,
         &None,
-        &infinity_pool,
+        &infinity_swap,
         &collection,
         &accts.owner,
         deposit_tokens_per_pool,
@@ -609,7 +609,7 @@ fn trades_are_routed_correctly() {
 
     let res: StdResult<SwapResponse> = router
         .wrap()
-        .query_wasm_smart(infinity_pool.clone(), &sim_msg);
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
     let swaps = res.unwrap().swaps;
 
     assert_eq!(swaps.len(), num_swaps);

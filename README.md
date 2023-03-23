@@ -1,8 +1,8 @@
 <img width="896" alt="Screenshot 2023-01-31 at 10 48 07 AM" src="https://user-images.githubusercontent.com/6496257/215808478-7e9ef4f4-edaf-47d6-afc4-baadda383e59.png">
 
-# Infinity Pool - NFT AMM
+# Infinity Swap
 
-[![CircleCI](https://circleci.com/gh/tasiov/infinity-pool/tree/main.svg?style=svg)](https://circleci.com/gh/tasiov/infinity-pool/tree/main)
+[![CircleCI](https://circleci.com/gh/tasiov/infinity-swap/tree/main.svg?style=svg)](https://circleci.com/gh/tasiov/infinity-swap/tree/main)
 
 ## WARNING: NOT FOR COMMERCIAL USE
 
@@ -10,15 +10,15 @@ This repo is under a business source license simliar to Uniswap V3. This means i
 
 ## DISCLAIMER
 
-INFINITY POOL IS PROVIDED “AS IS”, AT YOUR OWN RISK, AND WITHOUT WARRANTIES OF ANY KIND. No developer or entity involved in creating or instantiating Infinity Pool smart contracts will be liable for any claims or damages whatsoever associated with your use, inability to use, or your interaction with other users of Infinity Pool, including any direct, indirect, incidental, special, exemplary, punitive or consequential damages, or loss of profits, cryptocurrencies, tokens, or anything else of value.
+INFINITY SWAP IS PROVIDED “AS IS”, AT YOUR OWN RISK, AND WITHOUT WARRANTIES OF ANY KIND. No developer or entity involved in creating or instantiating Infinity Swap smart contracts will be liable for any claims or damages whatsoever associated with your use, inability to use, or your interaction with other users of Infinity Swap, including any direct, indirect, incidental, special, exemplary, punitive or consequential damages, or loss of profits, cryptocurrencies, tokens, or anything else of value.
 
 ---
 
 ## Overview
 
-Infinity Pool is an automated market maker (AMM) protocol that allows for the buying and selling of NFT assets with a specified fungible token. The buy and sell price of the NFT assets are determined by the parameters of the pool, the bonding curve, and the assets custodied by the pool.
+Infinity Swap is an automated market maker (AMM) protocol that allows for the buying and selling of NFT assets with a specified fungible token. The buy and sell price of the NFT assets are determined by the parameters of the pool, the bonding curve, and the assets custodied by the pool.
 
-Infinity Pool makes use of an NFT AMM design, but is written for [CosmWasm](https://github.com/CosmWasm/cosmwasm) so that it may be used on Cosmos SDK based chains.
+Infinity Swap makes use of an NFT AMM design, but is written for [CosmWasm](https://github.com/CosmWasm/cosmwasm) so that it may be used on Cosmos SDK based chains.
 
 ## Features
 

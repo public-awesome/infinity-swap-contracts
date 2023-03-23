@@ -1,11 +1,11 @@
 use crate::helpers::nft_functions::validate_nft_owner;
 use crate::setup::msg::MarketAccounts;
-use crate::setup::setup_infinity_swap::setup_infinity_pool;
+use crate::setup::setup_infinity_swap::setup_infinity_swap;
 use crate::setup::setup_marketplace::setup_marketplace;
 use crate::setup::templates::standard_minter_template;
-use infinity_pool::msg::{PoolsByIdResponse, QueryMsg, TransactionType};
-use infinity_pool::state::{Pool, PoolType};
-use infinity_pool::swap_processor::Swap;
+use infinity_swap::msg::{PoolsByIdResponse, QueryMsg, TransactionType};
+use infinity_swap::state::{Pool, PoolType};
+use infinity_swap::swap_processor::Swap;
 
 use anyhow::Error;
 use cosmwasm_std::{Addr, Coin, Decimal, Event, Uint128};
@@ -20,7 +20,7 @@ use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
 pub struct SwapTestSetup {
     pub marketplace: Addr,
-    pub infinity_pool: Addr,
+    pub infinity_swap: Addr,
     pub vending_template: VendingTemplateResponse<MarketAccounts>,
 }
 
@@ -30,7 +30,7 @@ pub fn setup_swap_test(num_tokens: u32) -> Result<SwapTestSetup, Error> {
     let marketplace = setup_marketplace(&mut vt.router, vt.accts.creator.clone()).unwrap();
     setup_block_time(&mut vt.router, GENESIS_MINT_START_TIME, None);
 
-    let infinity_pool = setup_infinity_pool(
+    let infinity_swap = setup_infinity_swap(
         &mut vt.router,
         vt.accts.creator.clone(),
         marketplace.clone(),
@@ -39,7 +39,7 @@ pub fn setup_swap_test(num_tokens: u32) -> Result<SwapTestSetup, Error> {
 
     Ok(SwapTestSetup {
         marketplace,
-        infinity_pool,
+        infinity_swap,
         vending_template: vt,
     })
 }
@@ -132,7 +132,7 @@ pub fn validate_swap_outcome(
         .find(|&e| e.ty == "wasm-swap")
         .unwrap();
 
-    let infinity_pool_addr = Addr::unchecked(wasm_swap_event.attributes[0].value.clone());
+    let infinity_swap_addr = Addr::unchecked(wasm_swap_event.attributes[0].value.clone());
     let tx_type = wasm_swap_event
         .attributes
         .iter()
@@ -185,7 +185,7 @@ pub fn validate_swap_outcome(
                 // Verify pool owner received NFT
                 let pool_owner_account = if pool.pool_type == PoolType::Trade && pool.reinvest_nfts
                 {
-                    infinity_pool_addr.clone()
+                    infinity_swap_addr.clone()
                 } else {
                     pool.get_recipient()
                 };
@@ -197,7 +197,7 @@ pub fn validate_swap_outcome(
                 // Verify pool owner received tokens
                 let pool_owner_account =
                     if pool.pool_type == PoolType::Trade && pool.reinvest_tokens {
-                        infinity_pool_addr.clone()
+                        infinity_swap_addr.clone()
                     } else {
                         pool.get_recipient()
                     };
@@ -251,7 +251,7 @@ pub fn validate_swap_outcome(
     };
     let post_swap_pools: PoolsByIdResponse = router
         .wrap()
-        .query_wasm_smart(infinity_pool_addr, &get_pools_msg)
+        .query_wasm_smart(infinity_swap_addr, &get_pools_msg)
         .unwrap();
     let mut post_swap_pools_map: HashMap<u64, Pool> = HashMap::new();
     for (pool_id, pool) in post_swap_pools.pools {

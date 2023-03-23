@@ -2,8 +2,8 @@ use std::vec;
 
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{coins, Addr, Attribute};
-use infinity_pool::instantiate::instantiate;
-use infinity_pool::msg::InstantiateMsg;
+use infinity_swap::instantiate::instantiate;
+use infinity_swap::msg::InstantiateMsg;
 use sg_std::NATIVE_DENOM;
 
 const MARKETPLACE: &str = "marketplace";

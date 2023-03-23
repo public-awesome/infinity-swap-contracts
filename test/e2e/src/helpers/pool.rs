@@ -1,14 +1,14 @@
 use super::chain::Chain;
-use super::constants::{INFINITY_POOL_NAME, LISTING_FEE, SG721_NAME};
+use super::constants::{INFINITY_SWAP_NAME, LISTING_FEE, SG721_NAME};
 use super::fixtures::get_pool_fixtures;
 use crate::helpers::nft::{approve_all_nfts, mint_nfts};
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosm_orc::orchestrator::ExecResponse;
 use cosm_orc::orchestrator::{ExecReq, SigningKey};
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ExecuteMsg as InfinityPoolExecuteMsg, PoolsByIdResponse, QueryMsg as InfinityPoolQueryMsg,
 };
-use infinity_pool::state::Pool;
+use infinity_swap::state::Pool;
 use serde::Deserialize;
 
 pub fn pool_execute_message(
@@ -19,7 +19,7 @@ pub fn pool_execute_message(
     user: &SigningKey,
 ) -> ExecResponse {
     let reqs = vec![ExecReq {
-        contract_name: INFINITY_POOL_NAME.to_string(),
+        contract_name: INFINITY_SWAP_NAME.to_string(),
         msg: Box::new(execute_msg),
         funds,
     }];
@@ -33,7 +33,7 @@ pub fn pool_query_message<T: for<'a> Deserialize<'a>>(
 ) -> T {
     chain
         .orc
-        .query(INFINITY_POOL_NAME, &query_msg)
+        .query(INFINITY_SWAP_NAME, &query_msg)
         .unwrap()
         .data()
         .unwrap()
@@ -53,14 +53,14 @@ pub fn create_active_pool(
 
     approve_all_nfts(
         chain,
-        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
+        chain.orc.contract_map.address(INFINITY_SWAP_NAME).unwrap(),
         user,
     );
 
     let resp = pool_execute_message(
         chain,
         create_pool_msg,
-        "infinity-pool-create-pool",
+        "infinity-swap-create-pool",
         vec![OrcCoin {
             amount: LISTING_FEE,
             denom: denom.parse().unwrap(),
@@ -88,7 +88,7 @@ pub fn create_active_pool(
                 collection,
                 nft_token_ids: token_ids,
             },
-            "infinity-pool-deposit-nfts",
+            "infinity-swap-deposit-nfts",
             vec![],
             user,
         );
@@ -98,7 +98,7 @@ pub fn create_active_pool(
         pool_execute_message(
             chain,
             InfinityPoolExecuteMsg::DepositTokens { pool_id },
-            "infinity-pool-deposit-tokens",
+            "infinity-swap-deposit-tokens",
             vec![OrcCoin {
                 amount: pool_deposit_amount,
                 denom: denom.parse().unwrap(),
@@ -113,7 +113,7 @@ pub fn create_active_pool(
             is_active: true,
             pool_id,
         },
-        "infinity-pool-activate",
+        "infinity-swap-activate",
         vec![],
         user,
     );

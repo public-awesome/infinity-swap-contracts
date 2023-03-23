@@ -1,13 +1,13 @@
 use crate::helpers::{
     chain::Chain,
-    constants::{INFINITY_POOL_NAME, SG721_NAME},
+    constants::{INFINITY_SWAP_NAME, SG721_NAME},
     helper::{gen_users, latest_block_time},
     instantiate::instantiate_minter,
     nft::{approve_all_nfts, mint_and_transfer_nfts},
     pool::{create_pools_from_fixtures, pool_execute_message, pool_query_message},
 };
 use cosmwasm_std::Uint128;
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ExecuteMsg as InfinityPoolExecuteMsg, NftSwap, QueryMsg as InfinityPoolQueryMsg, SwapParams,
     SwapResponse,
 };
@@ -56,7 +56,7 @@ fn swap_small(chain: &mut Chain) {
     let bidder_token_ids = mint_and_transfer_nfts(chain, 10, &maker, taker_addr.as_ref());
     approve_all_nfts(
         chain,
-        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
+        chain.orc.contract_map.address(INFINITY_SWAP_NAME).unwrap(),
         &taker,
     );
 
@@ -99,7 +99,7 @@ fn swap_small(chain: &mut Chain) {
                 finder: None,
             },
         },
-        "infinity-pool-swap-nfts-for-tokens",
+        "infinity-swap-swap-nfts-for-tokens",
         vec![],
         &taker,
     );

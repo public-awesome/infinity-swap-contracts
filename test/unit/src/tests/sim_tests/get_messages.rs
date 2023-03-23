@@ -2,15 +2,15 @@ use std::vec;
 
 use cosmwasm_std::Timestamp;
 use cosmwasm_std::{Addr, Uint128};
-use infinity_pool::msg::PoolNftSwap;
-use infinity_pool::msg::QueryMsg::SimDirectSwapNftsForTokens;
-use infinity_pool::msg::QueryMsg::SimDirectSwapTokensForSpecificNfts;
-use infinity_pool::msg::QueryMsg::SimSwapNftsForTokens;
-use infinity_pool::msg::QueryMsg::SimSwapTokensForAnyNfts;
-use infinity_pool::msg::QueryMsg::SimSwapTokensForSpecificNfts;
-use infinity_pool::msg::{self};
-use infinity_pool::msg::{NftSwap, SwapParams};
-use infinity_pool::state::Pool;
+use infinity_swap::msg::PoolNftSwap;
+use infinity_swap::msg::QueryMsg::SimDirectSwapNftsForTokens;
+use infinity_swap::msg::QueryMsg::SimDirectSwapTokensForSpecificNfts;
+use infinity_swap::msg::QueryMsg::SimSwapNftsForTokens;
+use infinity_swap::msg::QueryMsg::SimSwapTokensForAnyNfts;
+use infinity_swap::msg::QueryMsg::SimSwapTokensForSpecificNfts;
+use infinity_swap::msg::{self};
+use infinity_swap::msg::{NftSwap, SwapParams};
+use infinity_swap::state::Pool;
 use sg_std::GENESIS_MINT_START_TIME;
 
 pub fn get_sim_swap_message(

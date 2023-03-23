@@ -1,6 +1,6 @@
 use crate::helpers::{
     chain::Chain,
-    constants::{INFINITY_POOL_NAME, LISTING_FEE, MINT_PRICE, SG721_NAME},
+    constants::{INFINITY_SWAP_NAME, LISTING_FEE, MINT_PRICE, SG721_NAME},
     fixtures::get_pool_fixtures,
     helper::gen_users,
     instantiate::instantiate_minter,
@@ -9,10 +9,10 @@ use crate::helpers::{
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use infinity_pool::msg::{
+use infinity_swap::msg::{
     ExecuteMsg as InfinityPoolExecuteMsg, PoolsByIdResponse, QueryMsg as InfinityPoolQueryMsg,
 };
-use infinity_pool::state::{BondingCurve, Pool, PoolType};
+use infinity_swap::state::{BondingCurve, Pool, PoolType};
 use test_context::test_context;
 
 #[test_context(Chain)]
@@ -54,7 +54,7 @@ fn test_small_pool_creation(chain: &mut Chain) {
 
     approve_all_nfts(
         chain,
-        chain.orc.contract_map.address(INFINITY_POOL_NAME).unwrap(),
+        chain.orc.contract_map.address(INFINITY_SWAP_NAME).unwrap(),
         &user,
     );
 
@@ -71,7 +71,7 @@ fn test_small_pool_creation(chain: &mut Chain) {
             reinvest_tokens: true,
             reinvest_nfts: true,
         },
-        "infinity-pool-create-pool",
+        "infinity-swap-create-pool",
         vec![OrcCoin {
             amount: LISTING_FEE,
             denom: denom.parse().unwrap(),
@@ -92,7 +92,7 @@ fn test_small_pool_creation(chain: &mut Chain) {
             collection: collection.clone(),
             nft_token_ids: token_ids.clone(),
         },
-        "infinity-pool-deposit-nfts",
+        "infinity-swap-deposit-nfts",
         vec![],
         &user,
     );
@@ -100,7 +100,7 @@ fn test_small_pool_creation(chain: &mut Chain) {
     pool_execute_message(
         chain,
         InfinityPoolExecuteMsg::DepositTokens { pool_id },
-        "infinity-pool-deposit-tokens",
+        "infinity-swap-deposit-tokens",
         vec![OrcCoin {
             amount: pool_deposit_amount,
             denom: denom.parse().unwrap(),
@@ -114,7 +114,7 @@ fn test_small_pool_creation(chain: &mut Chain) {
             is_active: true,
             pool_id,
         },
-        "infinity-pool-activate",
+        "infinity-swap-activate",
         vec![],
         &user,
     );
