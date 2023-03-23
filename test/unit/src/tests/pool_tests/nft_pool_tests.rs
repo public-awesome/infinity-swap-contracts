@@ -4,7 +4,7 @@ use crate::helpers::nft_functions::{approve, mint};
 use crate::helpers::pool_functions::create_pool;
 use crate::helpers::utils::assert_error;
 use crate::setup::setup_accounts::setup_addtl_account;
-use crate::setup::setup_infinity_pool::setup_infinity_pool;
+use crate::setup::setup_infinity_swap::setup_infinity_pool;
 use crate::setup::setup_marketplace::{setup_marketplace, LISTING_FEE};
 use crate::setup::templates::standard_minter_template;
 use cosmwasm_std::{coins, Addr, Uint128};
