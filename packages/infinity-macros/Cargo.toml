@@ -1,0 +1,19 @@
+[package]
+name = "infinity-macros"
+repository = "https://github.com/tasiov/infinity-swap"
+description = "A macros package for defining NFT contract interfaces."
+version = { workspace = true }
+edition = { workspace = true }
+authors = { workspace = true }
+license = { workspace = true }
+
+[lib]
+proc-macro = true
+
+[dependencies]
+infinity-interface = { workspace = true }
+cosmwasm-std = { workspace = true }
+cosmwasm-schema = { workspace = true }
+syn = { workspace = true }
+quote = { workspace = true }
+proc-macro2 = { workspace = true }
