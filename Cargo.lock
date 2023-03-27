@@ -1389,6 +1389,66 @@ dependencies = [
 ]
 
 [[package]]
+name = "infinity-interface"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw721",
+ "cw721-base",
+ "infinity-swap",
+ "sg-marketplace",
+ "sg-std",
+ "sg1",
+ "sg2",
+ "sg721",
+ "sg721-base",
+ "thiserror",
+]
+
+[[package]]
+name = "infinity-macros"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "infinity-interface",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "infinity-marketplace-wrapper"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw721",
+ "cw721-base",
+ "infinity-interface",
+ "infinity-macros",
+ "infinity-swap",
+ "sg-marketplace",
+ "sg-std",
+ "sg1",
+ "sg2",
+ "sg721",
+ "sg721-base",
+ "thiserror",
+]
+
+[[package]]
 name = "infinity-swap"
 version = "0.1.0"
 dependencies = [

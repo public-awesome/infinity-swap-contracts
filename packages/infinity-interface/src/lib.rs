@@ -1,5 +1,6 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Timestamp, Uint128};
+use cosmwasm_std::{Addr, Deps, StdError, Timestamp, Uint128};
+use cw_utils::maybe_addr;
 
 #[cw_serde]
 pub enum TransactionType {
@@ -31,7 +32,7 @@ pub struct Swap {
 
 #[cw_serde]
 pub struct SwapResponse {
-    pub swap: Vec<Swap>,
+    pub swaps: Vec<Swap>,
 }
 
 #[cw_serde]
@@ -51,4 +52,23 @@ pub struct SwapParams {
     pub asset_recipient: Option<String>,
     /// The address of the finder, will receive a portion of the fees equal to percentage set by maker
     pub finder: Option<String>,
+}
+
+pub struct SwapParamsInternal {
+    pub deadline: Timestamp,
+    pub robust: bool,
+    pub asset_recipient: Option<Addr>,
+    pub finder: Option<Addr>,
+}
+
+pub fn transform_swap_params(
+    deps: Deps,
+    swap_params: SwapParams,
+) -> Result<SwapParamsInternal, StdError> {
+    Ok(SwapParamsInternal {
+        deadline: swap_params.deadline,
+        robust: swap_params.robust,
+        asset_recipient: maybe_addr(deps.api, swap_params.asset_recipient)?,
+        finder: maybe_addr(deps.api, swap_params.finder)?,
+    })
 }

@@ -1,5 +1,5 @@
 [package]
-name = "infinity-swap"
+name = "infinity-marketplace-wrapper"
 version    = { workspace = true }
 edition    = { workspace = true }
 repository = { workspace = true }
@@ -21,6 +21,9 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
+infinity-macros = { workspace = true }
+infinity-interface = { workspace = true }
+infinity-swap = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-storage = { workspace = true }
@@ -37,4 +40,3 @@ sg-std = { workspace = true }
 sg-marketplace = { workspace = true }
 cw721-base = { workspace = true }
 cw721 = { workspace = true }
-

@@ -58,13 +58,6 @@ pub fn infinity_module_query(metadata: TokenStream, input: TokenStream) -> Token
         quote! {
         enum Right {
             #[returns(#swap_response)]
-            SimSwapTokensForSpecificNfts {
-                sender: String,
-                collection: String,
-                nft_orders: Vec<#nft_order>,
-                swap_params: #swap_params,
-            },
-            #[returns(#swap_response)]
             SimSwapTokensForAnyNfts {
                 sender: String,
                 collection: String,

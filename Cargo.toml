@@ -1,14 +1,18 @@
 [workspace]
-members = ["contracts/*",  "test/*"]
+members = ["contracts/*",  "packages/*",  "test/*"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/tasiov/infinity-swap"
-description = "An NFT AMM protocol written for CosmWasm"
+description = "A set of contracts and libraries for the Infinity Swap project."
+authors = ["Tasio tasiovictoria@ujulabs.com"]
 license = "BUSL-1.1"
 
 [workspace.dependencies]
+infinity-macros = { path = "./packages/infinity-macros" }
+infinity-interface = { path = "./packages/infinity-interface" }
+infinity-swap = { path = "./contracts/infinity-swap" }
 cosmwasm-std = "1.1.9"
 cosmwasm-schema = { version = "1.1.9" }
 cosmwasm-storage = { version = "1.0.0" }
@@ -25,6 +29,10 @@ sg-std = "0.21.8"
 sg-marketplace = { git = "https://github.com/public-awesome/marketplace", features = ["library"] }
 thiserror = { version = "1.0.31" }
 anyhow = "1.0.51"
+
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "1.0", features = ["derive"] }
 
 [profile.release.package.infinity-swap]
 codegen-units = 1
