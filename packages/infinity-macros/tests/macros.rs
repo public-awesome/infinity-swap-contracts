@@ -32,13 +32,6 @@ fn infinity_module_query_derive() {
         asset_recipient: Some("asset_recipient".to_string()),
         finder: Some("finder".to_string()),
     };
-
-    Test::SimSwapTokensForSpecificNfts {
-        sender: "sender".to_string(),
-        collection: "collection".to_string(),
-        nft_orders: nft_orders.clone(),
-        swap_params: swap_params.clone(),
-    };
     Test::SimSwapTokensForAnyNfts {
         sender: "sender".to_string(),
         collection: "collection".to_string(),
@@ -59,7 +52,6 @@ fn infinity_module_query_derive() {
         Test::Foo
         | Test::Bar(_)
         | Test::Baz { .. }
-        | Test::SimSwapTokensForSpecificNfts { .. }
         | Test::SimSwapTokensForAnyNfts { .. }
         | Test::SimSwapNftsForTokens { .. } => "yay",
     };
