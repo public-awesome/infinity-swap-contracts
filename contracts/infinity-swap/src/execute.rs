@@ -291,8 +291,7 @@ pub fn execute_deposit_tokens(
     info: MessageInfo,
     pool_id: u64,
 ) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
-    let received_amount = must_pay(&info, &config.denom)?;
+    let received_amount = must_pay(&info, &NATIVE_DENOM)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
     // Only the owner of the pool can deposit and withdraw assets
@@ -376,11 +375,10 @@ pub fn execute_withdraw_tokens(
 
     let mut response = Response::new();
 
-    let config = CONFIG.load(deps.storage)?;
     // Withdraw tokens to the asset recipient if specified, otherwise to the sender
     let recipient = asset_recipient.unwrap_or(info.sender);
     transfer_token(
-        coin(amount.u128(), config.denom),
+        coin(amount.u128(), NATIVE_DENOM),
         recipient.as_ref(),
         &mut response,
     )?;
@@ -596,7 +594,7 @@ pub fn execute_remove_pool(
     if pool.total_tokens > Uint128::zero() {
         let recipient = asset_recipient.unwrap_or(info.sender);
         transfer_token(
-            coin(pool.total_tokens.u128(), config.denom),
+            coin(pool.total_tokens.u128(), NATIVE_DENOM),
             recipient.as_ref(),
             &mut response,
         )?;
@@ -773,8 +771,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
         &swap_params,
     )?;
 
-    let received_amount =
-        validate_nft_swaps_for_buy(&info, &swap_prep_result.denom, &nfts_to_swap_for)?;
+    let received_amount = validate_nft_swaps_for_buy(&info, &nfts_to_swap_for)?;
 
     let mut response = Response::new();
     let mut pools_to_save: Vec<Pool>;

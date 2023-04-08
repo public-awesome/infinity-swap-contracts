@@ -9,8 +9,6 @@ pub const POOL_COUNTER: Item<u64> = Item::new("pool-counter");
 /// The global configuration object for the protocol
 #[cw_serde]
 pub struct Config {
-    /// The fungible token used in the pools
-    pub denom: String,
     /// The address of the marketplace contract
     pub marketplace_addr: Addr,
     /// The address of the developer who will receive a portion of the fair burn

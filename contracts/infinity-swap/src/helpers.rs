@@ -16,7 +16,7 @@ use sg721::RoyaltyInfoResponse;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg721_base::ExecuteMsg as Sg721ExecuteMsg;
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
-use sg_std::Response;
+use sg_std::{Response, NATIVE_DENOM};
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 
@@ -399,7 +399,6 @@ pub fn validate_finder(
 }
 
 pub struct SwapPrepResult {
-    pub denom: String,
     pub marketplace_params: ParamsResponse,
     pub collection_royalties: Option<RoyaltyInfoResponse>,
     pub asset_recipient: Addr,
@@ -432,7 +431,6 @@ pub fn prep_for_swap(
     let seller_recipient = asset_recipient.unwrap_or_else(|| sender.clone());
 
     Ok(SwapPrepResult {
-        denom: config.denom.clone(),
         marketplace_params,
         collection_royalties,
         asset_recipient: seller_recipient,
@@ -478,7 +476,6 @@ pub fn validate_nft_swaps_for_sell(
 /// Validate NftSwap vector token amounts, and that user has provided enough tokens
 pub fn validate_nft_swaps_for_buy(
     info: &MessageInfo,
-    denom: &str,
     pool_nft_swaps: &Vec<PoolNftSwap>,
 ) -> Result<Uint128, ContractError> {
     if pool_nft_swaps.is_empty() {
@@ -510,7 +507,7 @@ pub fn validate_nft_swaps_for_buy(
         }
     }
 
-    let received_amount = must_pay(info, denom)?;
+    let received_amount = must_pay(info, NATIVE_DENOM)?;
     if received_amount != expected_amount {
         return Err(ContractError::InsufficientFunds(format!(
             "expected {} but received {}",

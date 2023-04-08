@@ -13,7 +13,7 @@ use infinity_swap::msg::{
     PoolsResponse, QueryMsg, QueryOptions,
 };
 use infinity_swap::state::{BondingCurve, Config, PoolQuote};
-use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
+use sg_std::GENESIS_MINT_START_TIME;
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
 const USER: &str = "user1";
@@ -39,7 +39,6 @@ fn try_query_config() {
     assert_eq!(
         res.config,
         Config {
-            denom: NATIVE_DENOM.to_string(),
             marketplace_addr: marketplace,
             developer: None,
         }
