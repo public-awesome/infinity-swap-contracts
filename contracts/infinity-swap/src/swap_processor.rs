@@ -598,6 +598,13 @@ impl<'a> SwapProcessor<'a> {
                 }
                 // Create PoolQueueItem and insert into pool_queue_item_map
                 let pool = pool_option.unwrap();
+
+                if pool.collection != self.collection {
+                    return Err(ContractError::InvalidPool(
+                        "pool does not belong to this collection".to_string(),
+                    ));
+                }
+
                 let quote_price = pool.get_sell_quote(self.min_quote)?;
                 if quote_price.is_none() {
                     if swap_params.robust {
