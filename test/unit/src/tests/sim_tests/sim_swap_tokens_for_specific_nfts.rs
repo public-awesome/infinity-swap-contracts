@@ -2,6 +2,9 @@ use crate::helpers::nft_functions::mint_and_approve_many;
 use crate::helpers::pool_functions::prepare_pool_variations;
 use crate::helpers::swap_functions::{setup_swap_test, validate_swap_fees, SwapTestSetup};
 use crate::setup::setup_accounts::setup_addtl_account;
+use crate::setup::setup_infinity_swap::setup_infinity_swap;
+use crate::setup::setup_marketplace::setup_marketplace;
+use crate::setup::templates::minter_two_collections;
 use cosmwasm_std::{StdError, StdResult, Timestamp, Uint128};
 use infinity_swap::msg::{
     NftSwap, NftTokenIdsResponse, PoolNftSwap, QueryMsg, QueryOptions, SwapParams, SwapResponse,
@@ -13,6 +16,7 @@ use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::GENESIS_MINT_START_TIME;
 use std::vec;
 use test_suite::common_setup::msg::VendingTemplateResponse;
+use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
 #[test]
 fn cant_swap_inactive_pool() {
@@ -224,6 +228,123 @@ fn cant_swap_invalid_pool_type() {
             res.unwrap_err(),
             StdError::GenericErr {
                 msg: "Querier contract error: Generic error: Invalid pool: pool cannot sell nfts"
+                    .to_string()
+            }
+        );
+    }
+}
+
+#[test]
+fn cant_swap_for_pools_outside_of_collection() {
+    let mut vt = minter_two_collections(5000);
+
+    let marketplace = setup_marketplace(&mut vt.router, vt.accts.creator.clone()).unwrap();
+    setup_block_time(&mut vt.router, GENESIS_MINT_START_TIME, None);
+
+    let infinity_swap = setup_infinity_swap(
+        &mut vt.router,
+        vt.accts.creator.clone(),
+        marketplace.clone(),
+    )
+    .unwrap();
+
+    let VendingTemplateResponse {
+        mut router,
+        accts,
+        collection_response_vec,
+        ..
+    } = vt;
+
+    let minter = &collection_response_vec[0].minter.clone().unwrap();
+    let collection_a = &collection_response_vec[0].collection.clone().unwrap();
+    let collection_resp_b = &collection_response_vec[1];
+    let collection_b = collection_resp_b.collection.clone().unwrap();
+
+    let owner_token_ids = mint_and_approve_many(
+        &mut router,
+        &accts.creator,
+        &accts.owner,
+        &minter,
+        &collection_a,
+        &infinity_swap,
+        100,
+    );
+
+    let deposit_tokens_per_pool = Uint128::from(10_000u128);
+    let pools = prepare_pool_variations(
+        &mut router,
+        7,
+        &None,
+        &infinity_swap,
+        &collection_a,
+        &accts.owner,
+        deposit_tokens_per_pool,
+        owner_token_ids,
+        6,
+        true,
+        0,
+        0,
+    );
+
+    let pool_chunks: Vec<Vec<Pool>> = pools
+        .into_iter()
+        .filter(|p| p.can_sell_nfts())
+        .chunks(3)
+        .into_iter()
+        .map(|chunk| chunk.collect())
+        .collect();
+
+    for chunk in pool_chunks {
+        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
+        for pool in chunk {
+            let nft_token_ids_response: NftTokenIdsResponse = router
+                .wrap()
+                .query_wasm_smart(
+                    infinity_swap.clone(),
+                    &QueryMsg::PoolNftTokenIds {
+                        pool_id: pool.id,
+                        query_options: QueryOptions {
+                            descending: None,
+                            start_after: None,
+                            limit: Some(3),
+                        },
+                    },
+                )
+                .unwrap();
+
+            pool_nfts_to_swap_for.push(PoolNftSwap {
+                pool_id: pool.id,
+                nft_swaps: nft_token_ids_response
+                    .nft_token_ids
+                    .into_iter()
+                    .map(|token_id| NftSwap {
+                        nft_token_id: token_id,
+                        token_amount: Uint128::from(100_000u128),
+                    })
+                    .collect(),
+            });
+        }
+
+        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+            collection: collection_b.to_string(),
+            pool_nfts_to_swap_for,
+            sender: accts.bidder.to_string(),
+            swap_params: SwapParams {
+                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+                robust: false,
+                asset_recipient: None,
+                finder: None,
+            },
+        };
+
+        let res: StdResult<SwapResponse> = router
+            .wrap()
+            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+
+        assert_eq!(
+            res.unwrap_err(),
+            StdError::GenericErr {
+                msg: "Querier contract error: Generic error: Invalid pool: pool does not belong to this collection"
                     .to_string()
             }
         );
