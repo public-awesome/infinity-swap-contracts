@@ -488,29 +488,6 @@ impl<'a> SwapProcessor<'a> {
         Ok(())
     }
 
-    pub fn get_transaction_events(&self) -> Vec<Event> {
-        let mut events: Vec<Event> = vec![];
-        for swap in self.swaps.iter() {
-            events.push(swap.into());
-        }
-        for pool in self.pools_to_save.values() {
-            events.push(
-                pool.create_event(
-                    "pool-swap-update",
-                    vec![
-                        "id",
-                        "spot_price",
-                        "total_nfts",
-                        "total_tokens",
-                        "is_active",
-                    ],
-                )
-                .unwrap(),
-            );
-        }
-        events
-    }
-
     /// Swap NFTs to tokens directly with the specified pool
     pub fn direct_swap_nfts_for_tokens(
         &mut self,

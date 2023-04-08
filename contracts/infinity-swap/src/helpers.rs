@@ -278,6 +278,30 @@ pub fn update_nft_deposits(
     Ok(())
 }
 
+/// Process swaps for NFT deposit changes
+pub fn get_transaction_events(swaps: &Vec<Swap>, pools_to_save: &Vec<Pool>) -> Vec<Event> {
+    let mut events: Vec<Event> = vec![];
+    for swap in swaps.iter() {
+        events.push(swap.into());
+    }
+    for pool in pools_to_save.iter() {
+        events.push(
+            pool.create_event(
+                "pool-swap-update",
+                vec![
+                    "id",
+                    "spot_price",
+                    "total_nfts",
+                    "total_tokens",
+                    "is_active",
+                ],
+            )
+            .unwrap(),
+        );
+    }
+    events
+}
+
 /// Push the transfer NFT message on the NFT collection contract
 pub fn transfer_nft(
     token_id: &str,

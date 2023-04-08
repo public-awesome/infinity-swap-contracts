@@ -1,8 +1,9 @@
 use crate::error::ContractError;
 use crate::helpers::{
-    get_next_pool_counter, load_marketplace_params, only_owner, prep_for_swap, remove_nft_deposit,
-    remove_pool, save_pool, save_pools, store_nft_deposit, transfer_nft, transfer_token,
-    update_nft_deposits, validate_nft_swaps_for_buy, validate_nft_swaps_for_sell,
+    get_next_pool_counter, get_transaction_events, load_marketplace_params, only_owner,
+    prep_for_swap, remove_nft_deposit, remove_pool, save_pool, save_pools, store_nft_deposit,
+    transfer_nft, transfer_token, update_nft_deposits, validate_nft_swaps_for_buy,
+    validate_nft_swaps_for_sell,
 };
 use crate::msg::{ExecuteMsg, NftSwap, PoolNftSwap, QueryOptions, SwapParams, TransactionType};
 use crate::query::query_pool_nft_token_ids;
@@ -267,8 +268,6 @@ pub fn execute_create_pool(
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
     let mut response = Response::new();
-    let event = pool.create_event_all_props("create-pool")?;
-    response = response.add_event(event);
     response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
 
     // Burn the listing fee set on the marketplace contract
@@ -279,6 +278,9 @@ pub fn execute_create_pool(
     if listing_fee > Uint128::zero() {
         fair_burn(listing_fee.u128(), config.developer, &mut response);
     }
+
+    let event = pool.create_event_all_props("create-pool")?;
+    response = response.add_event(event);
 
     Ok(response)
 }
@@ -303,9 +305,9 @@ pub fn execute_deposit_tokens(
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
     let mut response = Response::new();
+    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
     let event = pool.create_event("deposit-tokens", vec!["id", "spot_price", "total_tokens"])?;
     response = response.add_event(event);
-    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
     Ok(response)
 }
 
@@ -346,15 +348,15 @@ pub fn execute_deposit_nfts(
 
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
+    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
 
     let event = Event::new("deposit-nfts").add_attributes(vec![
         attr("pool_id", pool.id.to_string()),
         attr("total_nfts", pool.total_nfts.to_string()),
         attr("nft_token_ids", nft_token_ids.join(",")),
     ]);
-
     response = response.add_event(event);
-    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
+
     Ok(response)
 }
 
@@ -387,10 +389,11 @@ pub fn execute_withdraw_tokens(
 
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
+    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
 
     let event = pool.create_event("withdraw-tokens", vec!["id", "spot_price", "total_tokens"])?;
     response = response.add_event(event);
-    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
+
     Ok(response)
 }
 
@@ -437,6 +440,7 @@ pub fn execute_withdraw_nfts(
 
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
+    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
 
     let event = Event::new("withdraw-nfts").add_attributes(vec![
         attr("pool_id", pool.id.to_string()),
@@ -444,7 +448,7 @@ pub fn execute_withdraw_nfts(
         attr("nft_token_ids", nft_token_ids.join(",")),
     ]);
     response = response.add_event(event);
-    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
+
     Ok(response)
 }
 
@@ -529,9 +533,10 @@ pub fn execute_update_pool_config(
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
     let mut response = Response::new();
+    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
+
     let event = pool.create_event("update-pool-config", attr_keys)?;
     response = response.add_event(event);
-    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
 
     Ok(response)
 }
@@ -555,9 +560,10 @@ pub fn execute_set_active_pool(
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
 
     let mut response = Response::new();
+    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
+
     let event = pool.create_event("set-active-pool", vec!["id", "is_active"])?;
     response = response.add_event(event);
-    response = save_pool(deps.storage, &mut pool, &marketplace_params, response)?;
 
     Ok(response)
 }
@@ -597,10 +603,10 @@ pub fn execute_remove_pool(
     }
 
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;
+    response = remove_pool(deps.storage, &mut pool, &marketplace_params, response)?;
 
     let event = pool.create_event("remove-pool", vec!["id"])?;
     response = response.add_event(event);
-    response = remove_pool(deps.storage, &mut pool, &marketplace_params, response)?;
 
     Ok(response)
 }
@@ -651,7 +657,6 @@ pub fn execute_direct_swap_nfts_for_tokens(
         );
         processor.direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)?;
         processor.finalize_transaction(&mut response)?;
-        response = response.add_events(processor.get_transaction_events());
         swaps = processor.swaps;
         pools_to_save = processor.pools_to_save.into_values().collect();
     }
@@ -663,6 +668,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
         &swap_prep_result.marketplace_params,
         response,
     )?;
+    response = response.add_events(get_transaction_events(&swaps, &pools_to_save));
 
     Ok(response)
 }
@@ -711,7 +717,6 @@ pub fn execute_swap_nfts_for_tokens(
         );
         processor.swap_nfts_for_tokens(deps.as_ref().storage, nfts_to_swap, swap_params)?;
         processor.finalize_transaction(&mut response)?;
-        response = response.add_events(processor.get_transaction_events());
         swaps = processor.swaps;
         pools_to_save = processor.pools_to_save.into_values().collect();
     }
@@ -723,6 +728,7 @@ pub fn execute_swap_nfts_for_tokens(
         &swap_prep_result.marketplace_params,
         response,
     )?;
+    response = response.add_events(get_transaction_events(&swaps, &pools_to_save));
 
     Ok(response)
 }
@@ -793,7 +799,6 @@ pub fn execute_swap_tokens_for_specific_nfts(
         );
         processor.swap_tokens_for_specific_nfts(deps.storage, nfts_to_swap_for, swap_params)?;
         processor.finalize_transaction(&mut response)?;
-        response = response.add_events(processor.get_transaction_events());
         swaps = processor.swaps;
         pools_to_save = processor.pools_to_save.into_values().collect();
     }
@@ -805,6 +810,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
         &swap_prep_result.marketplace_params,
         response,
     )?;
+    response = response.add_events(get_transaction_events(&swaps, &pools_to_save));
 
     Ok(response)
 }
@@ -868,7 +874,6 @@ pub fn execute_swap_tokens_for_any_nfts(
         );
         processor.swap_tokens_for_any_nfts(deps.storage, max_expected_token_input, swap_params)?;
         processor.finalize_transaction(&mut response)?;
-        response = response.add_events(processor.get_transaction_events());
         swaps = processor.swaps;
         pools_to_save = processor.pools_to_save.into_values().collect();
     }
@@ -880,6 +885,7 @@ pub fn execute_swap_tokens_for_any_nfts(
         &swap_prep_result.marketplace_params,
         response,
     )?;
+    response = response.add_events(get_transaction_events(&swaps, &pools_to_save));
 
     Ok(response)
 }

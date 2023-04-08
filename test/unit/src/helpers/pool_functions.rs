@@ -15,14 +15,25 @@ pub fn create_pool(
     owner: Addr,
     msg: InfinitySwapExecuteMsg,
 ) -> Result<Pool, Error> {
-    let res = router.execute_contract(
-        owner,
-        infinity_swap.clone(),
-        &msg,
-        &coins(LISTING_FEE, NATIVE_DENOM),
-    );
-    assert!(res.is_ok());
-    let pool_id = res.unwrap().events[1].attributes[1]
+    let res = router
+        .execute_contract(
+            owner,
+            infinity_swap.clone(),
+            &msg,
+            &coins(LISTING_FEE, NATIVE_DENOM),
+        )
+        .unwrap();
+
+    let create_pool_event = res
+        .events
+        .iter()
+        .find(|event| event.ty == "wasm-create-pool")
+        .unwrap();
+    let pool_id = create_pool_event
+        .attributes
+        .iter()
+        .find(|attr| attr.key == "id")
+        .unwrap()
         .value
         .parse::<u64>()
         .unwrap();
