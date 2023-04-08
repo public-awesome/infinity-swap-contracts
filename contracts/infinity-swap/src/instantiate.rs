@@ -25,7 +25,6 @@ pub fn instantiate(
     CONFIG.save(
         deps.storage,
         &Config {
-            denom: msg.denom.clone(),
             marketplace_addr: deps.api.addr_validate(&msg.marketplace_addr)?,
             developer: maybe_addr(deps.api, msg.developer)?,
         },
