@@ -291,7 +291,7 @@ pub fn execute_deposit_tokens(
     info: MessageInfo,
     pool_id: u64,
 ) -> Result<Response, ContractError> {
-    let received_amount = must_pay(&info, &NATIVE_DENOM)?;
+    let received_amount = must_pay(&info, NATIVE_DENOM)?;
 
     let mut pool = pools().load(deps.storage, pool_id)?;
     // Only the owner of the pool can deposit and withdraw assets

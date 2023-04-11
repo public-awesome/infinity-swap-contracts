@@ -283,7 +283,7 @@ pub fn update_nft_deposits(
 }
 
 /// Process swaps for NFT deposit changes
-pub fn get_transaction_events(swaps: &Vec<Swap>, pools_to_save: &Vec<Pool>) -> Vec<Event> {
+pub fn get_transaction_events(swaps: &[Swap], pools_to_save: &[Pool]) -> Vec<Event> {
     let mut events: Vec<Event> = vec![];
     for swap in swaps.iter() {
         events.push(swap.into());
