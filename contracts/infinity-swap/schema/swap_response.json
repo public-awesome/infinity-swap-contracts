@@ -114,8 +114,8 @@
       "description": "Defines whether the end user is buying or selling NFTs",
       "type": "string",
       "enum": [
-        "nfts_for_tokens",
-        "tokens_for_nfts"
+        "user_submits_nfts",
+        "user_submits_tokens"
       ]
     },
     "Uint128": {

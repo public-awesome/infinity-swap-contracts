@@ -34,20 +34,20 @@ export interface InfinitySwapReadOnlyInterface {
     poolId: number;
     queryOptions: QueryOptionsForString;
   }) => Promise<PoolNftTokenIdsResponse>;
-  poolQuotesBuy: ({
+  quotesBuyFromPool: ({
     collection,
     queryOptions
   }: {
     collection: string;
     queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
-  }) => Promise<PoolQuotesBuyResponse>;
-  poolQuotesSell: ({
+  }) => Promise<QuotesBuyFromPoolResponse>;
+  quotesSellToPool: ({
     collection,
     queryOptions
   }: {
     collection: string;
     queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
-  }) => Promise<PoolQuotesSellResponse>;
+  }) => Promise<QuotesSellToPoolResponse>;
   simDirectSwapNftsForTokens: ({
     nftsToSwap,
     poolId,
@@ -116,8 +116,8 @@ export class InfinitySwapQueryClient implements InfinitySwapReadOnlyInterface {
     this.poolsById = this.poolsById.bind(this);
     this.poolsByOwner = this.poolsByOwner.bind(this);
     this.poolNftTokenIds = this.poolNftTokenIds.bind(this);
-    this.poolQuotesBuy = this.poolQuotesBuy.bind(this);
-    this.poolQuotesSell = this.poolQuotesSell.bind(this);
+    this.quotesBuyFromPool = this.quotesBuyFromPool.bind(this);
+    this.quotesSellToPool = this.quotesSellToPool.bind(this);
     this.simDirectSwapNftsForTokens = this.simDirectSwapNftsForTokens.bind(this);
     this.simSwapNftsForTokens = this.simSwapNftsForTokens.bind(this);
     this.simDirectSwapTokensForSpecificNfts = this.simDirectSwapTokensForSpecificNfts.bind(this);
@@ -180,29 +180,29 @@ export class InfinitySwapQueryClient implements InfinitySwapReadOnlyInterface {
       }
     });
   };
-  poolQuotesBuy = async ({
+  quotesBuyFromPool = async ({
     collection,
     queryOptions
   }: {
     collection: string;
     queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
-  }): Promise<PoolQuotesBuyResponse> => {
+  }): Promise<QuotesBuyFromPoolResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      pool_quotes_buy: {
+      quotes_buy_from_pool: {
         collection,
         query_options: queryOptions
       }
     });
   };
-  poolQuotesSell = async ({
+  quotesSellToPool = async ({
     collection,
     queryOptions
   }: {
     collection: string;
     queryOptions: QueryOptionsForTupleOfUint128_and_uint64;
-  }): Promise<PoolQuotesSellResponse> => {
+  }): Promise<QuotesSellToPoolResponse> => {
     return this.client.queryContractSmart(this.contractAddress, {
-      pool_quotes_sell: {
+      quotes_sell_to_pool: {
         collection,
         query_options: queryOptions
       }

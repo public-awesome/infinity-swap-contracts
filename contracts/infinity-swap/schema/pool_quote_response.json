@@ -20,7 +20,7 @@
       "type": "string"
     },
     "PoolQuote": {
-      "description": "PoolQuote represents a quote for a pool, at which assets can be bought or sold",
+      "description": "PoolQuote represents a quote at which assets can be bought or sold from a pool",
       "type": "object",
       "required": [
         "collection",
