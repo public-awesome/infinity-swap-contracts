@@ -9,7 +9,6 @@ export interface ConfigResponse {
   config: Config;
 }
 export interface Config {
-  denom: string;
   developer?: Addr | null;
   marketplace_addr: Addr;
 }
@@ -208,12 +207,12 @@ export type QueryMsg = {
     query_options: QueryOptionsForString;
   };
 } | {
-  pool_quotes_buy: {
+  quotes_buy_from_pool: {
     collection: string;
     query_options: QueryOptionsForTupleOfUint128AndUint64;
   };
 } | {
-  pool_quotes_sell: {
+  quotes_sell_to_pool: {
     collection: string;
     query_options: QueryOptionsForTupleOfUint128AndUint64;
   };
@@ -268,7 +267,7 @@ export interface QueryOptionsForTupleOfUint128AndUint64 {
   limit?: number | null;
   start_after?: [Uint128, number] | null;
 }
-export type TransactionType = "nfts_for_tokens" | "tokens_for_nfts";
+export type TransactionType = "user_submits_nfts" | "user_submits_tokens";
 export interface SwapResponse {
   swaps: Swap[];
 }

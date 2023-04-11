@@ -123,10 +123,10 @@
       "description": "Retrieve pool quotes sorted by their buy quote price Return type: `PoolQuoteResponse`",
       "type": "object",
       "required": [
-        "pool_quotes_buy"
+        "quotes_buy_from_pool"
       ],
       "properties": {
-        "pool_quotes_buy": {
+        "quotes_buy_from_pool": {
           "type": "object",
           "required": [
             "collection",
@@ -149,10 +149,10 @@
       "description": "Retrieve pool quotes sorted by their sell quote price Return type: `PoolQuoteResponse`",
       "type": "object",
       "required": [
-        "pool_quotes_sell"
+        "quotes_sell_to_pool"
       ],
       "properties": {
-        "pool_quotes_sell": {
+        "quotes_sell_to_pool": {
           "type": "object",
           "required": [
             "collection",
