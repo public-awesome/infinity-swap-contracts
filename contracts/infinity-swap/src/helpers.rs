@@ -1,7 +1,7 @@
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
 use crate::state::{
-    buy_pool_quotes, pools, sell_pool_quotes, BondingCurve, Pool, PoolQuote, CONFIG, NFT_DEPOSITS,
-    POOL_COUNTER,
+    buy_from_pool_quotes, pools, sell_to_pool_quotes, BondingCurve, Pool, PoolQuote, CONFIG,
+    NFT_DEPOSITS, POOL_COUNTER,
 };
 use crate::swap_processor::Swap;
 use crate::ContractError;
@@ -49,75 +49,38 @@ pub fn get_next_pool_counter(store: &mut dyn Storage) -> Result<u64, ContractErr
     Ok(pool_counter)
 }
 
-pub fn remove_buy_pool_quote(
+pub fn remove_buy_from_pool_quote(
     store: &mut dyn Storage,
     pool_id: u64,
     response: Response,
 ) -> Result<Response, ContractError> {
-    let old_data = buy_pool_quotes().may_load(store, pool_id)?;
+    let old_data = buy_from_pool_quotes().may_load(store, pool_id)?;
     if old_data.is_none() {
         return Ok(response);
     }
-    buy_pool_quotes().replace(store, pool_id, None, old_data.as_ref())?;
+    buy_from_pool_quotes().replace(store, pool_id, None, old_data.as_ref())?;
     let response = response
         .add_event(Event::new("remove-buy-pool-quote").add_attribute("id", pool_id.to_string()));
     Ok(response)
 }
 
-pub fn remove_sell_pool_quote(
+pub fn remove_sell_to_pool_quote(
     store: &mut dyn Storage,
     pool_id: u64,
     response: Response,
 ) -> Result<Response, ContractError> {
-    let old_data = sell_pool_quotes().may_load(store, pool_id)?;
+    let old_data = sell_to_pool_quotes().may_load(store, pool_id)?;
     if old_data.is_none() {
         return Ok(response);
     }
-    sell_pool_quotes().replace(store, pool_id, None, old_data.as_ref())?;
+    sell_to_pool_quotes().replace(store, pool_id, None, old_data.as_ref())?;
     let response = response
         .add_event(Event::new("remove-sell-pool-quote").add_attribute("id", pool_id.to_string()));
     Ok(response)
 }
 
 /// Update the indexed buy pool quotes for a specific pool
-pub fn update_buy_pool_quotes(
-    store: &mut dyn Storage,
-    pool: &Pool,
-    min_price: Uint128,
-    response: Response,
-) -> Result<Response, ContractError> {
-    if !pool.can_buy_nfts() {
-        return Ok(response);
-    }
-    let mut response = response;
-    if !pool.is_active {
-        response = remove_buy_pool_quote(store, pool.id, response)?;
-        return Ok(response);
-    }
-    let buy_pool_quote = pool.get_buy_quote(min_price)?;
-
-    // If the pool quote is less than the minimum price, remove it from the index
-    if buy_pool_quote.is_none() {
-        response = remove_buy_pool_quote(store, pool.id, response)?;
-        return Ok(response);
-    }
-    let pool_quote = PoolQuote {
-        id: pool.id,
-        collection: pool.collection.clone(),
-        quote_price: buy_pool_quote.unwrap(),
-    };
-    buy_pool_quotes().save(store, pool.id, &pool_quote)?;
-    response = response.add_event(
-        Event::new("add-buy-pool-quote")
-            .add_attribute("id", pool_quote.id.to_string())
-            .add_attribute("collection", pool_quote.collection.to_string())
-            .add_attribute("quote_price", pool_quote.quote_price.to_string()),
-    );
-    Ok(response)
-}
-
-/// Update the indexed sell pool quotes for a specific pool
-pub fn update_sell_pool_quotes(
+pub fn update_buy_from_pool_quotes(
     store: &mut dyn Storage,
     pool: &Pool,
     min_price: Uint128,
@@ -128,13 +91,50 @@ pub fn update_sell_pool_quotes(
     }
     let mut response = response;
     if !pool.is_active {
-        response = remove_sell_pool_quote(store, pool.id, response)?;
+        response = remove_buy_from_pool_quote(store, pool.id, response)?;
         return Ok(response);
     }
-    let sell_pool_quote = pool.get_sell_quote(min_price)?;
+    let buy_pool_quote = pool.get_buy_from_pool_quote(min_price)?;
+
+    // If the pool quote is less than the minimum price, remove it from the index
+    if buy_pool_quote.is_none() {
+        response = remove_buy_from_pool_quote(store, pool.id, response)?;
+        return Ok(response);
+    }
+    let pool_quote = PoolQuote {
+        id: pool.id,
+        collection: pool.collection.clone(),
+        quote_price: buy_pool_quote.unwrap(),
+    };
+    buy_from_pool_quotes().save(store, pool.id, &pool_quote)?;
+    response = response.add_event(
+        Event::new("add-buy-pool-quote")
+            .add_attribute("id", pool_quote.id.to_string())
+            .add_attribute("collection", pool_quote.collection.to_string())
+            .add_attribute("quote_price", pool_quote.quote_price.to_string()),
+    );
+    Ok(response)
+}
+
+/// Update the indexed sell pool quotes for a specific pool
+pub fn update_sell_to_pool_quotes(
+    store: &mut dyn Storage,
+    pool: &Pool,
+    min_price: Uint128,
+    response: Response,
+) -> Result<Response, ContractError> {
+    if !pool.can_buy_nfts() {
+        return Ok(response);
+    }
+    let mut response = response;
+    if !pool.is_active {
+        response = remove_sell_to_pool_quote(store, pool.id, response)?;
+        return Ok(response);
+    }
+    let sell_pool_quote = pool.get_sell_to_pool_quote(min_price)?;
     // If the pool quote is less than the minimum price, remove it from the index
     if sell_pool_quote.is_none() {
-        response = remove_sell_pool_quote(store, pool.id, response)?;
+        response = remove_sell_to_pool_quote(store, pool.id, response)?;
         return Ok(response);
     }
     let pool_quote = PoolQuote {
@@ -142,7 +142,7 @@ pub fn update_sell_pool_quotes(
         collection: pool.collection.clone(),
         quote_price: sell_pool_quote.unwrap(),
     };
-    sell_pool_quotes().save(store, pool.id, &pool_quote)?;
+    sell_to_pool_quotes().save(store, pool.id, &pool_quote)?;
     response = response.add_event(
         Event::new("add-sell-pool-quote")
             .add_attribute("id", pool_quote.id.to_string())
@@ -179,8 +179,10 @@ pub fn save_pool(
     let mut response = response;
     pool.validate(marketplace_params)?;
     force_property_values(pool)?;
-    response = update_buy_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
-    response = update_sell_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
+    response =
+        update_buy_from_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
+    response =
+        update_sell_to_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
     pools().save(store, pool.id, pool)?;
 
     Ok(response)
@@ -210,8 +212,10 @@ pub fn remove_pool(
 ) -> Result<Response, ContractError> {
     let mut response = response;
     pool.set_active(false)?;
-    response = update_buy_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
-    response = update_sell_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
+    response =
+        update_buy_from_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
+    response =
+        update_sell_to_pool_quotes(store, pool, marketplace_params.params.min_price, response)?;
     pools().remove(store, pool.id)?;
 
     Ok(response)
@@ -265,12 +269,12 @@ pub fn update_nft_deposits(
 ) -> Result<(), ContractError> {
     for swap in swaps.iter() {
         match swap.transaction_type {
-            TransactionType::NftsForTokens => {
+            TransactionType::UserSubmitsNfts => {
                 if &swap.nft_payment.address == contract {
                     store_nft_deposit(storage, swap.pool_id, &swap.nft_payment.nft_token_id)?;
                 }
             }
-            TransactionType::TokensForNfts => {
+            TransactionType::UserSubmitsTokens => {
                 remove_nft_deposit(storage, swap.pool_id, &swap.nft_payment.nft_token_id)
             }
         }

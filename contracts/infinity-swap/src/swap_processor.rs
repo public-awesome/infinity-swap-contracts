@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::helpers::{get_nft_deposit, transfer_nft, transfer_token, verify_nft_deposit};
 use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
-use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, Pool, PoolQuote, PoolType};
+use crate::state::{buy_from_pool_quotes, pools, sell_to_pool_quotes, Pool, PoolQuote, PoolType};
 
 use core::cmp::Ordering;
 use cosmwasm_schema::cw_serde;
@@ -199,7 +199,7 @@ impl<'a> SwapProcessor<'a> {
     /// Create an individual swap object
     fn create_swap(&mut self, pool: &Pool, payment_amount: Uint128, nft_token_id: String) -> Swap {
         // Subtract from received amount in the case of a buy
-        if self.tx_type == TransactionType::TokensForNfts {
+        if self.tx_type == TransactionType::UserSubmitsTokens {
             self.remaining_balance -= payment_amount;
         }
 
@@ -237,8 +237,12 @@ impl<'a> SwapProcessor<'a> {
 
         // Set the addresses that will receive the NFT and token payment
         let (nft_recipient, token_recipient) = match &self.tx_type {
-            TransactionType::TokensForNfts => (self.seller_recipient.clone(), pool.get_recipient()),
-            TransactionType::NftsForTokens => (pool.get_recipient(), self.seller_recipient.clone()),
+            TransactionType::UserSubmitsTokens => {
+                (self.seller_recipient.clone(), pool.get_recipient())
+            }
+            TransactionType::UserSubmitsNfts => {
+                (pool.get_recipient(), self.seller_recipient.clone())
+            }
         };
 
         Swap {
@@ -270,10 +274,10 @@ impl<'a> SwapProcessor<'a> {
 
         // Manage pool assets for swap
         let result = match self.tx_type {
-            TransactionType::NftsForTokens => pool_queue_item
+            TransactionType::UserSubmitsNfts => pool_queue_item
                 .pool
                 .sell_nft_to_pool(&nft_swap, pool_queue_item.quote_price),
-            TransactionType::TokensForNfts => pool_queue_item
+            TransactionType::UserSubmitsTokens => pool_queue_item
                 .pool
                 .buy_nft_from_pool(&nft_swap, pool_queue_item.quote_price),
         };
@@ -300,13 +304,13 @@ impl<'a> SwapProcessor<'a> {
 
         // Reinvest tokens or NFTs if applicable
         if pool_queue_item.pool.pool_type == PoolType::Trade {
-            if self.tx_type == TransactionType::TokensForNfts
+            if self.tx_type == TransactionType::UserSubmitsTokens
                 && pool_queue_item.pool.reinvest_tokens
             {
                 let reinvest_amount = swap.seller_payment.unwrap().amount;
                 swap.seller_payment = None;
                 pool_queue_item.pool.deposit_tokens(reinvest_amount)?;
-            } else if self.tx_type == TransactionType::NftsForTokens
+            } else if self.tx_type == TransactionType::UserSubmitsNfts
                 && pool_queue_item.pool.reinvest_nfts
             {
                 swap.nft_payment.address = self.contract.to_string();
@@ -327,8 +331,12 @@ impl<'a> SwapProcessor<'a> {
             return Ok((pool_queue_item, true));
         }
         let get_next_pool_quote = match self.tx_type {
-            TransactionType::TokensForNfts => pool_queue_item.pool.get_sell_quote(self.min_quote),
-            TransactionType::NftsForTokens => pool_queue_item.pool.get_buy_quote(self.min_quote),
+            TransactionType::UserSubmitsNfts => {
+                pool_queue_item.pool.get_sell_to_pool_quote(self.min_quote)
+            }
+            TransactionType::UserSubmitsTokens => {
+                pool_queue_item.pool.get_buy_from_pool_quote(self.min_quote)
+            }
         };
         if get_next_pool_quote.is_err() {
             pool_queue_item.usable = false;
@@ -430,16 +438,16 @@ impl<'a> SwapProcessor<'a> {
         // Init iter
         if self.pool_quote_iter.is_none() {
             self.pool_quote_iter = Some(match &self.tx_type {
-                TransactionType::TokensForNfts => sell_pool_quotes()
+                TransactionType::UserSubmitsNfts => sell_to_pool_quotes()
                     .idx
                     .collection_sell_price
                     .sub_prefix(self.collection.clone())
-                    .range(storage, None, None, Order::Ascending),
-                TransactionType::NftsForTokens => buy_pool_quotes()
+                    .range(storage, None, None, Order::Descending),
+                TransactionType::UserSubmitsTokens => buy_from_pool_quotes()
                     .idx
                     .collection_buy_price
                     .sub_prefix(self.collection.clone())
-                    .range(storage, None, None, Order::Descending),
+                    .range(storage, None, None, Order::Ascending),
             })
         }
 
@@ -468,10 +476,10 @@ impl<'a> SwapProcessor<'a> {
         }
 
         let loaded_pool_queue_item = match &self.tx_type {
-            // For buys, the first pool will have the lowest quote
-            TransactionType::TokensForNfts => self.pool_queue.pop_first(),
             // For sells, the last pool will have the highest quote
-            TransactionType::NftsForTokens => self.pool_queue.pop_last(),
+            TransactionType::UserSubmitsNfts => self.pool_queue.pop_last(),
+            // For buys, the first pool will have the lowest quote
+            TransactionType::UserSubmitsTokens => self.pool_queue.pop_first(),
         };
 
         if let Some(_loaded_pool_queue_item) = &loaded_pool_queue_item {
@@ -495,7 +503,7 @@ impl<'a> SwapProcessor<'a> {
         nfts_to_swap: Vec<NftSwap>,
         swap_params: SwapParams,
     ) -> Result<(), ContractError> {
-        let quote_price = pool.get_buy_quote(self.min_quote)?;
+        let quote_price = pool.get_sell_to_pool_quote(self.min_quote)?;
         if quote_price.is_none() {
             return Err(ContractError::NoQuoteForPool(format!(
                 "pool {} cannot offer quote",
@@ -605,7 +613,7 @@ impl<'a> SwapProcessor<'a> {
                     ));
                 }
 
-                let quote_price = pool.get_sell_quote(self.min_quote)?;
+                let quote_price = pool.get_buy_from_pool_quote(self.min_quote)?;
                 if quote_price.is_none() {
                     if swap_params.robust {
                         continue;

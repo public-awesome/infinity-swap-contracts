@@ -95,7 +95,7 @@ pub fn validate_swap_fees(
         assert_eq!(swap.finder_payment, None);
     }
 
-    if pool.reinvest_tokens && swap.transaction_type == TransactionType::TokensForNfts {
+    if pool.reinvest_tokens && swap.transaction_type == TransactionType::UserSubmitsTokens {
         assert_eq!(swap.seller_payment, None);
     } else {
         assert_eq!(
@@ -181,7 +181,7 @@ pub fn validate_swap_outcome(
                 );
             }
 
-            if tx_type == "NftsForTokens" {
+            if tx_type == "UserSubmitsNfts" {
                 // Verify pool owner received NFT
                 let pool_owner_account = if pool.pool_type == PoolType::Trade && pool.reinvest_nfts
                 {
@@ -263,7 +263,7 @@ pub fn validate_swap_outcome(
             continue;
         }
         let post_swap_pool = post_swap_pools_map.get(&pool.id).unwrap();
-        if tx_type == "NftsForTokens" {
+        if tx_type == "UserSubmitsNfts" {
             assert!(pool.spot_price >= post_swap_pool.spot_price)
         } else {
             assert!(pool.spot_price <= post_swap_pool.spot_price)
