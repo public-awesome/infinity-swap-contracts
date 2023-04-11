@@ -32,8 +32,8 @@ pub struct SwapParams {
 /// Defines whether the end user is buying or selling NFTs
 #[cw_serde]
 pub enum TransactionType {
-    NftsForTokens,
-    TokensForNfts,
+    UserSubmitsNfts,
+    UserSubmitsTokens,
 }
 
 impl fmt::Display for TransactionType {
@@ -214,13 +214,13 @@ pub enum QueryMsg {
     },
     /// Retrieve pool quotes sorted by their buy quote price
     /// Return type: `PoolQuoteResponse`
-    PoolQuotesBuy {
+    QuotesBuyFromPool {
         collection: String,
         query_options: QueryOptions<(Uint128, u64)>,
     },
     /// Retrieve pool quotes sorted by their sell quote price
     /// Return type: `PoolQuoteResponse`
-    PoolQuotesSell {
+    QuotesSellToPool {
         collection: String,
         query_options: QueryOptions<(Uint128, u64)>,
     },

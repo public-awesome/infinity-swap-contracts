@@ -638,7 +638,7 @@ pub fn execute_direct_swap_nfts_for_tokens(
 
     {
         let mut processor = SwapProcessor::new(
-            TransactionType::NftsForTokens,
+            TransactionType::UserSubmitsNfts,
             env.contract.address.clone(),
             pool.collection.clone(),
             info.sender,
@@ -698,7 +698,7 @@ pub fn execute_swap_nfts_for_tokens(
 
     {
         let mut processor = SwapProcessor::new(
-            TransactionType::NftsForTokens,
+            TransactionType::UserSubmitsNfts,
             env.contract.address.clone(),
             collection,
             info.sender,
@@ -779,7 +779,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
 
     {
         let mut processor = SwapProcessor::new(
-            TransactionType::TokensForNfts,
+            TransactionType::UserSubmitsTokens,
             env.contract.address.clone(),
             collection,
             info.sender,
@@ -854,7 +854,7 @@ pub fn execute_swap_tokens_for_any_nfts(
 
     {
         let mut processor = SwapProcessor::new(
-            TransactionType::TokensForNfts,
+            TransactionType::UserSubmitsTokens,
             env.contract.address.clone(),
             collection,
             info.sender,

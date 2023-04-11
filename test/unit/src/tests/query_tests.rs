@@ -184,7 +184,7 @@ fn try_query_pools_by_buy_price() {
         50,
     );
 
-    let pool_query = QueryMsg::PoolQuotesBuy {
+    let pool_query = QueryMsg::QuotesBuyFromPool {
         collection: collection.to_string(),
         query_options: QueryOptions {
             descending: None,
@@ -198,42 +198,16 @@ fn try_query_pools_by_buy_price() {
         .query_wasm_smart(infinity_swap, &pool_query)
         .unwrap();
 
-    assert_eq!(res.pool_quotes.len(), 10);
     let expected_pool_quotes = vec![
         PoolQuote {
-            id: 13,
+            id: 3,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1469u128),
+            quote_price: Uint128::from(300u128),
         },
         PoolQuote {
-            id: 12,
+            id: 4,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1320u128),
-        },
-        PoolQuote {
-            id: 14,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1000u128),
-        },
-        PoolQuote {
-            id: 7,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1000u128),
-        },
-        PoolQuote {
-            id: 9,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(900u128),
-        },
-        PoolQuote {
-            id: 8,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(800u128),
-        },
-        PoolQuote {
-            id: 6,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(636u128),
+            quote_price: Uint128::from(400u128),
         },
         PoolQuote {
             id: 5,
@@ -241,17 +215,43 @@ fn try_query_pools_by_buy_price() {
             quote_price: Uint128::from(550u128),
         },
         PoolQuote {
-            id: 2,
+            id: 6,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(200u128),
+            quote_price: Uint128::from(637u128),
         },
         PoolQuote {
-            id: 1,
+            id: 10,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(100u128),
+            quote_price: Uint128::from(1000u128),
+        },
+        PoolQuote {
+            id: 11,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(1100u128),
+        },
+        PoolQuote {
+            id: 12,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(1320u128),
+        },
+        PoolQuote {
+            id: 13,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(1470u128),
+        },
+        PoolQuote {
+            id: 7,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(3000u128),
+        },
+        PoolQuote {
+            id: 14,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(3000u128),
         },
     ];
 
+    assert_eq!(res.pool_quotes.len(), expected_pool_quotes.len());
     for (id, pq) in res.pool_quotes.iter().enumerate() {
         assert_eq!(pq, &expected_pool_quotes[id]);
     }
@@ -282,7 +282,7 @@ fn try_query_pools_by_sell_price() {
         50,
     );
 
-    let pool_query = QueryMsg::PoolQuotesSell {
+    let pool_query = QueryMsg::QuotesSellToPool {
         collection: collection.to_string(),
         query_options: QueryOptions {
             descending: None,
@@ -298,34 +298,9 @@ fn try_query_pools_by_sell_price() {
     assert_eq!(res.pool_quotes.len(), 10);
     let expected_pool_quotes = vec![
         PoolQuote {
-            id: 3,
+            id: 13,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(300u64),
-        },
-        PoolQuote {
-            id: 4,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(400u64),
-        },
-        PoolQuote {
-            id: 5,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(500u64),
-        },
-        PoolQuote {
-            id: 6,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(600u64),
-        },
-        PoolQuote {
-            id: 10,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1000u64),
-        },
-        PoolQuote {
-            id: 11,
-            collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1100u64),
+            quote_price: Uint128::from(1300u64),
         },
         PoolQuote {
             id: 12,
@@ -333,19 +308,44 @@ fn try_query_pools_by_sell_price() {
             quote_price: Uint128::from(1200u64),
         },
         PoolQuote {
-            id: 13,
+            id: 14,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(1300u64),
+            quote_price: Uint128::from(1000u64),
         },
         PoolQuote {
             id: 7,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(3000u64),
+            quote_price: Uint128::from(1000u64),
         },
         PoolQuote {
-            id: 14,
+            id: 9,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(3000u64),
+            quote_price: Uint128::from(900u64),
+        },
+        PoolQuote {
+            id: 8,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(800u64),
+        },
+        PoolQuote {
+            id: 6,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(600u64),
+        },
+        PoolQuote {
+            id: 5,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(500u64),
+        },
+        PoolQuote {
+            id: 2,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(200u64),
+        },
+        PoolQuote {
+            id: 1,
+            collection: Addr::unchecked("contract2"),
+            quote_price: Uint128::from(100u64),
         },
     ];
     for (id, pq) in res.pool_quotes.iter().enumerate() {

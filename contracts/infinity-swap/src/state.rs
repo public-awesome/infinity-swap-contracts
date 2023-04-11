@@ -4,7 +4,7 @@ use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
 use std::fmt;
 
 /// An incrementing uint used as the primary key for pools
-pub const POOL_COUNTER: Item<u64> = Item::new("pool-counter");
+pub const POOL_COUNTER: Item<u64> = Item::new("pool_counter");
 
 /// The global configuration object for the protocol
 #[cw_serde]
@@ -114,7 +114,7 @@ pub fn pools<'a>() -> IndexedMap<'a, u64, Pool, PoolIndices<'a>> {
     IndexedMap::new("pools", indexes)
 }
 
-/// PoolQuote represents a quote for a pool, at which assets can be bought or sold
+/// PoolQuote represents a quote at which assets can be bought or sold from a pool
 #[cw_serde]
 pub struct PoolQuote {
     /// The unique id of the pool quote, also corresponds to a pool_id
@@ -138,15 +138,15 @@ impl<'a> IndexList<PoolQuote> for BuyPoolQuoteIndices<'a> {
     }
 }
 
-pub fn buy_pool_quotes<'a>() -> IndexedMap<'a, u64, PoolQuote, BuyPoolQuoteIndices<'a>> {
+pub fn buy_from_pool_quotes<'a>() -> IndexedMap<'a, u64, PoolQuote, BuyPoolQuoteIndices<'a>> {
     let indexes = BuyPoolQuoteIndices {
         collection_buy_price: MultiIndex::new(
             |_pk: &[u8], p: &PoolQuote| (p.collection.clone(), p.quote_price.u128()),
-            "buy_pool_quotes",
-            "buy_pool_quotes__collection_buy_price",
+            "buy_from_pool_quotes",
+            "buy_from_pool_quotes__collection_buy_price",
         ),
     };
-    IndexedMap::new("buy_pool_quotes", indexes)
+    IndexedMap::new("buy_from_pool_quotes", indexes)
 }
 
 /// SellPoolQuoteIndices defines the indices for the PoolQuote type
@@ -162,15 +162,15 @@ impl<'a> IndexList<PoolQuote> for SellPoolQuoteIndices<'a> {
     }
 }
 
-pub fn sell_pool_quotes<'a>() -> IndexedMap<'a, u64, PoolQuote, SellPoolQuoteIndices<'a>> {
+pub fn sell_to_pool_quotes<'a>() -> IndexedMap<'a, u64, PoolQuote, SellPoolQuoteIndices<'a>> {
     let indexes = SellPoolQuoteIndices {
         collection_sell_price: MultiIndex::new(
             |_pk: &[u8], p: &PoolQuote| (p.collection.clone(), p.quote_price.u128()),
-            "sell_pool_quotes",
-            "sell_pool_quotes__collection_sell_price",
+            "sell_to_pool_quotes",
+            "sell_to_pool_quotes__collection_sell_price",
         ),
     };
-    IndexedMap::new("sell_pool_quotes", indexes)
+    IndexedMap::new("sell_to_pool_quotes", indexes)
 }
 
 /// NftDepositKey is comprised of the pool id and the token id

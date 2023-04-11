@@ -51,7 +51,8 @@ impl Pool {
                 "finders_fee_percent is above marketplace max_finders_fee_percent".to_string(),
             ));
         }
-        if self.bonding_curve == BondingCurve::Exponential && self.delta.u128() > MAX_BASIS_POINTS {
+        if self.bonding_curve == BondingCurve::Exponential && self.delta.u128() >= MAX_BASIS_POINTS
+        {
             return Err(ContractError::InvalidPool(
                 "delta cannot exceed max basis points on exponential curves".to_string(),
             ));
@@ -215,68 +216,94 @@ impl Pool {
         self.pool_type == PoolType::Trade || self.pool_type == PoolType::Nft
     }
 
-    /// Returns the price at which this pool will buy NFTs
-    /// Note: the buy quote is indexed by PoolQuote for future discovery
-    pub fn get_buy_quote(&self, min_quote: Uint128) -> Result<Option<Uint128>, ContractError> {
+    /// Returns the price at which this pool will sell NFTs
+    /// Note: the buy_from_pool_quote is indexed by PoolQuote for future discovery
+    pub fn get_buy_from_pool_quote(
+        &self,
+        min_quote: Uint128,
+    ) -> Result<Option<Uint128>, ContractError> {
         // Calculate the buy price with respect to pool types and bonding curves
         let buy_price = match self.pool_type {
-            PoolType::Token => Ok(self.spot_price),
-            PoolType::Nft => Err(ContractError::InvalidPool(
-                "pool cannot buy nfts".to_string(),
+            PoolType::Token => Err(ContractError::InvalidPool(
+                "pool cannot sell nfts".to_string(),
             )),
+            PoolType::Nft => Ok(self.spot_price),
             PoolType::Trade => match self.bonding_curve {
                 BondingCurve::Linear => self
                     .spot_price
                     .checked_add(self.delta)
                     .map_err(|e| ContractError::Std(StdError::overflow(e))),
                 BondingCurve::Exponential => {
-                    let product = self
-                        .spot_price
-                        .checked_mul(self.delta)
-                        .map_err(|e| StdError::Overflow { source: e })?
-                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
-                        .map_err(|e| ContractError::Std(StdError::divide_by_zero(e)))?;
+                    let net_delta = Uint128::from(MAX_BASIS_POINTS)
+                        .checked_add(self.delta)
+                        .map_err(|e| ContractError::Std(StdError::overflow(e)))?;
                     self.spot_price
-                        .checked_add(product)
+                        .checked_mul(net_delta)
+                        .map_err(|e| ContractError::Std(StdError::overflow(e)))?
+                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
+                        .map_err(|e| ContractError::Std(StdError::divide_by_zero(e)))?
+                        .checked_add(Uint128::one())
                         .map_err(|e| ContractError::Std(StdError::overflow(e)))
                 }
-                BondingCurve::ConstantProduct => self
-                    .total_tokens
-                    .checked_div(Uint128::from(self.total_nfts + 1))
-                    .map_err(|e| ContractError::Std(StdError::divide_by_zero(e))),
+                BondingCurve::ConstantProduct => {
+                    if self.total_nfts <= 1 {
+                        return Ok(None);
+                    }
+                    let mut buy_price = self
+                        .total_tokens
+                        .checked_div(Uint128::from(self.total_nfts - 1))
+                        .map_err(|e| ContractError::Std(StdError::divide_by_zero(e)))?;
+
+                    let k = self
+                        .total_tokens
+                        .checked_mul(self.total_nfts.into())
+                        .map_err(|e| ContractError::Std(StdError::overflow(e)))?;
+
+                    let ab = self
+                        .total_tokens
+                        .checked_add(buy_price)
+                        .map_err(|e| ContractError::Std(StdError::overflow(e)))?
+                        .checked_mul(Uint128::from(self.total_nfts - 1))
+                        .map_err(|e| ContractError::Std(StdError::overflow(e)))?;
+
+                    if k > ab {
+                        buy_price += Uint128::one();
+                    }
+                    Ok(buy_price)
+                }
             },
         }?;
-        // If the pool has insufficient tokens to buy the NFT, return None
-        if self.total_tokens < buy_price || buy_price < min_quote {
+        // If the pool has no NFTs to sell, or quote is below min, return None
+        if self.total_nfts == 0 || buy_price < min_quote {
             return Ok(None);
         }
         Ok(Some(buy_price))
     }
 
-    /// Returns the price at which this pool will sell NFTs
-    /// Note: the sell quote is indexed by PoolQuote for future discovery
-    pub fn get_sell_quote(&self, min_quote: Uint128) -> Result<Option<Uint128>, ContractError> {
-        if !self.can_sell_nfts() {
+    /// Returns the price at which this pool will buy NFTs
+    /// Note: the sell_to_pool_quote is indexed by PoolQuote for future discovery
+    pub fn get_sell_to_pool_quote(
+        &self,
+        min_quote: Uint128,
+    ) -> Result<Option<Uint128>, ContractError> {
+        if !self.can_buy_nfts() {
             return Err(ContractError::InvalidPool(
-                "pool cannot sell nfts".to_string(),
+                "pool cannot buy nfts".to_string(),
             ));
-        }
-        // If the pool has no NFTs to sell, return None
-        if self.total_nfts == 0 {
-            return Ok(None);
         }
         let sell_price = match self.bonding_curve {
             BondingCurve::Linear | BondingCurve::Exponential => self.spot_price,
             BondingCurve::ConstantProduct => {
-                if self.total_nfts < 2 {
+                if self.total_nfts < 1 {
                     return Ok(None);
                 }
                 self.total_tokens
-                    .checked_div(Uint128::from(self.total_nfts - 1))
+                    .checked_div(Uint128::from(self.total_nfts + 1))
                     .unwrap()
             }
         };
-        if sell_price < min_quote {
+        // If the pool has insufficient tokens to buy the NFT, or quote is below min, return None
+        if self.total_tokens < sell_price || sell_price < min_quote {
             return Ok(None);
         }
         Ok(Some(sell_price))
@@ -347,47 +374,45 @@ impl Pool {
     /// Updates the spot price of the pool depending on the transaction type
     pub fn update_spot_price(&mut self, tx_type: &TransactionType) -> Result<(), StdError> {
         let result = match tx_type {
-            TransactionType::TokensForNfts => match self.bonding_curve {
-                BondingCurve::Linear => self
-                    .spot_price
-                    .checked_add(self.delta)
-                    .map_err(|e| StdError::Overflow { source: e }),
-                BondingCurve::Exponential => {
-                    let product = self
-                        .spot_price
-                        .checked_mul(self.delta)
-                        .map_err(|e| StdError::Overflow { source: e })?
-                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
-                        .map_err(|e| StdError::DivideByZero { source: e })?;
-                    self.spot_price
-                        .checked_add(product)
-                        .map_err(|e| StdError::Overflow { source: e })
-                }
-                BondingCurve::ConstantProduct => self
-                    .total_tokens
-                    .checked_div(Uint128::from(self.total_nfts))
-                    .map_err(|e| StdError::DivideByZero { source: e }),
-            },
-            TransactionType::NftsForTokens => match self.bonding_curve {
+            TransactionType::UserSubmitsNfts => match self.bonding_curve {
                 BondingCurve::Linear => self
                     .spot_price
                     .checked_sub(self.delta)
-                    .map_err(|e| StdError::Overflow { source: e }),
+                    .map_err(StdError::overflow),
                 BondingCurve::Exponential => {
-                    let product = self
-                        .spot_price
-                        .checked_mul(self.delta)
-                        .map_err(|e| StdError::Overflow { source: e })?
-                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
-                        .map_err(|e| StdError::DivideByZero { source: e })?;
+                    let denominator = Uint128::from(MAX_BASIS_POINTS)
+                        .checked_add(self.delta)
+                        .map_err(StdError::overflow)?;
                     self.spot_price
-                        .checked_sub(product)
-                        .map_err(|e| StdError::Overflow { source: e })
+                        .checked_mul(Uint128::from(MAX_BASIS_POINTS))
+                        .map_err(StdError::overflow)?
+                        .checked_div(denominator)
+                        .map_err(StdError::divide_by_zero)
                 }
                 BondingCurve::ConstantProduct => self
                     .total_tokens
                     .checked_div(Uint128::from(self.total_nfts))
-                    .map_err(|e| StdError::DivideByZero { source: e }),
+                    .map_err(StdError::divide_by_zero),
+            },
+            TransactionType::UserSubmitsTokens => match self.bonding_curve {
+                BondingCurve::Linear => self
+                    .spot_price
+                    .checked_add(self.delta)
+                    .map_err(StdError::overflow),
+                BondingCurve::Exponential => {
+                    let net_delta = Uint128::from(MAX_BASIS_POINTS)
+                        .checked_add(self.delta)
+                        .map_err(StdError::overflow)?;
+                    self.spot_price
+                        .checked_mul(net_delta)
+                        .map_err(StdError::overflow)?
+                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
+                        .map_err(StdError::divide_by_zero)
+                }
+                BondingCurve::ConstantProduct => self
+                    .total_tokens
+                    .checked_div(Uint128::from(self.total_nfts))
+                    .map_err(StdError::divide_by_zero),
             },
         };
         match result {

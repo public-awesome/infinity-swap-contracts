@@ -4,7 +4,9 @@ use crate::msg::{
     PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
     TransactionType,
 };
-use crate::state::{buy_pool_quotes, pools, sell_pool_quotes, PoolQuote, CONFIG, NFT_DEPOSITS};
+use crate::state::{
+    buy_from_pool_quotes, pools, sell_to_pool_quotes, PoolQuote, CONFIG, NFT_DEPOSITS,
+};
 use crate::swap_processor::SwapProcessor;
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, Deps, Env, Order, StdError, StdResult, Uint128,
@@ -35,18 +37,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             pool_id,
             query_options,
         } => to_binary(&query_pool_nft_token_ids(deps, pool_id, query_options)?),
-        QueryMsg::PoolQuotesBuy {
+        QueryMsg::QuotesBuyFromPool {
             collection,
             query_options,
-        } => to_binary(&query_pool_quotes_by_buy_price(
+        } => to_binary(&query_quotes_buy_from_pool(
             deps,
             api.addr_validate(&collection)?,
             query_options,
         )?),
-        QueryMsg::PoolQuotesSell {
+        QueryMsg::QuotesSellToPool {
             collection,
             query_options,
-        } => to_binary(&query_pool_quotes_by_sell_price(
+        } => to_binary(&query_quotes_sell_to_pool(
             deps,
             api.addr_validate(&collection)?,
             query_options,
@@ -200,34 +202,7 @@ pub fn query_pool_nft_token_ids(
     })
 }
 
-pub fn query_pool_quotes_by_buy_price(
-    deps: Deps,
-    collection: Addr,
-    query_options: QueryOptions<(Uint128, u64)>,
-) -> StdResult<PoolQuoteResponse> {
-    let limit = query_options
-        .limit
-        .unwrap_or(DEFAULT_QUERY_LIMIT)
-        .min(MAX_QUERY_LIMIT) as usize;
-    let start = query_options
-        .start_after
-        .as_ref()
-        .map(|offset| Bound::exclusive((offset.0.u128(), offset.1)));
-    let order = option_bool_to_order(query_options.descending, Order::Descending);
-
-    let pool_quotes: Vec<PoolQuote> = buy_pool_quotes()
-        .idx
-        .collection_buy_price
-        .sub_prefix(collection)
-        .range(deps.storage, start, None, order)
-        .take(limit)
-        .map(|item| item.map(|(_, v)| v))
-        .collect::<StdResult<_>>()?;
-
-    Ok(PoolQuoteResponse { pool_quotes })
-}
-
-pub fn query_pool_quotes_by_sell_price(
+pub fn query_quotes_buy_from_pool(
     deps: Deps,
     collection: Addr,
     query_options: QueryOptions<(Uint128, u64)>,
@@ -242,7 +217,34 @@ pub fn query_pool_quotes_by_sell_price(
         .map(|offset| Bound::exclusive((offset.0.u128(), offset.1)));
     let order = option_bool_to_order(query_options.descending, Order::Ascending);
 
-    let pool_quotes: Vec<PoolQuote> = sell_pool_quotes()
+    let pool_quotes: Vec<PoolQuote> = buy_from_pool_quotes()
+        .idx
+        .collection_buy_price
+        .sub_prefix(collection)
+        .range(deps.storage, start, None, order)
+        .take(limit)
+        .map(|item| item.map(|(_, v)| v))
+        .collect::<StdResult<_>>()?;
+
+    Ok(PoolQuoteResponse { pool_quotes })
+}
+
+pub fn query_quotes_sell_to_pool(
+    deps: Deps,
+    collection: Addr,
+    query_options: QueryOptions<(Uint128, u64)>,
+) -> StdResult<PoolQuoteResponse> {
+    let limit = query_options
+        .limit
+        .unwrap_or(DEFAULT_QUERY_LIMIT)
+        .min(MAX_QUERY_LIMIT) as usize;
+    let start = query_options
+        .start_after
+        .as_ref()
+        .map(|offset| Bound::exclusive((offset.0.u128(), offset.1)));
+    let order = option_bool_to_order(query_options.descending, Order::Descending);
+
+    let pool_quotes: Vec<PoolQuote> = sell_to_pool_quotes()
         .idx
         .collection_sell_price
         .sub_prefix(collection)
@@ -268,7 +270,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let mut processor = SwapProcessor::new(
-        TransactionType::NftsForTokens,
+        TransactionType::UserSubmitsNfts,
         env.contract.address,
         pool.collection.clone(),
         sender,
@@ -304,7 +306,7 @@ pub fn sim_swap_nfts_for_tokens(
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let mut processor = SwapProcessor::new(
-        TransactionType::NftsForTokens,
+        TransactionType::UserSubmitsNfts,
         env.contract.address,
         collection,
         sender,
@@ -370,7 +372,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
     }
 
     let mut processor = SwapProcessor::new(
-        TransactionType::TokensForNfts,
+        TransactionType::UserSubmitsTokens,
         env.contract.address,
         collection,
         sender,
@@ -408,7 +410,7 @@ pub fn sim_swap_tokens_for_any_nfts(
     let total_tokens: Uint128 = max_expected_token_input.iter().sum();
 
     let mut processor = SwapProcessor::new(
-        TransactionType::TokensForNfts,
+        TransactionType::UserSubmitsTokens,
         env.contract.address,
         collection,
         sender,
