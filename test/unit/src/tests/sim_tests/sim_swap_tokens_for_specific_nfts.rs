@@ -241,12 +241,8 @@ fn cant_swap_for_pools_outside_of_collection() {
     let marketplace = setup_marketplace(&mut vt.router, vt.accts.creator.clone()).unwrap();
     setup_block_time(&mut vt.router, GENESIS_MINT_START_TIME, None);
 
-    let infinity_swap = setup_infinity_swap(
-        &mut vt.router,
-        vt.accts.creator.clone(),
-        marketplace.clone(),
-    )
-    .unwrap();
+    let infinity_swap =
+        setup_infinity_swap(&mut vt.router, vt.accts.creator.clone(), marketplace).unwrap();
 
     let VendingTemplateResponse {
         mut router,
@@ -264,8 +260,8 @@ fn cant_swap_for_pools_outside_of_collection() {
         &mut router,
         &accts.creator,
         &accts.owner,
-        &minter,
-        &collection_a,
+        minter,
+        collection_a,
         &infinity_swap,
         100,
     );
@@ -276,7 +272,7 @@ fn cant_swap_for_pools_outside_of_collection() {
         7,
         &None,
         &infinity_swap,
-        &collection_a,
+        collection_a,
         &accts.owner,
         deposit_tokens_per_pool,
         owner_token_ids,
