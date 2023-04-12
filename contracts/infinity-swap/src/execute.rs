@@ -422,6 +422,9 @@ pub fn execute_withdraw_nfts(
 
     let mut response = Response::new();
 
+    // Track the NFTs that have been withdrawn from the pool
+    pool.withdraw_nfts(&nft_token_ids)?;
+
     // Withdraw NFTs to the asset recipient if specified, otherwise to the sender
     let recipient = asset_recipient.unwrap_or(info.sender);
     for nft_token_id in &nft_token_ids {
@@ -431,10 +434,8 @@ pub fn execute_withdraw_nfts(
             pool.collection.as_ref(),
             &mut response,
         )?;
-        remove_nft_deposit(deps.storage, pool_id, nft_token_id);
+        remove_nft_deposit(deps.storage, pool_id, nft_token_id)?;
     }
-    // Track the NFTs that have been withdrawn from the pool
-    pool.withdraw_nfts(&nft_token_ids)?;
 
     let config = CONFIG.load(deps.storage)?;
     let marketplace_params = load_marketplace_params(deps.as_ref(), &config.marketplace_addr)?;

@@ -231,18 +231,22 @@ pub fn store_nft_deposit(
 }
 
 /// Remove NFT deposit
-pub fn remove_nft_deposit(storage: &mut dyn Storage, pool_id: u64, nft_token_id: &str) {
-    NFT_DEPOSITS.remove(storage, (pool_id, nft_token_id.to_string()))
+pub fn remove_nft_deposit(
+    storage: &mut dyn Storage,
+    pool_id: u64,
+    nft_token_id: &str,
+) -> Result<(), ContractError> {
+    let nft_found = verify_nft_deposit(storage, pool_id, nft_token_id);
+    if !nft_found {
+        return Err(ContractError::NftNotFound(nft_token_id.to_string()));
+    }
+    NFT_DEPOSITS.remove(storage, (pool_id, nft_token_id.to_string()));
+    Ok(())
 }
 
 /// Verify NFT is deposited into pool
-pub fn verify_nft_deposit(
-    storage: &dyn Storage,
-    pool_id: u64,
-    nft_token_id: &str,
-) -> Result<bool, ContractError> {
-    let result = NFT_DEPOSITS.may_load(storage, (pool_id, nft_token_id.to_string()))?;
-    Ok(result.is_some())
+pub fn verify_nft_deposit(storage: &dyn Storage, pool_id: u64, nft_token_id: &str) -> bool {
+    NFT_DEPOSITS.has(storage, (pool_id, nft_token_id.to_string()))
 }
 
 /// Grab the first NFT in a pool
@@ -275,7 +279,7 @@ pub fn update_nft_deposits(
                 }
             }
             TransactionType::UserSubmitsTokens => {
-                remove_nft_deposit(storage, swap.pool_id, &swap.nft_payment.nft_token_id)
+                remove_nft_deposit(storage, swap.pool_id, &swap.nft_payment.nft_token_id)?;
             }
         }
     }
