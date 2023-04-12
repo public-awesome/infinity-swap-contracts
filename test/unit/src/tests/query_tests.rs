@@ -242,12 +242,12 @@ fn try_query_pools_by_buy_price() {
         PoolQuote {
             id: 7,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(3000u128),
+            quote_price: Uint128::from(3001u128),
         },
         PoolQuote {
             id: 14,
             collection: Addr::unchecked("contract2"),
-            quote_price: Uint128::from(3000u128),
+            quote_price: Uint128::from(3001u128),
         },
     ];
 
