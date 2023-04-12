@@ -584,64 +584,61 @@ impl<'a> SwapProcessor<'a> {
         let mut pool_queue_item_map: BTreeMap<u64, PoolQueueItem> = BTreeMap::new();
 
         for pool_nfts in nfts_to_swap_for {
-            // Check if pool is in pools_to_save map, indicating it cannot be involved in further swaps
-            if self.pools_to_save.contains_key(&pool_nfts.pool_id) {
-                if swap_params.robust {
-                    continue;
+            let mut pool_queue_item =
+                if let Some(_pool_queue_item) = pool_queue_item_map.remove(&pool_nfts.pool_id) {
+                    _pool_queue_item
                 } else {
-                    return Err(ContractError::InvalidPool(
-                        "pool cannot be involved in further swaps".to_string(),
-                    ));
-                }
-            }
-            // If pool is not in pool_map, load it from storage
-            if !pool_queue_item_map.contains_key(&pool_nfts.pool_id) {
-                let pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
-                // If pool is not found, return error
-                if pool_option.is_none() {
-                    return Err(ContractError::PoolNotFound(format!(
-                        "pool {} not found",
-                        pool_nfts.pool_id
-                    )));
-                }
-                // Create PoolQueueItem and insert into pool_queue_item_map
-                let pool = pool_option.unwrap();
-
-                if pool.collection != self.collection {
-                    return Err(ContractError::InvalidPool(
-                        "pool does not belong to this collection".to_string(),
-                    ));
-                }
-
-                let quote_price = pool.get_buy_from_pool_quote(self.min_quote)?;
-                if quote_price.is_none() {
-                    if swap_params.robust {
-                        continue;
-                    } else {
-                        return Err(ContractError::NoQuoteForPool(format!(
-                            "pool {} cannot offer quote",
-                            pool.id
+                    let pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
+                    // If pool is not found, return error
+                    if pool_option.is_none() {
+                        return Err(ContractError::PoolNotFound(format!(
+                            "pool {} not found",
+                            pool_nfts.pool_id
                         )));
                     }
-                }
-                pool_queue_item_map.insert(
-                    pool.id,
+                    // Create PoolQueueItem and insert into pool_queue_item_map
+                    let pool = pool_option.unwrap();
+
+                    if pool.collection != self.collection {
+                        return Err(ContractError::InvalidPool(
+                            "pool does not belong to this collection".to_string(),
+                        ));
+                    }
+
+                    let quote_price = pool.get_buy_from_pool_quote(self.min_quote)?;
+                    if quote_price.is_none() {
+                        if swap_params.robust {
+                            continue;
+                        } else {
+                            return Err(ContractError::NoQuoteForPool(format!(
+                                "pool {} cannot offer quote",
+                                pool.id
+                            )));
+                        }
+                    }
                     PoolQueueItem {
                         pool,
                         quote_price: quote_price.unwrap(),
                         usable: true,
                         num_swaps: 0,
-                    },
-                );
-            }
+                    }
+                };
 
             // Iterate over all NFTs selected for the given pool
             for nft_swap in pool_nfts.nft_swaps {
-                let pool_queue_item = pool_queue_item_map.remove(&pool_nfts.pool_id).unwrap();
+                if !pool_queue_item.usable {
+                    if swap_params.robust {
+                        break;
+                    } else {
+                        return Err(ContractError::SwapError(
+                            "unable to process swap".to_string(),
+                        ));
+                    }
+                }
 
                 // Check if specified NFT is deposited into pool
                 let pool_owns_nft =
-                    verify_nft_deposit(storage, pool_nfts.pool_id, &nft_swap.nft_token_id)?;
+                    verify_nft_deposit(storage, pool_nfts.pool_id, &nft_swap.nft_token_id);
                 if !pool_owns_nft {
                     if swap_params.robust {
                         break;
@@ -653,24 +650,23 @@ impl<'a> SwapProcessor<'a> {
                     }
                 }
 
-                let (pool_queue_item, success) =
+                let (_pool_queue_item, success) =
                     self.process_swap(pool_queue_item, nft_swap, swap_params.robust)?;
+                pool_queue_item = _pool_queue_item;
 
                 // If the swap failed, stop processing swaps
                 if !success {
-                    break;
-                }
-
-                if pool_queue_item.usable {
-                    // If the swap was a success, and the quote price was updated, save into pool_queue
-                    pool_queue_item_map.insert(pool_queue_item.pool.id, pool_queue_item);
-                } else {
-                    // If the swap was a success, but the quote price was not updated,
-                    // withdraw from circulation by inserting into pools_to_save
-                    self.pools_to_save
-                        .insert(pool_queue_item.pool.id, pool_queue_item.pool);
+                    if swap_params.robust {
+                        break;
+                    } else {
+                        return Err(ContractError::SwapError(
+                            "unable to process swap".to_string(),
+                        ));
+                    }
                 }
             }
+
+            pool_queue_item_map.insert(pool_queue_item.pool.id, pool_queue_item);
         }
 
         // Move all pools that need saving from pool_queue_item_map into pools_to_save
