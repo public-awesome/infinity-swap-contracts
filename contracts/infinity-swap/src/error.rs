@@ -19,6 +19,9 @@ pub enum ContractError {
     #[error("Pool not found: {0}")]
     PoolNotFound(String),
 
+    #[error("NFT not found: token_id {0}")]
+    NftNotFound(String),
+
     #[error("No quote for pool: {0}")]
     NoQuoteForPool(String),
 
