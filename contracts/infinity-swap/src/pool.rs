@@ -249,26 +249,12 @@ impl Pool {
                     if self.total_nfts <= 1 {
                         return Ok(None);
                     }
-                    let mut buy_price = self
+                    let buy_price = self
                         .total_tokens
                         .checked_div(Uint128::from(self.total_nfts - 1))
-                        .map_err(|e| ContractError::Std(StdError::divide_by_zero(e)))?;
-
-                    let k = self
-                        .total_tokens
-                        .checked_mul(self.total_nfts.into())
+                        .map_err(|e| ContractError::Std(StdError::divide_by_zero(e)))?
+                        .checked_add(Uint128::one())
                         .map_err(|e| ContractError::Std(StdError::overflow(e)))?;
-
-                    let ab = self
-                        .total_tokens
-                        .checked_add(buy_price)
-                        .map_err(|e| ContractError::Std(StdError::overflow(e)))?
-                        .checked_mul(Uint128::from(self.total_nfts - 1))
-                        .map_err(|e| ContractError::Std(StdError::overflow(e)))?;
-
-                    if k > ab {
-                        buy_price += Uint128::one();
-                    }
                     Ok(buy_price)
                 }
             },
@@ -407,12 +393,16 @@ impl Pool {
                         .checked_mul(net_delta)
                         .map_err(StdError::overflow)?
                         .checked_div(Uint128::from(MAX_BASIS_POINTS))
-                        .map_err(StdError::divide_by_zero)
+                        .map_err(StdError::divide_by_zero)?
+                        .checked_add(Uint128::one())
+                        .map_err(StdError::overflow)
                 }
                 BondingCurve::ConstantProduct => self
                     .total_tokens
                     .checked_div(Uint128::from(self.total_nfts))
-                    .map_err(StdError::divide_by_zero),
+                    .map_err(StdError::divide_by_zero)?
+                    .checked_add(Uint128::one())
+                    .map_err(StdError::overflow),
             },
         };
         match result {
