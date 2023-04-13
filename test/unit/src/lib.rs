@@ -7,4 +7,7 @@ mod helpers;
 mod setup;
 
 #[cfg(test)]
-mod tests;
+mod infinity_swap_tests;
+
+#[cfg(test)]
+mod infinity_marketplace_wrapper_tests;
