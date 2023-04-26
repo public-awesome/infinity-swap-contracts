@@ -10,4 +10,4 @@ mod setup;
 mod infinity_swap_tests;
 
 #[cfg(test)]
-mod infinity_marketplace_wrapper_tests;
+mod infinity_marketplace_adapter_tests;

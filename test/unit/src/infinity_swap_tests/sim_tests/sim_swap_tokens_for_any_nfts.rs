@@ -9,13 +9,13 @@ use infinity_swap::state::BondingCurve;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
-use test_suite::common_setup::msg::VendingTemplateResponse;
+use test_suite::common_setup::msg::MinterTemplateResponse;
 
 #[test]
 fn cant_swap_inactive_pools() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
@@ -79,7 +79,7 @@ fn cant_swap_inactive_pools() {
 fn can_swap_active_pools() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
@@ -144,7 +144,7 @@ fn can_swap_active_pools() {
 fn sale_price_above_max_expected() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
@@ -214,7 +214,7 @@ fn sale_price_above_max_expected() {
 fn robust_query_does_not_revert_whole_tx() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
@@ -282,7 +282,7 @@ fn robust_query_does_not_revert_whole_tx() {
 fn minimal_fee_tx_is_handled_correctly() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
@@ -290,6 +290,7 @@ fn minimal_fee_tx_is_handled_correctly() {
             },
         infinity_swap,
         marketplace,
+        ..
     } = setup_swap_test(5000).unwrap();
 
     let collection_resp = &collection_response_vec[0];
@@ -366,7 +367,7 @@ fn minimal_fee_tx_is_handled_correctly() {
 fn finders_and_swap_fee_tx_is_handled_correctly() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
@@ -374,6 +375,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
             },
         infinity_swap,
         marketplace,
+        ..
     } = setup_swap_test(5000).unwrap();
     let user2 = setup_addtl_account(&mut router, "asset", 100u128).unwrap();
 
@@ -451,7 +453,7 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
 fn trades_are_routed_correctly() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
@@ -522,7 +524,7 @@ fn trades_are_routed_correctly() {
 fn constant_product_pools_with_little_nfts() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
