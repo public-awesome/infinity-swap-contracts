@@ -1,5 +1,5 @@
 [package]
-name = "infinity-interface"
+name = "infinity-shared"
 version    = { workspace = true }
 edition    = { workspace = true }
 repository = { workspace = true }

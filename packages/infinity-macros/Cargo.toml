@@ -11,7 +11,7 @@ license = { workspace = true }
 proc-macro = true
 
 [dependencies]
-infinity-interface = { workspace = true }
+infinity-shared = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true }
 syn = { workspace = true }
