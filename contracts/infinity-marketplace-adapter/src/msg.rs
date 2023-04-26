@@ -1,6 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use infinity_interface::{NftOrder, SwapParams, SwapResponse};
-use infinity_macros::infinity_module_query;
+use infinity_shared::interface::{NftOrder, SwapParams, SwapResponse};
 
 pub const MAX_QUERY_LIMIT: u32 = 100;
 
@@ -8,14 +7,24 @@ pub const MAX_QUERY_LIMIT: u32 = 100;
 pub struct InstantiateMsg {
     /// The address of the marketplace contract
     pub marketplace: String,
+    /// The max number of NFT swaps that can be processed in a single message
+    pub max_batch_size: u32,
 }
 
-#[infinity_module_query]
+#[cw_serde]
+pub enum ExecuteMsg {
+    SwapNftsForTokens {
+        collection: String,
+        nft_orders: Vec<NftOrder>,
+        swap_params: SwapParams,
+    },
+}
+
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
     #[returns(SwapResponse)]
-    SimSwapTokensForSpecificNfts {
+    SimSwapNftsForTokens {
         sender: String,
         collection: String,
         nft_orders: Vec<NftOrder>,

@@ -7,10 +7,10 @@ pub enum ContractError {
     Std(#[from] StdError),
 
     #[error("Invalid ask: {0}")]
-    InvalidAsk(String),
+    InvalidInput(String),
 
-    #[error("Invalid bid: {0}")]
-    InvalidBid(String),
+    #[error("Match error: {0}")]
+    MatchError(String),
 
     #[error("Price mismatch: {0}")]
     PriceMismatch(String),
