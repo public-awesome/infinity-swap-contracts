@@ -1,3 +1,4 @@
+pub mod execute;
 pub mod helpers;
 pub mod instantiate;
 pub mod msg;
