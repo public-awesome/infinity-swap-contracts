@@ -1,5 +1,6 @@
 use crate::helpers::nft_functions::validate_nft_owner;
 use crate::setup::msg::MarketAccounts;
+use crate::setup::setup_infinity_marketplace_adapter::setup_infinity_marketplace_adapter;
 use crate::setup::setup_infinity_swap::setup_infinity_swap;
 use crate::setup::setup_marketplace::setup_marketplace;
 use crate::setup::templates::standard_minter_template;
@@ -15,13 +16,14 @@ use sg_marketplace::msg::ParamsResponse;
 use sg_multi_test::StargazeApp;
 use sg_std::GENESIS_MINT_START_TIME;
 use std::collections::{HashMap, HashSet};
-use test_suite::common_setup::msg::VendingTemplateResponse;
+use test_suite::common_setup::msg::MinterTemplateResponse;
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
 pub struct SwapTestSetup {
     pub marketplace: Addr,
     pub infinity_swap: Addr,
-    pub vending_template: VendingTemplateResponse<MarketAccounts>,
+    pub infinity_marketplace_adapter: Addr,
+    pub vending_template: MinterTemplateResponse<MarketAccounts>,
 }
 
 pub fn setup_swap_test(num_tokens: u32) -> Result<SwapTestSetup, Error> {
@@ -37,9 +39,17 @@ pub fn setup_swap_test(num_tokens: u32) -> Result<SwapTestSetup, Error> {
     )
     .unwrap();
 
+    let infinity_marketplace_adapter = setup_infinity_marketplace_adapter(
+        &mut vt.router,
+        vt.accts.creator.clone(),
+        marketplace.clone(),
+    )
+    .unwrap();
+
     Ok(SwapTestSetup {
         marketplace,
         infinity_swap,
+        infinity_marketplace_adapter,
         vending_template: vt,
     })
 }

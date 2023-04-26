@@ -6,7 +6,9 @@ repository = { workspace = true }
 license    = { workspace = true }
 
 [dependencies]
-infinity-swap = { path = "../../contracts/infinity-swap" }
+infinity-swap = { workspace = true }
+infinity-marketplace-adapter = { workspace = true }
+infinity-shared = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-storage = { workspace = true }
@@ -26,9 +28,9 @@ cw721 = { workspace = true }
 
 
 [dev-dependencies]
-itertools = "0.10.5"
-cw-multi-test = { version = "0.16.0" }
-sg-multi-test = "0.21.8"
-test-suite = "0.21.8"
-vending-minter = { version = "0.21.8"}
-vending-factory = { version = "0.21.8"}
+itertools  = { workspace = true }
+cw-multi-test    = { workspace = true }
+sg-multi-test    = { workspace = true }
+test-suite       = { workspace = true }
+vending-minter   = { workspace = true }
+vending-factory  = { workspace = true }

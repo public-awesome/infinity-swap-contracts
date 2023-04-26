@@ -21,3 +21,12 @@ pub fn contract_infinity_swap() -> Box<dyn Contract<StargazeMsgWrapper>> {
     );
     Box::new(contract)
 }
+
+pub fn contract_infinity_marketplace_adapter() -> Box<dyn Contract<StargazeMsgWrapper>> {
+    let contract = ContractWrapper::new(
+        infinity_marketplace_adapter::execute::execute,
+        infinity_marketplace_adapter::instantiate::instantiate,
+        infinity_marketplace_adapter::query::query,
+    );
+    Box::new(contract)
+}

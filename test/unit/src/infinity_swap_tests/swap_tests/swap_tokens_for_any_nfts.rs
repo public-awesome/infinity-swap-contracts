@@ -7,13 +7,13 @@ use cw_multi_test::Executor;
 use infinity_swap::msg::{ExecuteMsg, QueryMsg, SwapParams, SwapResponse};
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
-use test_suite::common_setup::msg::VendingTemplateResponse;
+use test_suite::common_setup::msg::MinterTemplateResponse;
 
 #[test]
 fn correct_swap_simple() {
     let SwapTestSetup {
         vending_template:
-            VendingTemplateResponse {
+            MinterTemplateResponse {
                 mut router,
                 accts,
                 collection_response_vec,
