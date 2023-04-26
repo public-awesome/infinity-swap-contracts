@@ -11,28 +11,37 @@ license = "BUSL-1.1"
 
 [workspace.dependencies]
 infinity-macros = { path = "./packages/infinity-macros" }
-infinity-interface = { path = "./packages/infinity-interface" }
+infinity-shared = { path = "./packages/infinity-shared" }
 infinity-swap = { path = "./contracts/infinity-swap" }
-cosmwasm-std = "1.1.9"
-cosmwasm-schema = { version = "1.1.9" }
-cosmwasm-storage = { version = "1.0.0" }
+infinity-marketplace-adapter = { path = "./contracts/infinity-marketplace-adapter" }
+cosmwasm-schema  = "1.2.1"
+cosmwasm-std     = "1.2.1"
+cosmwasm-storage = "1.2.1"
 cw-storage-plus = "0.16.0"
 cw-utils = "0.16.0"
 cw2 = "0.16.0"
 cw721-base = { version = "0.16.0", features = ["library"] }
 cw721 = "0.16.0"
-sg1 = "0.21.8"
-sg2 = "0.21.8"
-sg721-base = { version = "0.21.8", features = ["library"] }
-sg721 = { version = "0.21.8", features = ["library"] }
-sg-std = "0.21.8"
-sg-marketplace = { git = "https://github.com/public-awesome/marketplace", features = ["library"] }
+sg1 = "2.1.0"
+sg2 = "2.1.0"
+sg721-base = { version = "2.1.0", features = ["library"] }
+sg721 = { version = "2.1.0", features = ["library"] }
+sg-std = "2.1.0"
+sg-marketplace = { path = "../marketplace/contracts/marketplace", features = ["library"] }
+sg-marketplace-common = { path = "../marketplace/packages/sg-marketplace-common" }
 thiserror = { version = "1.0.31" }
 anyhow = "1.0.51"
-
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "1.0", features = ["derive"] }
+
+# dev-dependencies
+itertools = "0.10.5"
+cw-multi-test   = "0.16.0"
+sg-multi-test   = "2.1.0"
+test-suite      = "2.1.0"
+vending-minter  = "2.1.0"
+vending-factory = "2.1.0"
 
 [profile.release.package.infinity-swap]
 codegen-units = 1
