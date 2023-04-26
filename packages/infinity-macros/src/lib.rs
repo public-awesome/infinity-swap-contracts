@@ -4,10 +4,10 @@ use syn::{parse_macro_input, AttributeArgs, DataEnum, DeriveInput, Path};
 
 fn infinity_interface_path(inside: &str) -> Path {
     let pkg = std::env::var("CARGO_PKG_NAME").unwrap();
-    let base = if pkg == "infinity-interface" {
-        "crate"
+    let base = if pkg == "infinity-shared" {
+        "crate::interface"
     } else {
-        "::infinity_interface"
+        "::infinity_shared::interface"
     };
     let path = format!("{base}::{inside}");
     let path: Path = syn::parse_str(&path).unwrap();
@@ -58,15 +58,42 @@ pub fn infinity_module_query(metadata: TokenStream, input: TokenStream) -> Token
         quote! {
         enum Right {
             #[returns(#swap_response)]
+            SimSwapNftsForTokens {
+                sender: String,
+                collection: String,
+                nft_orders: Vec<#nft_order>,
+                swap_params: #swap_params,
+            },
+            #[returns(#swap_response)]
             SimSwapTokensForAnyNfts {
                 sender: String,
                 collection: String,
                 orders: Vec<#uint_128>,
                 swap_params: #swap_params,
             },
-            #[returns(#swap_response)]
-            SimSwapNftsForTokens {
-                sender: String,
+        }
+        }
+        .into(),
+    )
+}
+
+#[proc_macro_attribute]
+pub fn infinity_module_execute(metadata: TokenStream, input: TokenStream) -> TokenStream {
+    let nft_order = infinity_interface_path("NftOrder");
+    let swap_params = infinity_interface_path("SwapParams");
+    let uint_128: Path = syn::parse_str(&format!("cosmwasm_std::Uint128")).unwrap();
+
+    merge_variants(
+        metadata,
+        input,
+        quote! {
+        enum Right {
+            SwapTokensForAnyNfts {
+                collection: String,
+                orders: Vec<#uint_128>,
+                swap_params: #swap_params,
+            },
+            SwapNftsForTokens {
                 collection: String,
                 nft_orders: Vec<#nft_order>,
                 swap_params: #swap_params,

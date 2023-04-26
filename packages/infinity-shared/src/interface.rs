@@ -1,11 +1,11 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Deps, StdError, Timestamp, Uint128};
+use cosmwasm_std::{Addr, Api, StdError, Timestamp, Uint128};
 use cw_utils::maybe_addr;
 
 #[cw_serde]
 pub enum TransactionType {
-    NftsForTokens,
-    TokensForNfts,
+    UserSubmitsNfts,
+    UserSubmitsTokens,
 }
 
 #[cw_serde]
@@ -17,16 +17,18 @@ pub struct TokenPayment {
 
 #[cw_serde]
 pub struct NftPayment {
+    pub label: String,
     pub token_id: String,
     pub address: String,
 }
 
 #[cw_serde]
 pub struct Swap {
+    pub source: String,
     pub transaction_type: TransactionType,
     pub sale_price: Uint128,
     pub network_fee: Uint128,
-    pub nft_payment: NftPayment,
+    pub nft_payments: Vec<NftPayment>,
     pub token_payments: Vec<TokenPayment>,
 }
 
@@ -62,13 +64,13 @@ pub struct SwapParamsInternal {
 }
 
 pub fn transform_swap_params(
-    deps: Deps,
+    api: &dyn Api,
     swap_params: SwapParams,
 ) -> Result<SwapParamsInternal, StdError> {
     Ok(SwapParamsInternal {
         deadline: swap_params.deadline,
         robust: swap_params.robust,
-        asset_recipient: maybe_addr(deps.api, swap_params.asset_recipient)?,
-        finder: maybe_addr(deps.api, swap_params.finder)?,
+        asset_recipient: maybe_addr(api, swap_params.asset_recipient)?,
+        finder: maybe_addr(api, swap_params.finder)?,
     })
 }
