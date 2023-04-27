@@ -1,13 +1,16 @@
-use crate::helpers::{match_user_submitted_nfts, MatchedBid};
+use crate::helpers::{match_user_submitted_nfts, match_user_submitted_tokens, MatchedBid};
 use crate::state::CONFIG;
 use crate::ContractError;
-use crate::{helpers::validate_user_submitted_nfts, msg::ExecuteMsg};
-use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, SubMsg, WasmMsg};
+use crate::{helpers::validate_nft_orders, msg::ExecuteMsg};
+use cosmwasm_std::{
+    coin, coins, to_binary, Addr, DepsMut, Env, MessageInfo, SubMsg, Uint128, WasmMsg,
+};
 use cw721::Cw721ExecuteMsg;
+use cw_utils::must_pay;
 use infinity_shared::interface::{transform_swap_params, NftOrder, SwapParamsInternal};
 use sg_marketplace::msg::ExecuteMsg as MarketplaceExecuteMsg;
-use sg_marketplace_common::transfer_nft;
-use sg_std::Response;
+use sg_marketplace_common::{bank_send, transfer_nft};
+use sg_std::{Response, NATIVE_DENOM};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -34,6 +37,18 @@ pub fn execute(
             nft_orders,
             transform_swap_params(api, swap_params)?,
         ),
+        ExecuteMsg::SwapTokensForSpecificNfts {
+            collection,
+            nft_orders,
+            swap_params,
+        } => execute_swap_tokens_for_specific_nfts(
+            deps,
+            env,
+            info,
+            api.addr_validate(&collection)?,
+            nft_orders,
+            transform_swap_params(api, swap_params)?,
+        ),
     }
 }
 
@@ -48,7 +63,7 @@ pub fn execute_swap_nfts_for_tokens(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_user_submitted_nfts(
+    validate_nft_orders(
         deps.as_ref(),
         &info.sender,
         &collection,
@@ -129,6 +144,89 @@ pub fn execute_swap_nfts_for_tokens(
                 }));
             }
         }
+    }
+
+    Ok(response)
+}
+
+/// Execute a SwapTokensForSpecificNfts message
+pub fn execute_swap_tokens_for_specific_nfts(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    collection: Addr,
+    nft_orders: Vec<NftOrder>,
+    swap_params: SwapParamsInternal,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+
+    validate_nft_orders(
+        deps.as_ref(),
+        &info.sender,
+        &collection,
+        &nft_orders,
+        config.max_batch_size,
+    )?;
+
+    let expected_amount = nft_orders
+        .iter()
+        .fold(Uint128::zero(), |acc, nft_order| acc + nft_order.amount);
+    let received_amount = must_pay(&info, NATIVE_DENOM)?;
+    if received_amount != expected_amount {
+        return Err(ContractError::InsufficientFunds(format!(
+            "expected {} but received {}",
+            expected_amount, received_amount
+        )));
+    }
+    let mut remaining_balance = received_amount.clone();
+
+    let matched_user_submitted_tokens =
+        match_user_submitted_tokens(deps.as_ref(), &config, &collection, nft_orders)?;
+
+    if !swap_params.robust {
+        let missing_match = matched_user_submitted_tokens
+            .iter()
+            .any(|m| m.matched_ask.is_none());
+        if missing_match {
+            return Err(ContractError::MatchError(
+                "all nfts not matched with a bid".to_string(),
+            ));
+        }
+    }
+
+    let finder = swap_params.finder.map(|f| f.to_string());
+
+    let mut response = Response::new();
+
+    for matched_order in matched_user_submitted_tokens {
+        if matched_order.matched_ask.is_none() {
+            continue;
+        }
+        let matched_ask = matched_order.matched_ask.unwrap();
+
+        let buy_now_msg = MarketplaceExecuteMsg::BuyNow {
+            collection: collection.to_string(),
+            token_id: matched_ask.token_id,
+            expires: matched_ask.expires_at,
+            finder: finder.clone(),
+            finders_fee_bps: None,
+        };
+
+        remaining_balance -= matched_ask.price;
+
+        response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
+            contract_addr: config.marketplace.to_string(),
+            msg: to_binary(&buy_now_msg)?,
+            funds: coins(matched_ask.price.u128(), NATIVE_DENOM),
+        }));
+    }
+
+    // Refund remaining balance
+    if remaining_balance.u128() > 0 {
+        response = response.add_submessage(bank_send(
+            coin(remaining_balance.u128(), NATIVE_DENOM),
+            &info.sender,
+        ));
     }
 
     Ok(response)

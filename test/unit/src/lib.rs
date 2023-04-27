@@ -7,7 +7,10 @@ mod helpers;
 mod setup;
 
 #[cfg(test)]
-mod infinity_swap_tests;
+mod infinity_marketplace_adapter_tests;
 
 #[cfg(test)]
-mod infinity_marketplace_adapter_tests;
+mod infinity_shared_tests;
+
+#[cfg(test)]
+mod infinity_swap_tests;

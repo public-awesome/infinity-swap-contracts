@@ -7,13 +7,14 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, BlockInfo, Deps};
 use infinity_shared::interface::NftOrder;
 use sg_marketplace::msg::{
-    BidsResponse, CollectionBidOffset, CollectionBidsResponse, QueryMsg as MarketplaceQueryMsg,
+    AskResponse, BidsResponse, CollectionBidOffset, CollectionBidsResponse,
+    QueryMsg as MarketplaceQueryMsg,
 };
-use sg_marketplace::state::{Bid, CollectionBid, Order};
+use sg_marketplace::state::{Ask, Bid, CollectionBid, Order};
 use sg_marketplace_common::only_owner;
 
 /// Validate NftSwap vector token amounts, and NFT ownership
-pub fn validate_user_submitted_nfts(
+pub fn validate_nft_orders(
     deps: Deps,
     sender: &Addr,
     collection: &Addr,
@@ -32,7 +33,7 @@ pub fn validate_user_submitted_nfts(
     }
 
     let mut uniq_token_ids: BTreeSet<String> = BTreeSet::new();
-    for (idx, nft_order) in nft_orders.iter().enumerate() {
+    for nft_order in nft_orders.iter() {
         only_owner(&deps.querier, sender, collection, &nft_order.token_id)?;
         if uniq_token_ids.contains(&nft_order.token_id) {
             return Err(ContractError::InvalidInput(
@@ -40,15 +41,6 @@ pub fn validate_user_submitted_nfts(
             ));
         }
         uniq_token_ids.insert(nft_order.token_id.clone());
-
-        if idx == 0 {
-            continue;
-        }
-        if nft_orders[idx - 1].amount < nft_order.amount {
-            return Err(ContractError::InvalidInput(
-                "nft order amounts must decrease monotonically".to_string(),
-            ));
-        }
     }
     Ok(())
 }
@@ -175,4 +167,45 @@ pub fn match_user_submitted_nfts(
         });
     }
     Ok(matched_user_submitted_nfts)
+}
+
+pub struct MatchedUserSubmittedTokenOrder {
+    pub nft_order: NftOrder,
+    pub matched_ask: Option<Ask>,
+}
+
+pub fn match_user_submitted_tokens(
+    deps: Deps,
+    config: &Config,
+    collection: &Addr,
+    nft_orders: Vec<NftOrder>,
+) -> Result<Vec<MatchedUserSubmittedTokenOrder>, ContractError> {
+    let mut matched_user_submitted_tokens: Vec<MatchedUserSubmittedTokenOrder> = vec![];
+
+    for nft_order in nft_orders {
+        let token_id = nft_order.token_id.parse::<u32>().unwrap();
+        let ask_response: AskResponse = deps.querier.query_wasm_smart(
+            &config.marketplace,
+            &MarketplaceQueryMsg::Ask {
+                collection: collection.to_string(),
+                token_id: token_id,
+            },
+        )?;
+        let ask = match ask_response.ask {
+            Some(_ask) => {
+                if _ask.price > nft_order.amount {
+                    Some(_ask)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        };
+
+        matched_user_submitted_tokens.push(MatchedUserSubmittedTokenOrder {
+            nft_order: nft_order,
+            matched_ask: ask,
+        });
+    }
+    Ok(matched_user_submitted_tokens)
 }
