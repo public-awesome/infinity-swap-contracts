@@ -34,3 +34,4 @@ sg-multi-test    = { workspace = true }
 test-suite       = { workspace = true }
 vending-minter   = { workspace = true }
 vending-factory  = { workspace = true }
+mockall          = { workspace = true }

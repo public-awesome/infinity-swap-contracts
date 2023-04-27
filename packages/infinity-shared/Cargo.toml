@@ -38,4 +38,3 @@ sg-std = { workspace = true }
 sg-marketplace = { workspace = true }
 cw721-base = { workspace = true }
 cw721 = { workspace = true }
-

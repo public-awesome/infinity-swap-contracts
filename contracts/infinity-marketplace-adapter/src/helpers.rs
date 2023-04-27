@@ -18,12 +18,19 @@ pub fn validate_user_submitted_nfts(
     sender: &Addr,
     collection: &Addr,
     nft_orders: &Vec<NftOrder>,
+    max_batch_size: u32,
 ) -> Result<(), ContractError> {
     if nft_orders.is_empty() {
         return Err(ContractError::InvalidInput(
             "nft orders must not be empty".to_string(),
         ));
     }
+    if nft_orders.len() > max_batch_size as usize {
+        return Err(ContractError::InvalidInput(
+            "nft orders must not exceed max batch size".to_string(),
+        ));
+    }
+
     let mut uniq_token_ids: BTreeSet<String> = BTreeSet::new();
     for (idx, nft_order) in nft_orders.iter().enumerate() {
         only_owner(&deps.querier, sender, collection, &nft_order.token_id)?;

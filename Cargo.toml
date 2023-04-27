@@ -36,12 +36,13 @@ quote = "1.0"
 syn = { version = "1.0", features = ["derive"] }
 
 # dev-dependencies
-itertools = "0.10.5"
+itertools       = "0.10.5"
 cw-multi-test   = "0.16.0"
 sg-multi-test   = "2.1.0"
 test-suite      = "2.1.0"
 vending-minter  = "2.1.0"
 vending-factory = "2.1.0"
+mockall         = "0.11.4"
 
 [profile.release.package.infinity-swap]
 codegen-units = 1
