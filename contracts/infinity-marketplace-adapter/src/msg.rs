@@ -18,6 +18,11 @@ pub enum ExecuteMsg {
         nft_orders: Vec<NftOrder>,
         swap_params: SwapParams,
     },
+    SwapTokensForSpecificNfts {
+        collection: String,
+        nft_orders: Vec<NftOrder>,
+        swap_params: SwapParams,
+    },
 }
 
 #[cw_serde]
@@ -25,6 +30,13 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(SwapResponse)]
     SimSwapNftsForTokens {
+        sender: String,
+        collection: String,
+        nft_orders: Vec<NftOrder>,
+        swap_params: SwapParams,
+    },
+    #[returns(SwapResponse)]
+    SimSwapTokensForSpecificNfts {
         sender: String,
         collection: String,
         nft_orders: Vec<NftOrder>,
