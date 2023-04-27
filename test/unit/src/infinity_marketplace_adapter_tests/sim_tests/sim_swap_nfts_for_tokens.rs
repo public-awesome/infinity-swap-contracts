@@ -13,7 +13,7 @@ use sg_marketplace::state::SaleType;
 use test_suite::common_setup::msg::MinterTemplateResponse;
 
 #[test]
-fn sim_nft_for_token_marketplace_adapter_swap() {
+fn sim_nft_for_token_marketplace_adapter() {
     let SwapTestSetup {
         vending_template:
             MinterTemplateResponse {

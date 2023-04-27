@@ -43,8 +43,14 @@ pub fn query_sim_swap_nfts_for_tokens(
 ) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_user_submitted_nfts(deps, &sender, &collection, &nft_orders)
-        .map_err(|err| StdError::generic_err(err.to_string()))?;
+    validate_user_submitted_nfts(
+        deps,
+        &sender,
+        &collection,
+        &nft_orders,
+        config.max_batch_size,
+    )
+    .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let matched_user_submitted_nfts =
         match_user_submitted_nfts(deps, &env.block, &config, &collection, nft_orders)
@@ -63,7 +69,7 @@ pub fn query_sim_swap_nfts_for_tokens(
 
     let mut swaps: Vec<Swap> = vec![];
 
-    let marketplace_params = load_marketplace_params(deps, &config.marketplace)?;
+    let marketplace_params = load_marketplace_params(&deps.querier, &config.marketplace)?;
     let royalty_info = load_collection_royalties(&deps.querier, deps.api, &collection)?;
 
     for matched_order in matched_user_submitted_nfts {
@@ -107,6 +113,11 @@ pub fn query_sim_swap_nfts_for_tokens(
                 amount: royalty_fee.coin.amount,
             });
         }
+        token_payments.push(TokenPayment {
+            label: "seller".to_string(),
+            address: tx_fees.seller_payment.recipient.to_string(),
+            amount: tx_fees.seller_payment.coin.amount,
+        });
 
         swaps.push(Swap {
             source: config.marketplace.to_string(),
@@ -114,7 +125,7 @@ pub fn query_sim_swap_nfts_for_tokens(
             sale_price: price,
             network_fee: tx_fees.fair_burn_fee,
             nft_payments: vec![NftPayment {
-                label: "seller".to_string(),
+                label: "buyer".to_string(),
                 token_id,
                 address: bidder.to_string(),
             }],

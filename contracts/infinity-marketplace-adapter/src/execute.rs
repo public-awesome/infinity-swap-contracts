@@ -48,7 +48,13 @@ pub fn execute_swap_nfts_for_tokens(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_user_submitted_nfts(deps.as_ref(), &info.sender, &collection, &nft_orders)?;
+    validate_user_submitted_nfts(
+        deps.as_ref(),
+        &info.sender,
+        &collection,
+        &nft_orders,
+        config.max_batch_size,
+    )?;
 
     let matched_user_submitted_nfts =
         match_user_submitted_nfts(deps.as_ref(), &env.block, &config, &collection, nft_orders)?;
@@ -64,7 +70,9 @@ pub fn execute_swap_nfts_for_tokens(
         }
     }
 
+    let sender_recipient = swap_params.asset_recipient.unwrap_or(info.sender);
     let finder = swap_params.finder.map(|f| f.to_string());
+
     let mut response = Response::new();
 
     let approve_all_msg = Cw721ExecuteMsg::ApproveAll {
@@ -97,6 +105,7 @@ pub fn execute_swap_nfts_for_tokens(
                     token_id: bid.token_id,
                     bidder: bid.bidder.to_string(),
                     finder: finder.clone(),
+                    funds_recipient: Some(sender_recipient.to_string()),
                 };
                 response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
                     contract_addr: config.marketplace.to_string(),
@@ -111,6 +120,7 @@ pub fn execute_swap_nfts_for_tokens(
                     token_id: token_id_num,
                     bidder: collection_bid.bidder.to_string(),
                     finder: finder.clone(),
+                    funds_recipient: Some(sender_recipient.to_string()),
                 };
                 response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
                     contract_addr: config.marketplace.to_string(),
