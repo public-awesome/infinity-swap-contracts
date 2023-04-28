@@ -1,23 +1,36 @@
-use std::cmp::Ordering;
-use std::collections::BTreeSet;
-
+use crate::reply::BUY_NOW_REPLY_ID;
 use crate::state::Config;
 use crate::ContractError;
+
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, BlockInfo, Deps, Uint128};
+use cosmwasm_std::{
+    coins, to_binary, Addr, BlockInfo, Deps, QuerierWrapper, SubMsg, Uint128, WasmMsg,
+};
 use infinity_shared::interface::{NftOrder, NftPayment, Swap, TokenPayment, TransactionType};
 use sg_marketplace::msg::{
     AskOffset, AskResponse, AsksResponse, BidsResponse, CollectionBidOffset,
-    CollectionBidsResponse, QueryMsg as MarketplaceQueryMsg,
+    CollectionBidsResponse, ExecuteMsg as MarketplaceExecuteMsg, QueryMsg as MarketplaceQueryMsg,
 };
 use sg_marketplace::state::{Ask, Bid, CollectionBid, Order};
 use sg_marketplace_common::{only_owner, TransactionFees};
+use sg_std::{Response, NATIVE_DENOM};
+use std::cmp::Ordering;
+use std::collections::BTreeSet;
+
+pub fn validate_nft_owner(
+    querier: &QuerierWrapper,
+    sender: &Addr,
+    collection: &Addr,
+    nft_orders: &Vec<NftOrder>,
+) -> Result<(), ContractError> {
+    for nft_order in nft_orders.iter() {
+        only_owner(querier, sender, collection, &nft_order.token_id)?;
+    }
+    Ok(())
+}
 
 /// Validate NftSwap vector token amounts, and NFT ownership
 pub fn validate_nft_orders(
-    deps: Deps,
-    sender: &Addr,
-    collection: &Addr,
     nft_orders: &Vec<NftOrder>,
     max_batch_size: u32,
 ) -> Result<(), ContractError> {
@@ -34,7 +47,6 @@ pub fn validate_nft_orders(
 
     let mut uniq_token_ids: BTreeSet<String> = BTreeSet::new();
     for nft_order in nft_orders.iter() {
-        only_owner(&deps.querier, sender, collection, &nft_order.token_id)?;
         if uniq_token_ids.contains(&nft_order.token_id) {
             return Err(ContractError::InvalidInput(
                 "found duplicate nft token id".to_string(),
@@ -143,6 +155,7 @@ pub fn fetch_asks(
 
 pub fn tx_fees_to_swap(
     tx_fees: TransactionFees,
+    transaction_type: TransactionType,
     token_id: &str,
     sale_price: Uint128,
     buyer: &Addr,
@@ -171,7 +184,7 @@ pub fn tx_fees_to_swap(
 
     Swap {
         source: source.to_string(),
-        transaction_type: TransactionType::UserSubmitsNfts,
+        transaction_type,
         sale_price,
         network_fee: tx_fees.fair_burn_fee,
         nft_payments: vec![NftPayment {
@@ -292,7 +305,7 @@ pub fn match_tokens_against_specific_nfts(
         )?;
         let ask = match ask_response.ask {
             Some(_ask) => {
-                if _ask.price > nft_order.amount {
+                if nft_order.amount >= _ask.price {
                     Some(_ask)
                 } else {
                     None
@@ -338,7 +351,16 @@ pub fn match_tokens_against_any_nfts(
 
     let mut matched_user_submitted_tokens: Vec<MatchedTokensAgainstAnyNfts> = vec![];
     for nft_order in nft_orders {
-        let ask = asks.pop();
+        let ask = match asks.pop() {
+            Some(_ask) => {
+                if nft_order >= _ask.price {
+                    Some(_ask)
+                } else {
+                    None
+                }
+            }
+            None => None,
+        };
 
         if !robust && ask.is_none() {
             return Err(ContractError::MatchError(
@@ -352,4 +374,32 @@ pub fn match_tokens_against_any_nfts(
         });
     }
     Ok(matched_user_submitted_tokens)
+}
+
+pub fn buy_now(
+    response: Response,
+    ask: &Ask,
+    finder: &Option<String>,
+    marketplace: &Addr,
+) -> Result<Response, ContractError> {
+    let mut response = response;
+
+    let buy_now_msg = MarketplaceExecuteMsg::BuyNow {
+        collection: ask.collection.to_string(),
+        token_id: ask.token_id,
+        expires: ask.expires_at,
+        finder: finder.clone(),
+        finders_fee_bps: None,
+    };
+
+    response = response.add_submessage(SubMsg::reply_always(
+        WasmMsg::Execute {
+            contract_addr: marketplace.to_string(),
+            msg: to_binary(&buy_now_msg)?,
+            funds: coins(ask.price.u128(), NATIVE_DENOM),
+        },
+        BUY_NOW_REPLY_ID,
+    ));
+
+    Ok(response)
 }

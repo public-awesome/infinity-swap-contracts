@@ -1,13 +1,11 @@
 use crate::helpers::{
-    match_nfts_against_tokens, match_tokens_against_any_nfts, match_tokens_against_specific_nfts,
-    MatchedBid,
+    buy_now, match_nfts_against_tokens, match_tokens_against_any_nfts,
+    match_tokens_against_specific_nfts, validate_nft_owner, MatchedBid,
 };
-use crate::state::CONFIG;
+use crate::state::{CONFIG, FORWARD_NFTS};
 use crate::ContractError;
 use crate::{helpers::validate_nft_orders, msg::ExecuteMsg};
-use cosmwasm_std::{
-    coin, coins, to_binary, Addr, DepsMut, Env, MessageInfo, SubMsg, Uint128, WasmMsg,
-};
+use cosmwasm_std::{coin, to_binary, Addr, DepsMut, Env, MessageInfo, SubMsg, Uint128, WasmMsg};
 use cw721::Cw721ExecuteMsg;
 use cw_utils::must_pay;
 use infinity_shared::interface::{transform_swap_params, NftOrder, SwapParamsInternal};
@@ -78,13 +76,8 @@ pub fn execute_swap_nfts_for_tokens(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_nft_orders(
-        deps.as_ref(),
-        &info.sender,
-        &collection,
-        &nft_orders,
-        config.max_batch_size,
-    )?;
+    validate_nft_orders(&nft_orders, config.max_batch_size)?;
+    validate_nft_owner(&deps.querier, &info.sender, &collection, &nft_orders)?;
 
     let matches = match_nfts_against_tokens(
         deps.as_ref(),
@@ -170,13 +163,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_nft_orders(
-        deps.as_ref(),
-        &info.sender,
-        &collection,
-        &nft_orders,
-        config.max_batch_size,
-    )?;
+    validate_nft_orders(&nft_orders, config.max_batch_size)?;
 
     let expected_amount = nft_orders
         .iter()
@@ -207,22 +194,18 @@ pub fn execute_swap_tokens_for_specific_nfts(
             continue;
         }
         let matched_ask = matched_order.matched_ask.unwrap();
-
-        let buy_now_msg = MarketplaceExecuteMsg::BuyNow {
-            collection: collection.to_string(),
-            token_id: matched_ask.token_id,
-            expires: matched_ask.expires_at,
-            finder: finder.clone(),
-            finders_fee_bps: None,
-        };
-
         remaining_balance -= matched_ask.price;
 
-        response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-            contract_addr: config.marketplace.to_string(),
-            msg: to_binary(&buy_now_msg)?,
-            funds: coins(matched_ask.price.u128(), NATIVE_DENOM),
-        }));
+        response = buy_now(response, &matched_ask, &finder, &config.marketplace)?;
+
+        FORWARD_NFTS.save(
+            deps.storage,
+            (
+                matched_ask.collection.clone(),
+                matched_ask.token_id.to_string(),
+            ),
+            &info.sender,
+        )?;
     }
 
     // Refund remaining balance
@@ -288,22 +271,18 @@ pub fn execute_swap_tokens_for_any_nfts(
             continue;
         }
         let matched_ask = matched_order.matched_ask.unwrap();
-
-        let buy_now_msg = MarketplaceExecuteMsg::BuyNow {
-            collection: collection.to_string(),
-            token_id: matched_ask.token_id,
-            expires: matched_ask.expires_at,
-            finder: finder.clone(),
-            finders_fee_bps: None,
-        };
-
         remaining_balance -= matched_ask.price;
 
-        response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-            contract_addr: config.marketplace.to_string(),
-            msg: to_binary(&buy_now_msg)?,
-            funds: coins(matched_ask.price.u128(), NATIVE_DENOM),
-        }));
+        response = buy_now(response, &matched_ask, &finder, &config.marketplace)?;
+
+        FORWARD_NFTS.save(
+            deps.storage,
+            (
+                matched_ask.collection.clone(),
+                matched_ask.token_id.to_string(),
+            ),
+            &info.sender,
+        )?;
     }
 
     // Refund remaining balance

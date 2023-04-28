@@ -54,17 +54,17 @@ pub fn mint_to(
 
 pub fn approve(
     router: &mut StargazeApp,
-    creator: &Addr,
+    owner: &Addr,
     collection: &Addr,
-    marketplace: &Addr,
+    spender: &Addr,
     token_id: u32,
 ) {
     let approve_msg: Sg721ExecuteMsg<CollectionInfoResponse, Empty> = Sg721ExecuteMsg::Approve {
-        spender: marketplace.to_string(),
+        spender: spender.to_string(),
         token_id: token_id.to_string(),
         expires: None,
     };
-    let res = router.execute_contract(creator.clone(), collection.clone(), &approve_msg, &[]);
+    let res = router.execute_contract(owner.clone(), collection.clone(), &approve_msg, &[]);
     assert!(res.is_ok());
 }
 
