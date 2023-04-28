@@ -1,4 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Uint128;
 use infinity_shared::interface::{NftOrder, SwapParams, SwapResponse};
 
 pub const MAX_QUERY_LIMIT: u32 = 100;
@@ -23,6 +24,11 @@ pub enum ExecuteMsg {
         nft_orders: Vec<NftOrder>,
         swap_params: SwapParams,
     },
+    SwapTokensForAnyNfts {
+        collection: String,
+        nft_orders: Vec<Uint128>,
+        swap_params: SwapParams,
+    },
 }
 
 #[cw_serde]
@@ -40,6 +46,13 @@ pub enum QueryMsg {
         sender: String,
         collection: String,
         nft_orders: Vec<NftOrder>,
+        swap_params: SwapParams,
+    },
+    #[returns(SwapResponse)]
+    SimSwapTokensForAnyNfts {
+        sender: String,
+        collection: String,
+        nft_orders: Vec<Uint128>,
         swap_params: SwapParams,
     },
 }
