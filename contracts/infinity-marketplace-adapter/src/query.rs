@@ -1,12 +1,12 @@
 use crate::helpers::{
     match_nfts_against_tokens, match_tokens_against_any_nfts, match_tokens_against_specific_nfts,
-    tx_fees_to_swap, validate_nft_orders, MatchedBid,
+    tx_fees_to_swap, validate_nft_orders, validate_nft_owner, MatchedBid,
 };
 use crate::msg::QueryMsg;
 use crate::state::CONFIG;
 use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult, Uint128};
 use infinity_shared::interface::{
-    transform_swap_params, NftOrder, Swap, SwapParamsInternal, SwapResponse,
+    transform_swap_params, NftOrder, Swap, SwapParamsInternal, SwapResponse, TransactionType,
 };
 
 #[cfg(not(feature = "library"))]
@@ -71,14 +71,10 @@ pub fn query_sim_swap_nfts_for_tokens(
 ) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_nft_orders(
-        deps,
-        &sender,
-        &collection,
-        &nft_orders,
-        config.max_batch_size,
-    )
-    .map_err(|err| StdError::generic_err(err.to_string()))?;
+    validate_nft_orders(&nft_orders, config.max_batch_size)
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
+    validate_nft_owner(&deps.querier, &sender, &collection, &nft_orders)
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let matches = match_nfts_against_tokens(
         deps,
@@ -126,6 +122,7 @@ pub fn query_sim_swap_nfts_for_tokens(
 
         swaps.push(tx_fees_to_swap(
             tx_fees,
+            TransactionType::UserSubmitsNfts,
             &token_id,
             sale_price,
             &bidder,
@@ -146,14 +143,8 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
 ) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_nft_orders(
-        deps,
-        &sender,
-        &collection,
-        &nft_orders,
-        config.max_batch_size,
-    )
-    .map_err(|err| StdError::generic_err(err.to_string()))?;
+    validate_nft_orders(&nft_orders, config.max_batch_size)
+        .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let matches = match_tokens_against_specific_nfts(
         deps,
@@ -191,6 +182,7 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
 
         swaps.push(tx_fees_to_swap(
             tx_fees,
+            TransactionType::UserSubmitsTokens,
             &token_id,
             matched_ask.price,
             &sender_recipient,
@@ -259,6 +251,7 @@ pub fn query_sim_swap_tokens_for_any_nfts(
 
         swaps.push(tx_fees_to_swap(
             tx_fees,
+            TransactionType::UserSubmitsTokens,
             &token_id,
             matched_ask.price,
             &sender_recipient,

@@ -27,6 +27,7 @@ pub fn contract_infinity_marketplace_adapter() -> Box<dyn Contract<StargazeMsgWr
         infinity_marketplace_adapter::execute::execute,
         infinity_marketplace_adapter::instantiate::instantiate,
         infinity_marketplace_adapter::query::query,
-    );
+    )
+    .with_reply(infinity_marketplace_adapter::reply::reply);
     Box::new(contract)
 }
