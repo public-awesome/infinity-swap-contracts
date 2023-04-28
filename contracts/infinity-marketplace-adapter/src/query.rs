@@ -1,12 +1,12 @@
 use crate::helpers::{
-    match_user_submitted_nfts, match_user_submitted_tokens, validate_nft_orders, MatchedBid,
+    match_nfts_against_tokens, match_tokens_against_any_nfts, match_tokens_against_specific_nfts,
+    tx_fees_to_swap, validate_nft_orders, MatchedBid,
 };
 use crate::msg::QueryMsg;
 use crate::state::CONFIG;
 use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult, Uint128};
 use infinity_shared::interface::{
-    transform_swap_params, NftOrder, NftPayment, Swap, SwapParamsInternal, SwapResponse,
-    TokenPayment, TransactionType,
+    transform_swap_params, NftOrder, Swap, SwapParamsInternal, SwapResponse,
 };
 
 #[cfg(not(feature = "library"))]
@@ -45,6 +45,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             nft_orders,
             transform_swap_params(api, swap_params)?,
         )?),
+        QueryMsg::SimSwapTokensForAnyNfts {
+            sender,
+            collection,
+            nft_orders,
+            swap_params,
+        } => to_binary(&query_sim_swap_tokens_for_any_nfts(
+            deps,
+            env,
+            api.addr_validate(&sender)?,
+            api.addr_validate(&collection)?,
+            nft_orders,
+            transform_swap_params(api, swap_params)?,
+        )?),
     }
 }
 
@@ -67,20 +80,15 @@ pub fn query_sim_swap_nfts_for_tokens(
     )
     .map_err(|err| StdError::generic_err(err.to_string()))?;
 
-    let matched_user_submitted_nfts =
-        match_user_submitted_nfts(deps, &env.block, &config, &collection, nft_orders)
-            .map_err(|err| StdError::generic_err(err.to_string()))?;
-
-    if !swap_params.robust {
-        let missing_match = matched_user_submitted_nfts
-            .iter()
-            .any(|m| m.matched_bid.is_none());
-        if missing_match {
-            return Err(StdError::generic_err(
-                "all nfts not matched with a bid".to_string(),
-            ));
-        }
-    }
+    let matches = match_nfts_against_tokens(
+        deps,
+        &env.block,
+        &config,
+        &collection,
+        nft_orders,
+        swap_params.robust,
+    )
+    .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let sender_recipient = swap_params.asset_recipient.unwrap_or(sender);
 
@@ -89,13 +97,14 @@ pub fn query_sim_swap_nfts_for_tokens(
     let marketplace_params = load_marketplace_params(&deps.querier, &config.marketplace)?;
     let royalty_info = load_collection_royalties(&deps.querier, deps.api, &collection)?;
 
-    for matched_order in matched_user_submitted_nfts {
+    for matched_order in matches {
         if matched_order.matched_bid.is_none() {
             continue;
         }
         let matched_bid = matched_order.matched_bid.unwrap();
 
-        let (price, bidder, finders_fee_bps): (Uint128, Addr, Option<u64>) = match matched_bid {
+        let (sale_price, bidder, finders_fee_bps): (Uint128, Addr, Option<u64>) = match matched_bid
+        {
             MatchedBid::Bid(bid) => (bid.price, bid.bidder, bid.finders_fee_bps),
             MatchedBid::CollectionBid(collection_bid) => (
                 collection_bid.price,
@@ -107,7 +116,7 @@ pub fn query_sim_swap_nfts_for_tokens(
         let token_id = matched_order.nft_order.token_id;
 
         let tx_fees = calculate_nft_sale_fees(
-            price,
+            sale_price,
             marketplace_params.trading_fee_percent,
             &sender_recipient,
             swap_params.finder.as_ref(),
@@ -115,39 +124,13 @@ pub fn query_sim_swap_nfts_for_tokens(
             royalty_info.as_ref(),
         )?;
 
-        let mut token_payments: Vec<TokenPayment> = vec![];
-        if let Some(finders_fee) = tx_fees.finders_fee {
-            token_payments.push(TokenPayment {
-                label: "finder".to_string(),
-                address: finders_fee.recipient.to_string(),
-                amount: finders_fee.coin.amount,
-            });
-        }
-        if let Some(royalty_fee) = tx_fees.royalty_fee {
-            token_payments.push(TokenPayment {
-                label: "royalty".to_string(),
-                address: royalty_fee.recipient.to_string(),
-                amount: royalty_fee.coin.amount,
-            });
-        }
-        token_payments.push(TokenPayment {
-            label: "seller".to_string(),
-            address: tx_fees.seller_payment.recipient.to_string(),
-            amount: tx_fees.seller_payment.coin.amount,
-        });
-
-        swaps.push(Swap {
-            source: config.marketplace.to_string(),
-            transaction_type: TransactionType::UserSubmitsNfts,
-            sale_price: price,
-            network_fee: tx_fees.fair_burn_fee,
-            nft_payments: vec![NftPayment {
-                label: "buyer".to_string(),
-                token_id,
-                address: bidder.to_string(),
-            }],
-            token_payments,
-        });
+        swaps.push(tx_fees_to_swap(
+            tx_fees,
+            &token_id,
+            sale_price,
+            &bidder,
+            &config.marketplace,
+        ));
     }
 
     Ok(SwapResponse { swaps })
@@ -172,20 +155,14 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
     )
     .map_err(|err| StdError::generic_err(err.to_string()))?;
 
-    let matched_user_submitted_tokens =
-        match_user_submitted_tokens(deps, &config, &collection, nft_orders)
-            .map_err(|err| StdError::generic_err(err.to_string()))?;
-
-    if !swap_params.robust {
-        let missing_match = matched_user_submitted_tokens
-            .iter()
-            .any(|m| m.matched_ask.is_none());
-        if missing_match {
-            return Err(StdError::generic_err(
-                "all orders not matched with an ask".to_string(),
-            ));
-        }
-    }
+    let matches = match_tokens_against_specific_nfts(
+        deps,
+        &config,
+        &collection,
+        nft_orders,
+        swap_params.robust,
+    )
+    .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let sender_recipient = swap_params.asset_recipient.unwrap_or(sender);
 
@@ -194,7 +171,7 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
     let marketplace_params = load_marketplace_params(&deps.querier, &config.marketplace)?;
     let royalty_info = load_collection_royalties(&deps.querier, deps.api, &collection)?;
 
-    for matched_order in matched_user_submitted_tokens {
+    for matched_order in matches {
         if matched_order.matched_ask.is_none() {
             continue;
         }
@@ -212,39 +189,81 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
             royalty_info.as_ref(),
         )?;
 
-        let mut token_payments: Vec<TokenPayment> = vec![];
-        if let Some(finders_fee) = tx_fees.finders_fee {
-            token_payments.push(TokenPayment {
-                label: "finder".to_string(),
-                address: finders_fee.recipient.to_string(),
-                amount: finders_fee.coin.amount,
-            });
-        }
-        if let Some(royalty_fee) = tx_fees.royalty_fee {
-            token_payments.push(TokenPayment {
-                label: "royalty".to_string(),
-                address: royalty_fee.recipient.to_string(),
-                amount: royalty_fee.coin.amount,
-            });
-        }
-        token_payments.push(TokenPayment {
-            label: "seller".to_string(),
-            address: tx_fees.seller_payment.recipient.to_string(),
-            amount: tx_fees.seller_payment.coin.amount,
-        });
+        swaps.push(tx_fees_to_swap(
+            tx_fees,
+            &token_id,
+            matched_ask.price,
+            &sender_recipient,
+            &config.marketplace,
+        ));
+    }
 
-        swaps.push(Swap {
-            source: config.marketplace.to_string(),
-            transaction_type: TransactionType::UserSubmitsNfts,
-            sale_price: matched_ask.price,
-            network_fee: tx_fees.fair_burn_fee,
-            nft_payments: vec![NftPayment {
-                label: "buyer".to_string(),
-                token_id,
-                address: sender_recipient.to_string(),
-            }],
-            token_payments,
-        });
+    Ok(SwapResponse { swaps })
+}
+
+pub fn query_sim_swap_tokens_for_any_nfts(
+    deps: Deps,
+    env: Env,
+    sender: Addr,
+    collection: Addr,
+    nft_orders: Vec<Uint128>,
+    swap_params: SwapParamsInternal,
+) -> StdResult<SwapResponse> {
+    let config = CONFIG.load(deps.storage)?;
+
+    if nft_orders.is_empty() {
+        return Err(StdError::generic_err(
+            "nft orders must not be empty".to_string(),
+        ));
+    }
+    if nft_orders.len() > config.max_batch_size as usize {
+        return Err(StdError::generic_err(
+            "nft orders must not exceed max batch size".to_string(),
+        ));
+    }
+
+    let matches = match_tokens_against_any_nfts(
+        deps,
+        &env.block,
+        &config,
+        &collection,
+        nft_orders,
+        swap_params.robust,
+    )
+    .map_err(|err| StdError::generic_err(err.to_string()))?;
+
+    let sender_recipient = swap_params.asset_recipient.unwrap_or(sender);
+
+    let mut swaps: Vec<Swap> = vec![];
+
+    let marketplace_params = load_marketplace_params(&deps.querier, &config.marketplace)?;
+    let royalty_info = load_collection_royalties(&deps.querier, deps.api, &collection)?;
+
+    for matched_order in matches {
+        if matched_order.matched_ask.is_none() {
+            continue;
+        }
+        let matched_ask = matched_order.matched_ask.unwrap();
+        let token_id = matched_ask.token_id.to_string();
+
+        let ask_recipient = matched_ask.funds_recipient.unwrap_or(matched_ask.seller);
+
+        let tx_fees = calculate_nft_sale_fees(
+            matched_ask.price,
+            marketplace_params.trading_fee_percent,
+            &ask_recipient,
+            swap_params.finder.as_ref(),
+            matched_ask.finders_fee_bps,
+            royalty_info.as_ref(),
+        )?;
+
+        swaps.push(tx_fees_to_swap(
+            tx_fees,
+            &token_id,
+            matched_ask.price,
+            &sender_recipient,
+            &config.marketplace,
+        ));
     }
 
     Ok(SwapResponse { swaps })

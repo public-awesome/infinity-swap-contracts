@@ -4,14 +4,14 @@ use std::collections::BTreeSet;
 use crate::state::Config;
 use crate::ContractError;
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, BlockInfo, Deps};
-use infinity_shared::interface::NftOrder;
+use cosmwasm_std::{Addr, BlockInfo, Deps, Uint128};
+use infinity_shared::interface::{NftOrder, NftPayment, Swap, TokenPayment, TransactionType};
 use sg_marketplace::msg::{
-    AskResponse, BidsResponse, CollectionBidOffset, CollectionBidsResponse,
-    QueryMsg as MarketplaceQueryMsg,
+    AskOffset, AskResponse, AsksResponse, BidsResponse, CollectionBidOffset,
+    CollectionBidsResponse, QueryMsg as MarketplaceQueryMsg,
 };
 use sg_marketplace::state::{Ask, Bid, CollectionBid, Order};
-use sg_marketplace_common::only_owner;
+use sg_marketplace_common::{only_owner, TransactionFees};
 
 /// Validate NftSwap vector token amounts, and NFT ownership
 pub fn validate_nft_orders(
@@ -93,24 +93,115 @@ pub fn fetch_collection_bids(
     Ok(collection_bids)
 }
 
+// Fetch asks in a loop until a certain number are retrieved or there are no more to fetch,
+// filters out invalid asks
+pub fn fetch_asks(
+    deps: Deps,
+    marketplace: &Addr,
+    collection: &Addr,
+    block: &BlockInfo,
+    limit: u32,
+) -> Result<Vec<Ask>, ContractError> {
+    let mut asks: Vec<Ask> = vec![];
+
+    loop {
+        let mut start_after: Option<AskOffset> = None;
+        if let Some(last_ask) = asks.last() {
+            start_after = Some(AskOffset {
+                price: last_ask.price,
+                token_id: last_ask.token_id,
+            });
+        }
+
+        let query_limit = limit - asks.len() as u32;
+        let asks_response: AsksResponse = deps.querier.query_wasm_smart(
+            marketplace,
+            &MarketplaceQueryMsg::AsksSortedByPrice {
+                collection: collection.to_string(),
+                include_inactive: Some(false),
+                start_after,
+                limit: Some(query_limit),
+            },
+        )?;
+        let num_results = asks_response.asks.len();
+
+        // Filter out expired asks
+        asks.extend(
+            asks_response
+                .asks
+                .into_iter()
+                .filter(|ask| !ask.is_expired(block)),
+        );
+
+        if num_results < query_limit as usize || asks.len() >= limit as usize {
+            break;
+        }
+    }
+
+    Ok(asks)
+}
+
+pub fn tx_fees_to_swap(
+    tx_fees: TransactionFees,
+    token_id: &str,
+    sale_price: Uint128,
+    buyer: &Addr,
+    source: &Addr,
+) -> Swap {
+    let mut token_payments: Vec<TokenPayment> = vec![];
+    if let Some(finders_fee) = tx_fees.finders_fee {
+        token_payments.push(TokenPayment {
+            label: "finder".to_string(),
+            address: finders_fee.recipient.to_string(),
+            amount: finders_fee.coin.amount,
+        });
+    }
+    if let Some(royalty_fee) = tx_fees.royalty_fee {
+        token_payments.push(TokenPayment {
+            label: "royalty".to_string(),
+            address: royalty_fee.recipient.to_string(),
+            amount: royalty_fee.coin.amount,
+        });
+    }
+    token_payments.push(TokenPayment {
+        label: "seller".to_string(),
+        address: tx_fees.seller_payment.recipient.to_string(),
+        amount: tx_fees.seller_payment.coin.amount,
+    });
+
+    Swap {
+        source: source.to_string(),
+        transaction_type: TransactionType::UserSubmitsNfts,
+        sale_price,
+        network_fee: tx_fees.fair_burn_fee,
+        nft_payments: vec![NftPayment {
+            label: "buyer".to_string(),
+            token_id: token_id.to_string(),
+            address: buyer.to_string(),
+        }],
+        token_payments,
+    }
+}
+
 #[cw_serde]
 pub enum MatchedBid {
     Bid(Bid),
     CollectionBid(CollectionBid),
 }
 
-pub struct MatchedUserSubmittedNftOrder {
+pub struct MatchedNftAgainstTokens {
     pub nft_order: NftOrder,
     pub matched_bid: Option<MatchedBid>,
 }
 
-pub fn match_user_submitted_nfts(
+pub fn match_nfts_against_tokens(
     deps: Deps,
     block: &BlockInfo,
     config: &Config,
     collection: &Addr,
     nft_orders: Vec<NftOrder>,
-) -> Result<Vec<MatchedUserSubmittedNftOrder>, ContractError> {
+    robust: bool,
+) -> Result<Vec<MatchedNftAgainstTokens>, ContractError> {
     let mut collection_bids = fetch_collection_bids(
         deps,
         &config.marketplace,
@@ -119,7 +210,7 @@ pub fn match_user_submitted_nfts(
         config.max_batch_size,
     )?;
 
-    let mut matched_user_submitted_nfts: Vec<MatchedUserSubmittedNftOrder> = vec![];
+    let mut matched_user_submitted_nfts: Vec<MatchedNftAgainstTokens> = vec![];
 
     for nft_order in nft_orders {
         let token_id = nft_order.token_id.parse::<u32>().unwrap();
@@ -161,26 +252,34 @@ pub fn match_user_submitted_nfts(
             }
         }
 
-        matched_user_submitted_nfts.push(MatchedUserSubmittedNftOrder {
+        if !robust && matched_bid.is_none() {
+            return Err(ContractError::MatchError(
+                "all nfts not matched with a bid".to_string(),
+            ));
+        }
+
+        matched_user_submitted_nfts.push(MatchedNftAgainstTokens {
             nft_order: nft_order,
             matched_bid,
         });
     }
+
     Ok(matched_user_submitted_nfts)
 }
 
-pub struct MatchedUserSubmittedTokenOrder {
+pub struct MatchedTokensAgainstSpecificNfts {
     pub nft_order: NftOrder,
     pub matched_ask: Option<Ask>,
 }
 
-pub fn match_user_submitted_tokens(
+pub fn match_tokens_against_specific_nfts(
     deps: Deps,
     config: &Config,
     collection: &Addr,
     nft_orders: Vec<NftOrder>,
-) -> Result<Vec<MatchedUserSubmittedTokenOrder>, ContractError> {
-    let mut matched_user_submitted_tokens: Vec<MatchedUserSubmittedTokenOrder> = vec![];
+    robust: bool,
+) -> Result<Vec<MatchedTokensAgainstSpecificNfts>, ContractError> {
+    let mut matched_user_submitted_tokens: Vec<MatchedTokensAgainstSpecificNfts> = vec![];
 
     for nft_order in nft_orders {
         let token_id = nft_order.token_id.parse::<u32>().unwrap();
@@ -202,8 +301,53 @@ pub fn match_user_submitted_tokens(
             None => None,
         };
 
-        matched_user_submitted_tokens.push(MatchedUserSubmittedTokenOrder {
+        if !robust && ask.is_none() {
+            return Err(ContractError::MatchError(
+                "all nft orders not matched with an ask".to_string(),
+            ));
+        }
+
+        matched_user_submitted_tokens.push(MatchedTokensAgainstSpecificNfts {
             nft_order: nft_order,
+            matched_ask: ask,
+        });
+    }
+    Ok(matched_user_submitted_tokens)
+}
+
+pub struct MatchedTokensAgainstAnyNfts {
+    pub token_amount: Uint128,
+    pub matched_ask: Option<Ask>,
+}
+
+pub fn match_tokens_against_any_nfts(
+    deps: Deps,
+    block: &BlockInfo,
+    config: &Config,
+    collection: &Addr,
+    nft_orders: Vec<Uint128>,
+    robust: bool,
+) -> Result<Vec<MatchedTokensAgainstAnyNfts>, ContractError> {
+    let mut asks = fetch_asks(
+        deps,
+        &config.marketplace,
+        &collection,
+        block,
+        config.max_batch_size,
+    )?;
+
+    let mut matched_user_submitted_tokens: Vec<MatchedTokensAgainstAnyNfts> = vec![];
+    for nft_order in nft_orders {
+        let ask = asks.pop();
+
+        if !robust && ask.is_none() {
+            return Err(ContractError::MatchError(
+                "all nft orders not matched with an ask".to_string(),
+            ));
+        }
+
+        matched_user_submitted_tokens.push(MatchedTokensAgainstAnyNfts {
+            token_amount: nft_order,
             matched_ask: ask,
         });
     }

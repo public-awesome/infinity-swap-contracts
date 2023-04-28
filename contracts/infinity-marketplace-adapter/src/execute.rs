@@ -1,4 +1,7 @@
-use crate::helpers::{match_user_submitted_nfts, match_user_submitted_tokens, MatchedBid};
+use crate::helpers::{
+    match_nfts_against_tokens, match_tokens_against_any_nfts, match_tokens_against_specific_nfts,
+    MatchedBid,
+};
 use crate::state::CONFIG;
 use crate::ContractError;
 use crate::{helpers::validate_nft_orders, msg::ExecuteMsg};
@@ -49,6 +52,18 @@ pub fn execute(
             nft_orders,
             transform_swap_params(api, swap_params)?,
         ),
+        ExecuteMsg::SwapTokensForAnyNfts {
+            collection,
+            nft_orders,
+            swap_params,
+        } => execute_swap_tokens_for_any_nfts(
+            deps,
+            env,
+            info,
+            api.addr_validate(&collection)?,
+            nft_orders,
+            transform_swap_params(api, swap_params)?,
+        ),
     }
 }
 
@@ -71,19 +86,14 @@ pub fn execute_swap_nfts_for_tokens(
         config.max_batch_size,
     )?;
 
-    let matched_user_submitted_nfts =
-        match_user_submitted_nfts(deps.as_ref(), &env.block, &config, &collection, nft_orders)?;
-
-    if !swap_params.robust {
-        let missing_match = matched_user_submitted_nfts
-            .iter()
-            .any(|m| m.matched_bid.is_none());
-        if missing_match {
-            return Err(ContractError::MatchError(
-                "all nfts not matched with a bid".to_string(),
-            ));
-        }
-    }
+    let matches = match_nfts_against_tokens(
+        deps.as_ref(),
+        &env.block,
+        &config,
+        &collection,
+        nft_orders,
+        swap_params.robust,
+    )?;
 
     let sender_recipient = swap_params.asset_recipient.unwrap_or(info.sender);
     let finder = swap_params.finder.map(|f| f.to_string());
@@ -100,7 +110,7 @@ pub fn execute_swap_nfts_for_tokens(
         funds: vec![],
     }));
 
-    for matched_order in matched_user_submitted_nfts {
+    for matched_order in matches {
         if matched_order.matched_bid.is_none() {
             continue;
         }
@@ -180,25 +190,100 @@ pub fn execute_swap_tokens_for_specific_nfts(
     }
     let mut remaining_balance = received_amount.clone();
 
-    let matched_user_submitted_tokens =
-        match_user_submitted_tokens(deps.as_ref(), &config, &collection, nft_orders)?;
-
-    if !swap_params.robust {
-        let missing_match = matched_user_submitted_tokens
-            .iter()
-            .any(|m| m.matched_ask.is_none());
-        if missing_match {
-            return Err(ContractError::MatchError(
-                "all nfts not matched with a bid".to_string(),
-            ));
-        }
-    }
+    let matches = match_tokens_against_specific_nfts(
+        deps.as_ref(),
+        &config,
+        &collection,
+        nft_orders,
+        swap_params.robust,
+    )?;
 
     let finder = swap_params.finder.map(|f| f.to_string());
 
     let mut response = Response::new();
 
-    for matched_order in matched_user_submitted_tokens {
+    for matched_order in matches {
+        if matched_order.matched_ask.is_none() {
+            continue;
+        }
+        let matched_ask = matched_order.matched_ask.unwrap();
+
+        let buy_now_msg = MarketplaceExecuteMsg::BuyNow {
+            collection: collection.to_string(),
+            token_id: matched_ask.token_id,
+            expires: matched_ask.expires_at,
+            finder: finder.clone(),
+            finders_fee_bps: None,
+        };
+
+        remaining_balance -= matched_ask.price;
+
+        response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
+            contract_addr: config.marketplace.to_string(),
+            msg: to_binary(&buy_now_msg)?,
+            funds: coins(matched_ask.price.u128(), NATIVE_DENOM),
+        }));
+    }
+
+    // Refund remaining balance
+    if remaining_balance.u128() > 0 {
+        response = response.add_submessage(bank_send(
+            coin(remaining_balance.u128(), NATIVE_DENOM),
+            &info.sender,
+        ));
+    }
+
+    Ok(response)
+}
+
+/// Execute a SwapTokensForAnyNfts message
+pub fn execute_swap_tokens_for_any_nfts(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    collection: Addr,
+    nft_orders: Vec<Uint128>,
+    swap_params: SwapParamsInternal,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+
+    if nft_orders.is_empty() {
+        return Err(ContractError::InvalidInput(
+            "nft orders must not be empty".to_string(),
+        ));
+    }
+    if nft_orders.len() > config.max_batch_size as usize {
+        return Err(ContractError::InvalidInput(
+            "nft orders must not exceed max batch size".to_string(),
+        ));
+    }
+
+    let expected_amount = nft_orders
+        .iter()
+        .fold(Uint128::zero(), |acc, nft_order| acc + nft_order);
+    let received_amount = must_pay(&info, NATIVE_DENOM)?;
+    if received_amount != expected_amount {
+        return Err(ContractError::InsufficientFunds(format!(
+            "expected {} but received {}",
+            expected_amount, received_amount
+        )));
+    }
+    let mut remaining_balance = received_amount.clone();
+
+    let matches = match_tokens_against_any_nfts(
+        deps.as_ref(),
+        &env.block,
+        &config,
+        &collection,
+        nft_orders,
+        swap_params.robust,
+    )?;
+
+    let finder = swap_params.finder.map(|f| f.to_string());
+
+    let mut response = Response::new();
+
+    for matched_order in matches {
         if matched_order.matched_ask.is_none() {
             continue;
         }
