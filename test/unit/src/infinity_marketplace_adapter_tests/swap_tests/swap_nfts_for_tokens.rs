@@ -111,7 +111,7 @@ fn swap_nft_for_token_marketplace_adapter() {
     set_collection_bid(
         &mut router,
         marketplace.clone(),
-        collection_bidder_0.clone(),
+        collection_bidder_0,
         collection.to_string(),
         expires,
         Some(250),
@@ -121,8 +121,8 @@ fn swap_nft_for_token_marketplace_adapter() {
         setup_addtl_account(&mut router, "collection_bidder_1", INITIAL_BALANCE).unwrap();
     set_collection_bid(
         &mut router,
-        marketplace.clone(),
-        collection_bidder_1.clone(),
+        marketplace,
+        collection_bidder_1,
         collection.to_string(),
         expires,
         Some(250),
@@ -148,7 +148,7 @@ fn swap_nft_for_token_marketplace_adapter() {
     };
     let sim_response: SwapResponse = router
         .wrap()
-        .query_wasm_smart(infinity_marketplace_adapter.clone(), &sim_msg)
+        .query_wasm_smart(&infinity_marketplace_adapter, &sim_msg)
         .unwrap();
     assert_eq!(sim_response.swaps.len(), 4);
 
@@ -169,12 +169,7 @@ fn swap_nft_for_token_marketplace_adapter() {
         },
     };
     let exec_res = router
-        .execute_contract(
-            owner.clone(),
-            infinity_marketplace_adapter.clone(),
-            &exec_msg,
-            &[],
-        )
+        .execute_contract(owner.clone(), infinity_marketplace_adapter, &exec_msg, &[])
         .unwrap();
 
     // Account for 4 swaps

@@ -109,7 +109,7 @@ fn sim_token_for_any_nfts_marketplace_adapter() {
     };
     let swap_response: SwapResponse = router
         .wrap()
-        .query_wasm_smart(infinity_marketplace_adapter.clone(), &sim_msg)
+        .query_wasm_smart(infinity_marketplace_adapter, &sim_msg)
         .unwrap();
 
     assert_eq!(swap_response.swaps.len(), 2);

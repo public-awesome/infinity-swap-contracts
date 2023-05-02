@@ -148,7 +148,7 @@ fn swap_token_for_specific_nfts_marketplace_adapter() {
     let exec_res = router
         .execute_contract(
             bidder.clone(),
-            infinity_marketplace_adapter.clone(),
+            infinity_marketplace_adapter,
             &exec_msg,
             &coins(fund_amount.u128(), NATIVE_DENOM),
         )

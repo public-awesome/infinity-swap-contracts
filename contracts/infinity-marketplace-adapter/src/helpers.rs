@@ -21,7 +21,7 @@ pub fn validate_nft_owner(
     querier: &QuerierWrapper,
     sender: &Addr,
     collection: &Addr,
-    nft_orders: &Vec<NftOrder>,
+    nft_orders: &[NftOrder],
 ) -> Result<(), ContractError> {
     for nft_order in nft_orders.iter() {
         only_owner(querier, sender, collection, &nft_order.token_id)?;
@@ -219,7 +219,7 @@ pub fn match_nfts_against_tokens(
     let mut collection_bids = fetch_collection_bids(
         deps,
         &config.marketplace,
-        &collection,
+        collection,
         block,
         config.max_batch_size,
     )?;
@@ -232,7 +232,7 @@ pub fn match_nfts_against_tokens(
             &config.marketplace,
             &MarketplaceQueryMsg::BidsSortedByTokenPrice {
                 collection: collection.to_string(),
-                token_id: token_id,
+                token_id,
                 start_after: None,
                 limit: Some(1),
                 descending: Some(true),
@@ -273,7 +273,7 @@ pub fn match_nfts_against_tokens(
         }
 
         matched_user_submitted_nfts.push(MatchedNftAgainstTokens {
-            nft_order: nft_order,
+            nft_order,
             matched_bid,
         });
     }
@@ -301,7 +301,7 @@ pub fn match_tokens_against_specific_nfts(
             &config.marketplace,
             &MarketplaceQueryMsg::Ask {
                 collection: collection.to_string(),
-                token_id: token_id,
+                token_id,
             },
         )?;
         let ask = match ask_response.ask {
@@ -322,7 +322,7 @@ pub fn match_tokens_against_specific_nfts(
         }
 
         matched_user_submitted_tokens.push(MatchedTokensAgainstSpecificNfts {
-            nft_order: nft_order,
+            nft_order,
             matched_ask: ask,
         });
     }
@@ -345,7 +345,7 @@ pub fn match_tokens_against_any_nfts(
     let mut asks = fetch_asks(
         deps,
         &config.marketplace,
-        &collection,
+        collection,
         block,
         config.max_batch_size,
     )?;
