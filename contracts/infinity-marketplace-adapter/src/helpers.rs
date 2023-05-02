@@ -150,6 +150,7 @@ pub fn fetch_asks(
         }
     }
 
+    asks.reverse();
     Ok(asks)
 }
 
