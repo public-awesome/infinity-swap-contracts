@@ -2491,6 +2491,7 @@ dependencies = [
 [[package]]
 name = "sg-marketplace"
 version = "1.4.0"
+source = "git+https://github.com/tasiov/marketplace?branch=infinity-marketplace-changes#5ad284b5e1dddf84a59f22457724043bc7d4a5bf"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -2514,6 +2515,7 @@ dependencies = [
 [[package]]
 name = "sg-marketplace-common"
 version = "1.0.0"
+source = "git+https://github.com/tasiov/marketplace?branch=infinity-marketplace-changes#5ad284b5e1dddf84a59f22457724043bc7d4a5bf"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
