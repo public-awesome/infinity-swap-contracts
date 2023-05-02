@@ -76,7 +76,7 @@ pub fn execute_swap_nfts_for_tokens(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_nft_orders(&nft_orders, config.max_batch_size)?;
+    validate_nft_orders(&nft_orders)?;
     validate_nft_owner(&deps.querier, &info.sender, &collection, &nft_orders)?;
 
     let matches = match_nfts_against_tokens(
@@ -163,7 +163,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_nft_orders(&nft_orders, config.max_batch_size)?;
+    validate_nft_orders(&nft_orders)?;
 
     let expected_amount = nft_orders
         .iter()
@@ -233,11 +233,6 @@ pub fn execute_swap_tokens_for_any_nfts(
     if orders.is_empty() {
         return Err(ContractError::InvalidInput(
             "nft orders must not be empty".to_string(),
-        ));
-    }
-    if orders.len() > config.max_batch_size as usize {
-        return Err(ContractError::InvalidInput(
-            "nft orders must not exceed max batch size".to_string(),
         ));
     }
 

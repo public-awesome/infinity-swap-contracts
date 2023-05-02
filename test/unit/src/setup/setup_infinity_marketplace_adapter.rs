@@ -13,7 +13,6 @@ pub fn setup_infinity_marketplace_adapter(
         router.store_code(contract_infinity_marketplace_adapter());
     let msg = infinity_marketplace_adapter::msg::InstantiateMsg {
         marketplace: marketplace_addr.to_string(),
-        max_batch_size: 100,
     };
     let infinity_marketplace_adapter = router
         .instantiate_contract(

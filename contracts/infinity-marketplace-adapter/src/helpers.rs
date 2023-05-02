@@ -33,18 +33,10 @@ pub fn validate_nft_owner(
 }
 
 /// Validate NftSwap vector token amounts, and NFT ownership
-pub fn validate_nft_orders(
-    nft_orders: &Vec<NftOrder>,
-    max_batch_size: u32,
-) -> Result<(), ContractError> {
+pub fn validate_nft_orders(nft_orders: &Vec<NftOrder>) -> Result<(), ContractError> {
     if nft_orders.is_empty() {
         return Err(ContractError::InvalidInput(
             "nft orders must not be empty".to_string(),
-        ));
-    }
-    if nft_orders.len() > max_batch_size as usize {
-        return Err(ContractError::InvalidInput(
-            "nft orders must not exceed max batch size".to_string(),
         ));
     }
 
@@ -249,7 +241,7 @@ pub fn match_nfts_against_tokens(
         &config.marketplace,
         collection,
         block,
-        config.max_batch_size,
+        nft_orders.len() as u32,
     )?;
 
     let mut matched_user_submitted_nfts: Vec<MatchedNftAgainstTokens> = vec![];
@@ -375,7 +367,7 @@ pub fn match_tokens_against_any_nfts(
         &config.marketplace,
         collection,
         block,
-        config.max_batch_size,
+        order.len() as u32,
     )?;
 
     let mut matched_user_submitted_tokens: Vec<MatchedTokensAgainstAnyNfts> = vec![];

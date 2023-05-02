@@ -22,7 +22,6 @@ pub fn instantiate(
 
     let config = Config {
         marketplace: deps.api.addr_validate(&msg.marketplace)?,
-        max_batch_size: msg.max_batch_size,
     };
 
     CONFIG.save(deps.storage, &config)?;
@@ -31,6 +30,5 @@ pub fn instantiate(
         .add_attribute("action", "instantiate")
         .add_attribute("contract_name", CONTRACT_NAME)
         .add_attribute("contract_version", CONTRACT_VERSION)
-        .add_attribute("marketplace", config.marketplace)
-        .add_attribute("max_batch_size", config.max_batch_size.to_string()))
+        .add_attribute("marketplace", config.marketplace))
 }

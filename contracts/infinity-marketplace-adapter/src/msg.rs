@@ -7,8 +7,6 @@ pub const MAX_QUERY_LIMIT: u32 = 100;
 pub struct InstantiateMsg {
     /// The address of the marketplace contract
     pub marketplace: String,
-    /// The max number of NFT swaps that can be processed in a single message
-    pub max_batch_size: u32,
 }
 
 #[infinity_module_execute]

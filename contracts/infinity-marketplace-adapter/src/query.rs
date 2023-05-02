@@ -72,8 +72,7 @@ pub fn query_sim_swap_nfts_for_tokens(
 ) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_nft_orders(&nft_orders, config.max_batch_size)
-        .map_err(|err| StdError::generic_err(err.to_string()))?;
+    validate_nft_orders(&nft_orders).map_err(|err| StdError::generic_err(err.to_string()))?;
     validate_nft_owner(&deps.querier, &sender, &collection, &nft_orders)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
@@ -146,8 +145,7 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
 ) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
 
-    validate_nft_orders(&nft_orders, config.max_batch_size)
-        .map_err(|err| StdError::generic_err(err.to_string()))?;
+    validate_nft_orders(&nft_orders).map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let matches = match_tokens_against_specific_nfts(
         deps,
@@ -215,11 +213,6 @@ pub fn query_sim_swap_tokens_for_any_nfts(
     if orders.is_empty() {
         return Err(StdError::generic_err(
             "nft orders must not be empty".to_string(),
-        ));
-    }
-    if orders.len() > config.max_batch_size as usize {
-        return Err(StdError::generic_err(
-            "nft orders must not exceed max batch size".to_string(),
         ));
     }
 
