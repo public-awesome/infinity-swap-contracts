@@ -1451,6 +1451,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "infinity-router"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw721",
+ "cw721-base",
+ "infinity-macros",
+ "infinity-shared",
+ "infinity-swap",
+ "sg-marketplace",
+ "sg-marketplace-common",
+ "sg-std",
+ "sg1",
+ "sg2",
+ "sg721",
+ "sg721-base",
+ "thiserror",
+]
+
+[[package]]
 name = "infinity-shared"
 version = "0.1.0"
 dependencies = [
