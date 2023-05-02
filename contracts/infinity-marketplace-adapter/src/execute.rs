@@ -175,7 +175,7 @@ pub fn execute_swap_tokens_for_specific_nfts(
             expected_amount, received_amount
         )));
     }
-    let mut remaining_balance = received_amount.clone();
+    let mut remaining_balance = received_amount;
 
     let matches = match_tokens_against_specific_nfts(
         deps.as_ref(),
@@ -251,7 +251,7 @@ pub fn execute_swap_tokens_for_any_nfts(
             expected_amount, received_amount
         )));
     }
-    let mut remaining_balance = received_amount.clone();
+    let mut remaining_balance = received_amount;
 
     let matches = match_tokens_against_any_nfts(
         deps.as_ref(),

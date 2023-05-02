@@ -29,17 +29,17 @@ fn infinity_module_query_derive() {
         asset_recipient: Some("asset_recipient".to_string()),
         finder: Some("finder".to_string()),
     };
-    TestQueryMsg::SimSwapTokensForAnyNfts {
+    let _msg = TestQueryMsg::SimSwapTokensForAnyNfts {
         sender: "sender".to_string(),
         collection: "collection".to_string(),
         orders: vec![Uint128::from(10u64)],
         swap_params: swap_params.clone(),
     };
-    TestQueryMsg::SimSwapNftsForTokens {
+    let _msg = TestQueryMsg::SimSwapNftsForTokens {
         sender: "sender".to_string(),
         collection: "collection".to_string(),
-        nft_orders: nft_orders.clone(),
-        swap_params: swap_params.clone(),
+        nft_orders,
+        swap_params,
     };
 
     let test = TestQueryMsg::Foo {};
@@ -77,15 +77,15 @@ fn infinity_module_execute_derive() {
         asset_recipient: Some("asset_recipient".to_string()),
         finder: Some("finder".to_string()),
     };
-    TestExecuteMsg::SwapTokensForAnyNfts {
+    let _msg = TestExecuteMsg::SwapTokensForAnyNfts {
         collection: "collection".to_string(),
         orders: vec![Uint128::from(10u64)],
         swap_params: swap_params.clone(),
     };
-    TestExecuteMsg::SwapNftsForTokens {
+    let _msg = TestExecuteMsg::SwapNftsForTokens {
         collection: "collection".to_string(),
-        nft_orders: nft_orders.clone(),
-        swap_params: swap_params.clone(),
+        nft_orders,
+        swap_params,
     };
 
     let test = TestExecuteMsg::Foo {};

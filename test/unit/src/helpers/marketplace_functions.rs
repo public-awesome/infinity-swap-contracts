@@ -27,8 +27,8 @@ pub fn set_bid(
         finder,
     };
     let response = router.execute_contract(
-        bidder.clone(),
-        marketplace.clone(),
+        bidder,
+        marketplace,
         &set_bid_msg,
         &coins(bid_amount, NATIVE_DENOM),
     );
@@ -50,8 +50,8 @@ pub fn set_collection_bid(
         finders_fee_bps,
     };
     let response = router.execute_contract(
-        bidder.clone(),
-        marketplace.clone(),
+        bidder,
+        marketplace,
         &set_bid_msg,
         &coins(amount, NATIVE_DENOM),
     );
@@ -82,8 +82,8 @@ pub fn set_ask(
         expires,
     };
     let response = router.execute_contract(
-        owner.clone(),
-        marketplace.clone(),
+        owner,
+        marketplace,
         &set_ask_msg,
         &coins(LISTING_FEE, NATIVE_DENOM),
     );

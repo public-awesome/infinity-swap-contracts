@@ -50,7 +50,7 @@ pub fn infinity_module_query(metadata: TokenStream, input: TokenStream) -> Token
     let swap_response = infinity_interface_path("SwapResponse");
     let nft_order = infinity_interface_path("NftOrder");
     let swap_params = infinity_interface_path("SwapParams");
-    let uint_128: Path = syn::parse_str(&format!("cosmwasm_std::Uint128")).unwrap();
+    let uint_128: Path = syn::parse_str("cosmwasm_std::Uint128").unwrap();
 
     merge_variants(
         metadata,
@@ -81,7 +81,7 @@ pub fn infinity_module_query(metadata: TokenStream, input: TokenStream) -> Token
 pub fn infinity_module_execute(metadata: TokenStream, input: TokenStream) -> TokenStream {
     let nft_order = infinity_interface_path("NftOrder");
     let swap_params = infinity_interface_path("SwapParams");
-    let uint_128: Path = syn::parse_str(&format!("cosmwasm_std::Uint128")).unwrap();
+    let uint_128: Path = syn::parse_str("cosmwasm_std::Uint128").unwrap();
 
     merge_variants(
         metadata,

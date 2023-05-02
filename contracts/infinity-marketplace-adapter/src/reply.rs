@@ -32,7 +32,7 @@ pub fn reply_buy_now(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, C
         .unwrap()
         .value;
 
-    let collection = deps.api.addr_validate(&collection_str)?;
+    let collection = deps.api.addr_validate(collection_str)?;
 
     let token_id = &event
         .attributes
