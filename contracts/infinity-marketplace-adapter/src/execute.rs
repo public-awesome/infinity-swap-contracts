@@ -52,14 +52,14 @@ pub fn execute(
         ),
         ExecuteMsg::SwapTokensForAnyNfts {
             collection,
-            nft_orders,
+            orders,
             swap_params,
         } => execute_swap_tokens_for_any_nfts(
             deps,
             env,
             info,
             api.addr_validate(&collection)?,
-            nft_orders,
+            orders,
             transform_swap_params(api, swap_params)?,
         ),
     }
@@ -225,23 +225,23 @@ pub fn execute_swap_tokens_for_any_nfts(
     env: Env,
     info: MessageInfo,
     collection: Addr,
-    nft_orders: Vec<Uint128>,
+    orders: Vec<Uint128>,
     swap_params: SwapParamsInternal,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
 
-    if nft_orders.is_empty() {
+    if orders.is_empty() {
         return Err(ContractError::InvalidInput(
             "nft orders must not be empty".to_string(),
         ));
     }
-    if nft_orders.len() > config.max_batch_size as usize {
+    if orders.len() > config.max_batch_size as usize {
         return Err(ContractError::InvalidInput(
             "nft orders must not exceed max batch size".to_string(),
         ));
     }
 
-    let expected_amount = nft_orders
+    let expected_amount = orders
         .iter()
         .fold(Uint128::zero(), |acc, nft_order| acc + nft_order);
     let received_amount = must_pay(&info, NATIVE_DENOM)?;
@@ -258,7 +258,7 @@ pub fn execute_swap_tokens_for_any_nfts(
         &env.block,
         &config,
         &collection,
-        nft_orders,
+        orders,
         swap_params.robust,
     )?;
 

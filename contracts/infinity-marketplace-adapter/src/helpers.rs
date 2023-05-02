@@ -11,7 +11,10 @@ use sg_marketplace::msg::{
     AskOffset, AskResponse, AsksResponse, BidsResponse, CollectionBidOffset,
     CollectionBidsResponse, ExecuteMsg as MarketplaceExecuteMsg, QueryMsg as MarketplaceQueryMsg,
 };
-use sg_marketplace::state::{Ask, Bid, CollectionBid, Order};
+use sg_marketplace::state::{
+    ask_key, bid_key, collection_bid_key, Ask, AskKey, Bid, BidKey, CollectionBid,
+    CollectionBidKey, Order,
+};
 use sg_marketplace_common::{only_owner, TransactionFees};
 use sg_std::{Response, NATIVE_DENOM};
 use std::cmp::Ordering;
@@ -194,10 +197,35 @@ pub fn tx_fees_to_swap(
             address: buyer.to_string(),
         }],
         token_payments,
+        data: None,
     }
 }
 
 #[cw_serde]
+pub enum SwapData {
+    Bid(BidKey),
+    CollectionBid(CollectionBidKey),
+    Ask(AskKey),
+}
+
+pub fn set_bid_swap_data(swap: &mut Swap, matched_bid: &MatchedBid) {
+    let data = match matched_bid {
+        MatchedBid::Bid(bid) => SwapData::Bid(bid_key(&bid.collection, bid.token_id, &bid.bidder)),
+        MatchedBid::CollectionBid(collection_bid) => SwapData::CollectionBid(collection_bid_key(
+            &collection_bid.collection,
+            &collection_bid.bidder,
+        )),
+    };
+    swap.set_data(data);
+}
+
+pub fn set_ask_swap_data(swap: &mut Swap, matched_ask: &Ask) {
+    swap.set_data(SwapData::Ask(ask_key(
+        &matched_ask.collection,
+        matched_ask.token_id,
+    )));
+}
+
 pub enum MatchedBid {
     Bid(Bid),
     CollectionBid(CollectionBid),
@@ -339,7 +367,7 @@ pub fn match_tokens_against_any_nfts(
     block: &BlockInfo,
     config: &Config,
     collection: &Addr,
-    nft_orders: Vec<Uint128>,
+    order: Vec<Uint128>,
     robust: bool,
 ) -> Result<Vec<MatchedTokensAgainstAnyNfts>, ContractError> {
     let mut asks = fetch_asks(
@@ -351,10 +379,10 @@ pub fn match_tokens_against_any_nfts(
     )?;
 
     let mut matched_user_submitted_tokens: Vec<MatchedTokensAgainstAnyNfts> = vec![];
-    for nft_order in nft_orders {
+    for order in order {
         let ask = match asks.pop() {
             Some(_ask) => {
-                if nft_order >= _ask.price {
+                if order >= _ask.price {
                     Some(_ask)
                 } else {
                     None
@@ -370,7 +398,7 @@ pub fn match_tokens_against_any_nfts(
         }
 
         matched_user_submitted_tokens.push(MatchedTokensAgainstAnyNfts {
-            token_amount: nft_order,
+            token_amount: order,
             matched_ask: ask,
         });
     }

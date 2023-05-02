@@ -103,18 +103,18 @@ fn swap_token_for_any_nfts_marketplace_adapter() {
         .unwrap()
         .amount;
 
-    let nft_orders: Vec<Uint128> = owner_token_ids
+    let orders: Vec<Uint128> = owner_token_ids
         .iter()
         .map(|_| Uint128::from(1000u128))
         .collect();
-    let fund_amount = nft_orders
+    let fund_amount = orders
         .iter()
         .fold(Uint128::zero(), |acc, order| acc + order);
 
     let sim_msg = InfinityAdapterQueryMsg::SimSwapTokensForAnyNfts {
         sender: bidder.to_string(),
         collection: collection.to_string(),
-        nft_orders: nft_orders.clone(),
+        orders: orders.clone(),
         swap_params: SwapParams {
             deadline: expires,
             robust: true,
@@ -131,7 +131,7 @@ fn swap_token_for_any_nfts_marketplace_adapter() {
 
     let exec_msg = InfinityAdapterExecuteMsg::SwapTokensForAnyNfts {
         collection: collection.to_string(),
-        nft_orders,
+        orders,
         swap_params: SwapParams {
             deadline: expires,
             robust: true,

@@ -49,8 +49,9 @@ fn infinity_module_query_derive() {
         TestQueryMsg::Foo
         | TestQueryMsg::Bar(_)
         | TestQueryMsg::Baz { .. }
-        | TestQueryMsg::SimSwapTokensForAnyNfts { .. }
-        | TestQueryMsg::SimSwapNftsForTokens { .. } => "yay",
+        | TestQueryMsg::SimSwapNftsForTokens { .. }
+        | TestQueryMsg::SimSwapTokensForSpecificNfts { .. }
+        | TestQueryMsg::SimSwapTokensForAnyNfts { .. } => "yay",
     };
     assert_eq!(result, "yay");
 }
@@ -95,8 +96,9 @@ fn infinity_module_execute_derive() {
         TestExecuteMsg::Foo
         | TestExecuteMsg::Bar(_)
         | TestExecuteMsg::Baz { .. }
-        | TestExecuteMsg::SwapTokensForAnyNfts { .. }
-        | TestExecuteMsg::SwapNftsForTokens { .. } => "yay",
+        | TestExecuteMsg::SwapNftsForTokens { .. }
+        | TestExecuteMsg::SwapTokensForSpecificNfts { .. }
+        | TestExecuteMsg::SwapTokensForAnyNfts { .. } => "yay",
     };
     assert_eq!(result, "yay");
 }

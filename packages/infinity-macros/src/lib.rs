@@ -65,6 +65,13 @@ pub fn infinity_module_query(metadata: TokenStream, input: TokenStream) -> Token
                 swap_params: #swap_params,
             },
             #[returns(#swap_response)]
+            SimSwapTokensForSpecificNfts {
+                sender: String,
+                collection: String,
+                nft_orders: Vec<#nft_order>,
+                swap_params: #swap_params,
+            },
+            #[returns(#swap_response)]
             SimSwapTokensForAnyNfts {
                 sender: String,
                 collection: String,
@@ -88,14 +95,19 @@ pub fn infinity_module_execute(metadata: TokenStream, input: TokenStream) -> Tok
         input,
         quote! {
         enum Right {
-            SwapTokensForAnyNfts {
-                collection: String,
-                orders: Vec<#uint_128>,
-                swap_params: #swap_params,
-            },
             SwapNftsForTokens {
                 collection: String,
                 nft_orders: Vec<#nft_order>,
+                swap_params: #swap_params,
+            },
+            SwapTokensForSpecificNfts {
+                collection: String,
+                nft_orders: Vec<#nft_order>,
+                swap_params: #swap_params,
+            },
+            SwapTokensForAnyNfts {
+                collection: String,
+                orders: Vec<#uint_128>,
                 swap_params: #swap_params,
             },
         }

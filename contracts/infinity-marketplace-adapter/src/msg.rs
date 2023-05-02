@@ -1,6 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Uint128;
-use infinity_shared::interface::{NftOrder, SwapParams, SwapResponse};
+use infinity_macros::{infinity_module_execute, infinity_module_query};
 
 pub const MAX_QUERY_LIMIT: u32 = 100;
 
@@ -12,47 +11,11 @@ pub struct InstantiateMsg {
     pub max_batch_size: u32,
 }
 
+#[infinity_module_execute]
 #[cw_serde]
-pub enum ExecuteMsg {
-    SwapNftsForTokens {
-        collection: String,
-        nft_orders: Vec<NftOrder>,
-        swap_params: SwapParams,
-    },
-    SwapTokensForSpecificNfts {
-        collection: String,
-        nft_orders: Vec<NftOrder>,
-        swap_params: SwapParams,
-    },
-    SwapTokensForAnyNfts {
-        collection: String,
-        nft_orders: Vec<Uint128>,
-        swap_params: SwapParams,
-    },
-}
+pub enum ExecuteMsg {}
 
+#[infinity_module_query]
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {
-    #[returns(SwapResponse)]
-    SimSwapNftsForTokens {
-        sender: String,
-        collection: String,
-        nft_orders: Vec<NftOrder>,
-        swap_params: SwapParams,
-    },
-    #[returns(SwapResponse)]
-    SimSwapTokensForSpecificNfts {
-        sender: String,
-        collection: String,
-        nft_orders: Vec<NftOrder>,
-        swap_params: SwapParams,
-    },
-    #[returns(SwapResponse)]
-    SimSwapTokensForAnyNfts {
-        sender: String,
-        collection: String,
-        nft_orders: Vec<Uint128>,
-        swap_params: SwapParams,
-    },
-}
+pub enum QueryMsg {}

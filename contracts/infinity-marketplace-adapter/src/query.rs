@@ -1,6 +1,7 @@
 use crate::helpers::{
     match_nfts_against_tokens, match_tokens_against_any_nfts, match_tokens_against_specific_nfts,
-    tx_fees_to_swap, validate_nft_orders, validate_nft_owner, MatchedBid,
+    set_ask_swap_data, set_bid_swap_data, tx_fees_to_swap, validate_nft_orders, validate_nft_owner,
+    MatchedBid,
 };
 use crate::msg::QueryMsg;
 use crate::state::CONFIG;
@@ -48,14 +49,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::SimSwapTokensForAnyNfts {
             sender,
             collection,
-            nft_orders,
+            orders,
             swap_params,
         } => to_binary(&query_sim_swap_tokens_for_any_nfts(
             deps,
             env,
             api.addr_validate(&sender)?,
             api.addr_validate(&collection)?,
-            nft_orders,
+            orders,
             transform_swap_params(api, swap_params)?,
         )?),
     }
@@ -99,12 +100,12 @@ pub fn query_sim_swap_nfts_for_tokens(
         }
         let matched_bid = matched_order.matched_bid.unwrap();
 
-        let (sale_price, bidder, finders_fee_bps): (Uint128, Addr, Option<u64>) = match matched_bid
+        let (sale_price, bidder, finders_fee_bps): (Uint128, Addr, Option<u64>) = match &matched_bid
         {
-            MatchedBid::Bid(bid) => (bid.price, bid.bidder, bid.finders_fee_bps),
+            MatchedBid::Bid(bid) => (bid.price, bid.bidder.clone(), bid.finders_fee_bps),
             MatchedBid::CollectionBid(collection_bid) => (
                 collection_bid.price,
-                collection_bid.bidder,
+                collection_bid.bidder.clone(),
                 collection_bid.finders_fee_bps,
             ),
         };
@@ -120,14 +121,16 @@ pub fn query_sim_swap_nfts_for_tokens(
             royalty_info.as_ref(),
         )?;
 
-        swaps.push(tx_fees_to_swap(
+        let mut swap = tx_fees_to_swap(
             tx_fees,
             TransactionType::UserSubmitsNfts,
             &token_id,
             sale_price,
             &bidder,
             &config.marketplace,
-        ));
+        );
+        set_bid_swap_data(&mut swap, &matched_bid);
+        swaps.push(swap);
     }
 
     Ok(SwapResponse { swaps })
@@ -169,7 +172,11 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
         let token_id = matched_order.nft_order.token_id;
         let matched_ask = matched_order.matched_ask.unwrap();
 
-        let ask_recipient = matched_ask.funds_recipient.unwrap_or(matched_ask.seller);
+        let ask_recipient = matched_ask
+            .funds_recipient
+            .as_ref()
+            .unwrap_or(&matched_ask.seller)
+            .clone();
 
         let tx_fees = calculate_nft_sale_fees(
             matched_ask.price,
@@ -180,14 +187,16 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
             royalty_info.as_ref(),
         )?;
 
-        swaps.push(tx_fees_to_swap(
+        let mut swap = tx_fees_to_swap(
             tx_fees,
             TransactionType::UserSubmitsTokens,
             &token_id,
             matched_ask.price,
             &sender_recipient,
             &config.marketplace,
-        ));
+        );
+        set_ask_swap_data(&mut swap, &matched_ask);
+        swaps.push(swap);
     }
 
     Ok(SwapResponse { swaps })
@@ -198,17 +207,17 @@ pub fn query_sim_swap_tokens_for_any_nfts(
     env: Env,
     sender: Addr,
     collection: Addr,
-    nft_orders: Vec<Uint128>,
+    orders: Vec<Uint128>,
     swap_params: SwapParamsInternal,
 ) -> StdResult<SwapResponse> {
     let config = CONFIG.load(deps.storage)?;
 
-    if nft_orders.is_empty() {
+    if orders.is_empty() {
         return Err(StdError::generic_err(
             "nft orders must not be empty".to_string(),
         ));
     }
-    if nft_orders.len() > config.max_batch_size as usize {
+    if orders.len() > config.max_batch_size as usize {
         return Err(StdError::generic_err(
             "nft orders must not exceed max batch size".to_string(),
         ));
@@ -219,7 +228,7 @@ pub fn query_sim_swap_tokens_for_any_nfts(
         &env.block,
         &config,
         &collection,
-        nft_orders,
+        orders,
         swap_params.robust,
     )
     .map_err(|err| StdError::generic_err(err.to_string()))?;
@@ -238,7 +247,11 @@ pub fn query_sim_swap_tokens_for_any_nfts(
         let matched_ask = matched_order.matched_ask.unwrap();
         let token_id = matched_ask.token_id.to_string();
 
-        let ask_recipient = matched_ask.funds_recipient.unwrap_or(matched_ask.seller);
+        let ask_recipient = matched_ask
+            .funds_recipient
+            .as_ref()
+            .unwrap_or(&matched_ask.seller)
+            .clone();
 
         let tx_fees = calculate_nft_sale_fees(
             matched_ask.price,
@@ -249,14 +262,16 @@ pub fn query_sim_swap_tokens_for_any_nfts(
             royalty_info.as_ref(),
         )?;
 
-        swaps.push(tx_fees_to_swap(
+        let mut swap = tx_fees_to_swap(
             tx_fees,
             TransactionType::UserSubmitsTokens,
             &token_id,
             matched_ask.price,
             &sender_recipient,
             &config.marketplace,
-        ));
+        );
+        set_ask_swap_data(&mut swap, &matched_ask);
+        swaps.push(swap);
     }
 
     Ok(SwapResponse { swaps })

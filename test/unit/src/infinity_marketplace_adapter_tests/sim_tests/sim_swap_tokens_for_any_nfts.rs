@@ -3,12 +3,13 @@ use crate::helpers::nft_functions::{approve, mint_and_approve_many};
 use crate::helpers::swap_functions::{setup_swap_test, SwapTestSetup};
 use crate::setup::msg::MarketAccounts;
 use crate::setup::setup_marketplace::MIN_EXPIRY;
-use cosmwasm_std::Uint128;
+use cosmwasm_std::{to_binary, Uint128};
+use infinity_marketplace_adapter::helpers::SwapData;
 use infinity_marketplace_adapter::msg::QueryMsg as InfinityAdapterQueryMsg;
 use infinity_shared::interface::{
     NftPayment, Swap, SwapParams, SwapResponse, TokenPayment, TransactionType,
 };
-use sg_marketplace::state::SaleType;
+use sg_marketplace::state::{ask_key, SaleType};
 use test_suite::common_setup::msg::MinterTemplateResponse;
 
 #[test]
@@ -96,7 +97,7 @@ fn sim_token_for_any_nfts_marketplace_adapter() {
     let sim_msg = InfinityAdapterQueryMsg::SimSwapTokensForAnyNfts {
         sender: bidder.to_string(),
         collection: collection.to_string(),
-        nft_orders: owner_token_ids
+        orders: owner_token_ids
             .iter()
             .map(|_| Uint128::from(1000u128))
             .collect(),
@@ -138,7 +139,14 @@ fn sim_token_for_any_nfts_marketplace_adapter() {
                     amount: Uint128::from(881u128),
                     address: owner.to_string()
                 }
-            ]
+            ],
+            data: Some(
+                to_binary(&SwapData::Ask(ask_key(
+                    &collection,
+                    owner_token_ids[0].parse::<u32>().unwrap()
+                )))
+                .unwrap()
+            )
         }
     );
 
@@ -166,7 +174,14 @@ fn sim_token_for_any_nfts_marketplace_adapter() {
                     amount: Uint128::from(880u128),
                     address: owner.to_string()
                 }
-            ]
+            ],
+            data: Some(
+                to_binary(&SwapData::Ask(ask_key(
+                    &collection,
+                    owner_token_ids[3].parse::<u32>().unwrap()
+                )))
+                .unwrap()
+            )
         }
     );
 }

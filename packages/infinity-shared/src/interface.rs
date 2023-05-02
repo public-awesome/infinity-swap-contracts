@@ -1,5 +1,5 @@
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api, StdError, Timestamp, Uint128};
+use cosmwasm_schema::{cw_serde, serde::Serialize};
+use cosmwasm_std::{to_binary, Addr, Api, Binary, StdError, Timestamp, Uint128};
 use cw_utils::maybe_addr;
 
 #[cw_serde]
@@ -30,6 +30,13 @@ pub struct Swap {
     pub network_fee: Uint128,
     pub nft_payments: Vec<NftPayment>,
     pub token_payments: Vec<TokenPayment>,
+    pub data: Option<Binary>,
+}
+
+impl Swap {
+    pub fn set_data<T: Serialize>(&mut self, data: T) {
+        self.data = Some(to_binary(&data).unwrap());
+    }
 }
 
 #[cw_serde]
