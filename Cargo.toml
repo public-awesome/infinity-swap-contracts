@@ -27,8 +27,8 @@ sg2 = "2.1.0"
 sg721-base = { version = "2.1.0", features = ["library"] }
 sg721 = { version = "2.1.0", features = ["library"] }
 sg-std = "2.1.0"
-sg-marketplace = { path = "../marketplace/contracts/marketplace", features = ["library"] }
-sg-marketplace-common = { path = "../marketplace/packages/sg-marketplace-common" }
+sg-marketplace = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes", features = ["library"] }
+sg-marketplace-common = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes" }
 thiserror = { version = "1.0.31" }
 anyhow = "1.0.51"
 proc-macro2 = "1.0"
