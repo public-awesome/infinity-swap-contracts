@@ -158,15 +158,22 @@ fn sim_nft_for_token_marketplace_adapter() {
             sale_price: Uint128::from(1001u128),
             network_fee: Uint128::from(20u128),
             nft_payments: vec![NftPayment {
-                label: "seller".to_string(),
+                label: "buyer".to_string(),
                 token_id: owner_token_ids[0].to_string(),
                 address: collection_bidder_0.to_string()
             }],
-            token_payments: vec![TokenPayment {
-                label: "royalty".to_string(),
-                amount: Uint128::from(100u128),
-                address: creator.to_string()
-            }]
+            token_payments: vec![
+                TokenPayment {
+                    label: "royalty".to_string(),
+                    amount: Uint128::from(100u128),
+                    address: creator.to_string()
+                },
+                TokenPayment {
+                    label: "seller".to_string(),
+                    amount: Uint128::from(881u128),
+                    address: owner.to_string()
+                },
+            ]
         }
     );
 
