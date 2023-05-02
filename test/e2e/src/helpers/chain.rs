@@ -4,11 +4,13 @@ use once_cell::sync::OnceCell;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::env;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;
+use std::{env, vec};
 use test_context::TestContext;
+
+use crate::helpers::constants::SG721_NAME;
 
 use super::instantiate::{
     instantiate_base_factory, instantiate_infinity_swap, instantiate_marketplace,
@@ -83,7 +85,10 @@ fn global_setup() -> Cfg {
             .unwrap();
 
         save_gas_report(&orc, &gas_report_dir);
-        prep_base_contracts(&mut orc, &accounts[0], &cfg.chain_cfg.denom);
+
+        let sg721_code_id = orc.contract_map.code_id(SG721_NAME).unwrap();
+
+        prep_base_contracts(&mut orc, &accounts[0], &cfg.chain_cfg.denom, sg721_code_id);
 
         // persist stored code_ids in CONFIG, so we can reuse for all tests
         cfg.contract_deploy_info = orc.contract_map.deploy_info().clone();
@@ -132,8 +137,13 @@ fn save_gas_report(orc: &CosmOrc<CosmosgRPC>, gas_report_dir: &str) {
     fs::write(p.join(file_name), j.to_string()).unwrap();
 }
 
-fn prep_base_contracts(orc: &mut CosmOrc<CosmosgRPC>, creator: &SigningAccount, denom: &str) {
-    instantiate_base_factory(orc, creator, denom).unwrap();
+fn prep_base_contracts(
+    orc: &mut CosmOrc<CosmosgRPC>,
+    creator: &SigningAccount,
+    denom: &str,
+    sg721_code_id: u64,
+) {
+    instantiate_base_factory(orc, creator, denom, vec![sg721_code_id]).unwrap();
     instantiate_marketplace(orc, creator).unwrap();
     instantiate_infinity_swap(orc, denom, creator).unwrap();
 }
