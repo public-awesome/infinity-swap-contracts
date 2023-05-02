@@ -23,6 +23,7 @@ pub fn instantiate_base_factory(
     orc: &mut CosmOrc<CosmosgRPC>,
     user: &SigningAccount,
     denom: &str,
+    allowed_sg721_code_ids: Vec<u64>,
 ) -> Result<InstantiateResponse, ProcessError> {
     orc.instantiate(
         BASE_FACTORY_NAME,
@@ -42,6 +43,8 @@ pub fn instantiate_base_factory(
                 mint_fee_bps: 10000,
                 max_trading_offset_secs: 0,
                 extension: None,
+                frozen: false,
+                allowed_sg721_code_ids,
             },
         },
         &user.key,
