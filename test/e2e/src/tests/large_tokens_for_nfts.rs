@@ -8,12 +8,11 @@ use crate::helpers::{
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::{Addr, Decimal, Uint128};
+use infinity_swap::interface::SwapParams;
 use infinity_swap::msg::{
     ExecuteMsg as InfinitySwapExecuteMsg, PoolsByIdResponse, QueryMsg as InfinitySwapQueryMsg,
-    SwapParams,
 };
-use infinity_swap::state::Pool;
-use infinity_swap::state::{BondingCurve, PoolType};
+use infinity_swap::state::{BondingCurve, Pool, PoolType};
 use std::env;
 use test_context::test_context;
 
@@ -148,13 +147,13 @@ fn large_single_pool_token_for_nft_swap(chain: &mut Chain) {
         }
     );
 
-    let max_expected_token_input = [Uint128::from(10_000u64); LARGE_NUM_SWAPS];
-    let send_amount: Uint128 = max_expected_token_input.iter().sum();
+    let orders = [Uint128::from(10_000u64); LARGE_NUM_SWAPS];
+    let send_amount: Uint128 = orders.iter().sum();
     let exec_res = pool_execute_message(
         chain,
         InfinitySwapExecuteMsg::SwapTokensForAnyNfts {
             collection,
-            max_expected_token_input: max_expected_token_input.to_vec(),
+            orders: orders.to_vec(),
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                 robust: false,
@@ -227,13 +226,13 @@ fn large_many_pool_token_for_nft_swap(chain: &mut Chain) {
         ));
     }
 
-    let max_expected_token_input = [Uint128::from(10_000u64); LARGE_NUM_SWAPS];
-    let send_amount: Uint128 = max_expected_token_input.iter().sum();
+    let orders = [Uint128::from(10_000u64); LARGE_NUM_SWAPS];
+    let send_amount: Uint128 = orders.iter().sum();
     let exec_res = pool_execute_message(
         chain,
         InfinitySwapExecuteMsg::SwapTokensForAnyNfts {
             collection,
-            max_expected_token_input: max_expected_token_input.to_vec(),
+            orders: orders.to_vec(),
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                 robust: false,

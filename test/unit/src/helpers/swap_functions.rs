@@ -4,13 +4,13 @@ use crate::setup::setup_infinity_marketplace_adapter::setup_infinity_marketplace
 use crate::setup::setup_infinity_swap::setup_infinity_swap;
 use crate::setup::setup_marketplace::setup_marketplace;
 use crate::setup::templates::standard_minter_template;
-use infinity_swap::msg::{PoolsByIdResponse, QueryMsg, TransactionType};
-use infinity_swap::state::{Pool, PoolType};
-use infinity_swap::swap_processor::Swap;
 
 use anyhow::Error;
 use cosmwasm_std::{Addr, Coin, Decimal, Event, Uint128};
 use cw_multi_test::AppResponse;
+use infinity_shared::interface::{Swap, TransactionType};
+use infinity_swap::msg::{PoolsByIdResponse, QueryMsg};
+use infinity_swap::state::{Pool, PoolId, PoolType};
 use sg721::RoyaltyInfoResponse;
 use sg_marketplace::msg::ParamsResponse;
 use sg_multi_test::StargazeApp;
@@ -68,53 +68,55 @@ pub fn validate_swap_fees(
     marketplace_params: &ParamsResponse,
     royalty_info: &Option<RoyaltyInfoResponse>,
 ) {
-    assert_eq!(swap.pool_id, pool.id);
+    let pool_id = swap.unpack_data::<PoolId>().unwrap().0;
+    assert_eq!(pool_id, pool.id);
 
     assert_eq!(
         swap.network_fee,
-        swap.spot_price * marketplace_params.params.trading_fee_percent / Uint128::from(100u128),
+        swap.sale_price * marketplace_params.params.trading_fee_percent / Uint128::from(100u128),
     );
-    let mut remaining_payment = swap.spot_price - swap.network_fee;
+    let mut remaining_payment = swap.sale_price - swap.network_fee;
 
+    let royalty_payment = swap.token_payments.iter().find(|p| p.label == "royalty");
     if royalty_info.is_none() {
-        assert_eq!(swap.royalty_payment, None);
+        assert_eq!(royalty_payment, None);
     } else {
         let royalty_info = royalty_info.as_ref().unwrap();
         if royalty_info.share > Decimal::zero() {
             assert_eq!(
-                swap.royalty_payment.as_ref().unwrap().amount,
-                swap.spot_price * royalty_info.share,
+                royalty_payment.as_ref().unwrap().amount,
+                swap.sale_price * royalty_info.share,
             );
             assert_eq!(
-                swap.royalty_payment.as_ref().unwrap().address,
+                royalty_payment.as_ref().unwrap().address,
                 royalty_info.payment_address
             );
-            remaining_payment -= swap.royalty_payment.as_ref().unwrap().amount;
+            remaining_payment -= royalty_payment.as_ref().unwrap().amount;
         } else {
-            assert_eq!(swap.royalty_payment, None);
+            assert_eq!(royalty_payment, None);
         }
     }
 
+    let finders_payment = swap.token_payments.iter().find(|p| p.label == "finder");
     if pool.finders_fee_percent > Decimal::zero() {
         assert_eq!(
-            swap.finder_payment.as_ref().unwrap().amount,
-            swap.spot_price * pool.finders_fee_percent / Uint128::from(100u128),
+            finders_payment.as_ref().unwrap().amount,
+            swap.sale_price * pool.finders_fee_percent / Uint128::from(100u128),
         );
-        remaining_payment -= swap.finder_payment.as_ref().unwrap().amount;
+        remaining_payment -= finders_payment.as_ref().unwrap().amount;
     } else {
-        assert_eq!(swap.finder_payment, None);
+        assert_eq!(finders_payment, None);
     }
 
+    let seller_payment = swap.token_payments.iter().find(|p| p.label == "seller");
     if pool.reinvest_tokens && swap.transaction_type == TransactionType::UserSubmitsTokens {
-        assert_eq!(swap.seller_payment, None);
+        assert_eq!(seller_payment, None);
     } else {
-        assert_eq!(
-            swap.seller_payment.as_ref().unwrap().amount,
-            remaining_payment
-        );
+        assert_eq!(seller_payment.as_ref().unwrap().amount, remaining_payment);
     }
 
-    assert!(!swap.nft_payment.nft_token_id.is_empty());
+    let nft_payment = swap.nft_payments.first().unwrap();
+    assert!(!nft_payment.token_id.is_empty());
 }
 
 pub fn validate_swap_outcome(
@@ -177,7 +179,7 @@ pub fn validate_swap_outcome(
             let token_id = event
                 .attributes
                 .iter()
-                .find(|&a| a.key == "nft_payment_token_id")
+                .find(|&a| a.key == "buyer_nft_payment_token_id")
                 .unwrap()
                 .value
                 .clone();

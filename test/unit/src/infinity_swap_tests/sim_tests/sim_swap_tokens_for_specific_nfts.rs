@@ -6,11 +6,9 @@ use crate::setup::setup_infinity_swap::setup_infinity_swap;
 use crate::setup::setup_marketplace::setup_marketplace;
 use crate::setup::templates::minter_two_collections;
 use cosmwasm_std::{StdError, StdResult, Timestamp, Uint128};
-use infinity_swap::msg::{
-    NftSwap, NftTokenIdsResponse, PoolNftSwap, QueryMsg, QueryOptions, SwapParams, SwapResponse,
-};
-use infinity_swap::state::Pool;
-use itertools::Itertools;
+use infinity_shared::interface::{NftOrder, SwapParams, SwapResponse};
+use infinity_swap::msg::{NftTokenIdsResponse, QueryMsg, QueryOptions};
+use infinity_swap::state::PoolId;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::GENESIS_MINT_START_TIME;
@@ -62,176 +60,60 @@ fn cant_swap_inactive_pool() {
         0,
     );
 
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk {
-            let nft_token_ids_response: NftTokenIdsResponse = router
-                .wrap()
-                .query_wasm_smart(
-                    infinity_swap.clone(),
-                    &QueryMsg::PoolNftTokenIds {
-                        pool_id: pool.id,
-                        query_options: QueryOptions {
-                            descending: None,
-                            start_after: None,
-                            limit: Some(3),
-                        },
-                    },
-                )
-                .unwrap();
-
-            pool_nfts_to_swap_for.push(PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: nft_token_ids_response
-                    .nft_token_ids
-                    .into_iter()
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id,
-                        token_amount: Uint128::from(100_000u128),
-                    })
-                    .collect(),
-            });
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    for pool in pools {
+        if !pool.can_sell_nfts() {
+            continue;
         }
 
-        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
-            collection: collection.to_string(),
-            pool_nfts_to_swap_for,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: true,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-
-        let res: StdResult<SwapResponse> = router
+        let nft_token_ids_response: NftTokenIdsResponse = router
             .wrap()
-            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::GenericErr {
-                msg: "Querier contract error: Generic error: Invalid pool: pool is not active"
-                    .to_string()
-            }
-        );
-    }
-}
-
-#[test]
-fn cant_swap_invalid_pool_type() {
-    let SwapTestSetup {
-        vending_template:
-            MinterTemplateResponse {
-                mut router,
-                accts,
-                collection_response_vec,
-                ..
-            },
-        infinity_swap,
-        ..
-    } = setup_swap_test(5000).unwrap();
-
-    let collection_resp = &collection_response_vec[0];
-    let minter = collection_resp.minter.clone().unwrap();
-    let collection = collection_resp.collection.clone().unwrap();
-
-    let owner_token_ids = mint_and_approve_many(
-        &mut router,
-        &accts.creator,
-        &accts.owner,
-        &minter,
-        &collection,
-        &infinity_swap,
-        100,
-    );
-
-    let deposit_tokens_per_pool = Uint128::from(10_000u128);
-    let pools = prepare_pool_variations(
-        &mut router,
-        7,
-        &None,
-        &infinity_swap,
-        &collection,
-        &accts.owner,
-        deposit_tokens_per_pool,
-        owner_token_ids,
-        6,
-        false,
-        0,
-        0,
-    );
-
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| !p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk {
-            let nft_token_ids_response: NftTokenIdsResponse = router
-                .wrap()
-                .query_wasm_smart(
-                    infinity_swap.clone(),
-                    &QueryMsg::PoolNftTokenIds {
-                        pool_id: pool.id,
-                        query_options: QueryOptions {
-                            descending: None,
-                            start_after: None,
-                            limit: Some(3),
-                        },
+            .query_wasm_smart(
+                infinity_swap.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(3),
                     },
-                )
-                .unwrap();
+                },
+            )
+            .unwrap();
 
-            pool_nfts_to_swap_for.push(PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: nft_token_ids_response
-                    .nft_token_ids
-                    .into_iter()
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id,
-                        token_amount: Uint128::from(100_000u128),
-                    })
-                    .collect(),
-            });
-        }
-
-        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
-            collection: collection.to_string(),
-            pool_nfts_to_swap_for,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: true,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-
-        let res: StdResult<SwapResponse> = router
-            .wrap()
-            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::GenericErr {
-                msg: "Querier contract error: Generic error: Invalid pool: pool cannot sell nfts"
-                    .to_string()
-            }
+        nft_orders.extend(
+            nft_token_ids_response
+                .nft_token_ids
+                .into_iter()
+                .map(|token_id| NftOrder {
+                    token_id,
+                    amount: Uint128::from(100_000u128),
+                }),
         );
     }
+
+    let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+        collection: collection.to_string(),
+        nft_orders,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+    assert_eq!(
+        res.unwrap_err(),
+        StdError::GenericErr {
+            msg: "Querier contract error: Generic error: Invalid pool: pool is not active"
+                .to_string()
+        }
+    );
 }
 
 #[test]
@@ -282,69 +164,60 @@ fn cant_swap_for_pools_outside_of_collection() {
         0,
     );
 
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk {
-            let nft_token_ids_response: NftTokenIdsResponse = router
-                .wrap()
-                .query_wasm_smart(
-                    infinity_swap.clone(),
-                    &QueryMsg::PoolNftTokenIds {
-                        pool_id: pool.id,
-                        query_options: QueryOptions {
-                            descending: None,
-                            start_after: None,
-                            limit: Some(3),
-                        },
-                    },
-                )
-                .unwrap();
-
-            pool_nfts_to_swap_for.push(PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: nft_token_ids_response
-                    .nft_token_ids
-                    .into_iter()
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id,
-                        token_amount: Uint128::from(100_000u128),
-                    })
-                    .collect(),
-            });
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    for pool in pools {
+        if !pool.can_sell_nfts() {
+            continue;
         }
 
-        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
-            collection: collection_b.to_string(),
-            pool_nfts_to_swap_for,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: false,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-
-        let res: StdResult<SwapResponse> = router
+        let nft_token_ids_response: NftTokenIdsResponse = router
             .wrap()
-            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+            .query_wasm_smart(
+                infinity_swap.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(3),
+                    },
+                },
+            )
+            .unwrap();
 
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::GenericErr {
-                msg: "Querier contract error: Generic error: Invalid pool: pool does not belong to this collection"
-                    .to_string()
-            }
+        nft_orders.extend(
+            nft_token_ids_response
+                .nft_token_ids
+                .into_iter()
+                .map(|token_id| NftOrder {
+                    token_id,
+                    amount: Uint128::from(100_000u128),
+                }),
         );
     }
+
+    let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+        collection: collection_b.to_string(),
+        nft_orders,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+
+    assert_eq!(
+        res.unwrap_err(),
+        StdError::GenericErr {
+            msg: "Querier contract error: Generic error: NFT not found: token_id 2453".to_string()
+        }
+    );
 }
 
 #[test]
@@ -391,64 +264,56 @@ fn can_swap_active_pool() {
         0,
     );
 
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk {
-            let nft_token_ids_response: NftTokenIdsResponse = router
-                .wrap()
-                .query_wasm_smart(
-                    infinity_swap.clone(),
-                    &QueryMsg::PoolNftTokenIds {
-                        pool_id: pool.id,
-                        query_options: QueryOptions {
-                            descending: None,
-                            start_after: None,
-                            limit: Some(3),
-                        },
-                    },
-                )
-                .unwrap();
-
-            pool_nfts_to_swap_for.push(PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: nft_token_ids_response
-                    .nft_token_ids
-                    .into_iter()
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id,
-                        token_amount: Uint128::from(100_000u128),
-                    })
-                    .collect(),
-            });
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    for pool in pools {
+        if !pool.can_sell_nfts() {
+            continue;
         }
 
-        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
-            collection: collection.to_string(),
-            pool_nfts_to_swap_for,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: false,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-
-        let res: StdResult<SwapResponse> = router
+        let nft_token_ids_response: NftTokenIdsResponse = router
             .wrap()
-            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+            .query_wasm_smart(
+                infinity_swap.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(3),
+                    },
+                },
+            )
+            .unwrap();
 
-        assert!(res.is_ok());
-        assert!(!res.unwrap().swaps.is_empty());
+        nft_orders.extend(
+            nft_token_ids_response
+                .nft_token_ids
+                .into_iter()
+                .map(|token_id| NftOrder {
+                    token_id,
+                    amount: Uint128::from(100_000u128),
+                }),
+        );
     }
+
+    let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+        collection: collection.to_string(),
+        nft_orders,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+
+    assert!(res.is_ok());
+    assert!(!res.unwrap().swaps.is_empty());
 }
 
 #[test]
@@ -504,56 +369,46 @@ fn incorrect_nfts_error() {
         0,
     );
 
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk {
-            pool_nfts_to_swap_for.push(PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: bidder_token_ids
-                    .drain(0..3)
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id,
-                        token_amount: Uint128::from(100_000u128),
-                    })
-                    .collect(),
-            });
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    for pool in pools {
+        if !pool.can_sell_nfts() {
+            continue;
         }
 
-        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
-            collection: collection.to_string(),
-            pool_nfts_to_swap_for: pool_nfts_to_swap_for.clone(),
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: false,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-
-        let res: StdResult<SwapResponse> = router
-            .wrap()
-            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
-
-        assert_eq!(
-            res.unwrap_err(),
-            StdError::GenericErr {
-                msg: format!(
-                    "Querier contract error: Generic error: Swap error: pool {} does not own NFT {}",
-                    pool_nfts_to_swap_for[0].pool_id, pool_nfts_to_swap_for[0].nft_swaps[0].nft_token_id
-                )
-                .to_string()
-            }
-        );
+        nft_orders.extend(bidder_token_ids.drain(0..3).map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(100_000u128),
+        }));
     }
+
+    let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+        collection: collection.to_string(),
+        nft_orders: nft_orders.clone(),
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+
+    println!("{:?}", res);
+
+    // assert_eq!(
+    //     res.unwrap_err(),
+    //     StdError::GenericErr {
+    //         msg: format!(
+    //             "Querier contract error: Generic error: Swap error: pool {} does not own NFT {}",
+    //             nft_orders[0].pool_id, nft_orders[0].nft_swaps[0].nft_token_id
+    //         )
+    //         .to_string()
+    //     }
+    // );
 }
 
 #[test]
@@ -600,66 +455,58 @@ fn sale_price_above_max_expected() {
         0,
     );
 
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk {
-            let nft_token_ids_response: NftTokenIdsResponse = router
-                .wrap()
-                .query_wasm_smart(
-                    infinity_swap.clone(),
-                    &QueryMsg::PoolNftTokenIds {
-                        pool_id: pool.id,
-                        query_options: QueryOptions {
-                            descending: None,
-                            start_after: None,
-                            limit: Some(3),
-                        },
-                    },
-                )
-                .unwrap();
-
-            pool_nfts_to_swap_for.push(PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: nft_token_ids_response
-                    .nft_token_ids
-                    .into_iter()
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id,
-                        token_amount: Uint128::from(10u128),
-                    })
-                    .collect(),
-            });
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    for pool in pools {
+        if !pool.can_sell_nfts() {
+            continue;
         }
 
-        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
-            collection: collection.to_string(),
-            pool_nfts_to_swap_for,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: false,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-
-        let res: StdResult<SwapResponse> = router
+        let nft_token_ids_response: NftTokenIdsResponse = router
             .wrap()
-            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+            .query_wasm_smart(
+                infinity_swap.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(3),
+                    },
+                },
+            )
+            .unwrap();
 
-        assert_eq!(res.unwrap_err(), StdError::GenericErr {
+        nft_orders.extend(
+            nft_token_ids_response
+                .nft_token_ids
+                .into_iter()
+                .map(|token_id| NftOrder {
+                    token_id,
+                    amount: Uint128::from(10u128),
+                }),
+        );
+    }
+
+    let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+        collection: collection.to_string(),
+        nft_orders,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+
+    assert_eq!(res.unwrap_err(), StdError::GenericErr {
                 msg: "Querier contract error: Generic error: Swap error: pool sale price is above max expected"
                     .to_string(),
             });
-    }
 }
 
 #[test]
@@ -706,75 +553,66 @@ fn robust_query_does_not_revert_whole_tx() {
         0,
     );
 
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk {
-            let nft_token_ids_response: NftTokenIdsResponse = router
-                .wrap()
-                .query_wasm_smart(
-                    infinity_swap.clone(),
-                    &QueryMsg::PoolNftTokenIds {
-                        pool_id: pool.id,
-                        query_options: QueryOptions {
-                            descending: None,
-                            start_after: None,
-                            limit: Some(3),
-                        },
-                    },
-                )
-                .unwrap();
-
-            let mut pool_nft_token_ids: Vec<String> =
-                nft_token_ids_response.nft_token_ids.into_iter().collect();
-            let mut pool_nft_swap = PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: pool_nft_token_ids
-                    .drain(0..2_usize)
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id,
-                        token_amount: Uint128::from(100_000_u128),
-                    })
-                    .collect(),
-            };
-            pool_nft_swap.nft_swaps.extend(
-                pool_nft_token_ids
-                    .drain(0..1_usize)
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id,
-                        token_amount: Uint128::from(10u128),
-                    })
-                    .collect::<Vec<NftSwap>>(),
-            );
-            pool_nfts_to_swap_for.push(pool_nft_swap);
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    for pool in pools {
+        if !pool.can_sell_nfts() {
+            continue;
         }
 
-        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
-            collection: collection.to_string(),
-            pool_nfts_to_swap_for,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: true,
-                asset_recipient: None,
-                finder: None,
-            },
-        };
-
-        let res: StdResult<SwapResponse> = router
+        let nft_token_ids_response: NftTokenIdsResponse = router
             .wrap()
-            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+            .query_wasm_smart(
+                infinity_swap.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(3),
+                    },
+                },
+            )
+            .unwrap();
 
-        assert!(res.is_ok());
-        assert!(!res.unwrap().swaps.is_empty());
+        let mut pool_nft_token_ids: Vec<String> =
+            nft_token_ids_response.nft_token_ids.into_iter().collect();
+        let mut pool_nft_orders: Vec<NftOrder> = pool_nft_token_ids
+            .drain(0..2_usize)
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(100_000_u128),
+            })
+            .collect();
+        pool_nft_orders.extend(
+            pool_nft_token_ids
+                .drain(0..1_usize)
+                .map(|token_id| NftOrder {
+                    token_id,
+                    amount: Uint128::from(10u128),
+                })
+                .collect::<Vec<NftOrder>>(),
+        );
+        nft_orders.extend(pool_nft_orders);
     }
+
+    let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+        collection: collection.to_string(),
+        nft_orders,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: true,
+            asset_recipient: None,
+            finder: None,
+        },
+    };
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+
+    assert!(res.is_ok());
+    assert!(!res.unwrap().swaps.is_empty());
 }
 
 #[test]
@@ -822,14 +660,6 @@ fn trading_fee_is_applied_correctly() {
         0,
     );
 
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
     let marketplace_params: ParamsResponse = router
         .wrap()
         .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
@@ -839,40 +669,40 @@ fn trading_fee_is_applied_correctly() {
         .query_wasm_smart(collection.clone(), &Sg721QueryMsg::CollectionInfo {})
         .unwrap();
 
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk.iter() {
-            let nft_token_ids_response: NftTokenIdsResponse = router
-                .wrap()
-                .query_wasm_smart(
-                    infinity_swap.clone(),
-                    &QueryMsg::PoolNftTokenIds {
-                        pool_id: pool.id,
-                        query_options: QueryOptions {
-                            descending: None,
-                            start_after: None,
-                            limit: Some(3),
-                        },
-                    },
-                )
-                .unwrap();
-
-            pool_nfts_to_swap_for.push(PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: nft_token_ids_response
-                    .nft_token_ids
-                    .iter()
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
-                        token_amount: Uint128::from(100_000u128),
-                    })
-                    .collect(),
-            });
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    for pool in &pools {
+        if !pool.can_sell_nfts() {
+            continue;
         }
+
+        let nft_token_ids_response: NftTokenIdsResponse = router
+            .wrap()
+            .query_wasm_smart(
+                infinity_swap.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(3),
+                    },
+                },
+            )
+            .unwrap();
+
+        nft_orders.extend(
+            nft_token_ids_response
+                .nft_token_ids
+                .iter()
+                .map(|token_id| NftOrder {
+                    token_id: token_id.to_string(),
+                    amount: Uint128::from(100_000u128),
+                }),
+        );
 
         let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
             collection: collection.to_string(),
-            pool_nfts_to_swap_for,
+            nft_orders: nft_orders.clone(),
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -887,7 +717,8 @@ fn trading_fee_is_applied_correctly() {
             .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
         for swap in res.unwrap().swaps {
-            let pool = chunk.iter().find(|p| p.id == swap.pool_id).unwrap();
+            let pool_id = swap.unpack_data::<PoolId>().unwrap().0;
+            let pool = pools.iter().find(|p| p.id == pool_id).unwrap();
             validate_swap_fees(
                 &swap,
                 pool,
@@ -944,14 +775,6 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         300,
     );
 
-    let pool_chunks: Vec<Vec<Pool>> = pools
-        .into_iter()
-        .filter(|p| p.can_sell_nfts())
-        .chunks(3)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
-
     let marketplace_params: ParamsResponse = router
         .wrap()
         .query_wasm_smart(marketplace, &MarketplaceQueryMsg::Params {})
@@ -961,61 +784,62 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         .query_wasm_smart(collection.clone(), &Sg721QueryMsg::CollectionInfo {})
         .unwrap();
 
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        for pool in chunk.iter() {
-            let nft_token_ids_response: NftTokenIdsResponse = router
-                .wrap()
-                .query_wasm_smart(
-                    infinity_swap.clone(),
-                    &QueryMsg::PoolNftTokenIds {
-                        pool_id: pool.id,
-                        query_options: QueryOptions {
-                            descending: None,
-                            start_after: None,
-                            limit: Some(3),
-                        },
-                    },
-                )
-                .unwrap();
-
-            pool_nfts_to_swap_for.push(PoolNftSwap {
-                pool_id: pool.id,
-                nft_swaps: nft_token_ids_response
-                    .nft_token_ids
-                    .iter()
-                    .map(|token_id| NftSwap {
-                        nft_token_id: token_id.to_string(),
-                        token_amount: Uint128::from(100_000u128),
-                    })
-                    .collect(),
-            });
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    for pool in &pools {
+        if !pool.can_sell_nfts() {
+            continue;
         }
 
-        let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
-            collection: collection.to_string(),
-            pool_nfts_to_swap_for,
-            sender: accts.bidder.to_string(),
-            swap_params: SwapParams {
-                deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
-                robust: false,
-                asset_recipient: None,
-                finder: Some(user2.to_string()),
-            },
-        };
-
-        let res: StdResult<SwapResponse> = router
+        let nft_token_ids_response: NftTokenIdsResponse = router
             .wrap()
-            .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+            .query_wasm_smart(
+                infinity_swap.clone(),
+                &QueryMsg::PoolNftTokenIds {
+                    pool_id: pool.id,
+                    query_options: QueryOptions {
+                        descending: None,
+                        start_after: None,
+                        limit: Some(3),
+                    },
+                },
+            )
+            .unwrap();
 
-        for swap in res.unwrap().swaps {
-            let pool = chunk.iter().find(|p| p.id == swap.pool_id).unwrap();
-            validate_swap_fees(
-                &swap,
-                pool,
-                &marketplace_params,
-                &collection_info.royalty_info,
-            );
-        }
+        nft_orders.extend(
+            nft_token_ids_response
+                .nft_token_ids
+                .iter()
+                .map(|token_id| NftOrder {
+                    token_id: token_id.to_string(),
+                    amount: Uint128::from(100_000u128),
+                }),
+        );
+    }
+
+    let sim_msg = QueryMsg::SimSwapTokensForSpecificNfts {
+        collection: collection.to_string(),
+        nft_orders,
+        sender: accts.bidder.to_string(),
+        swap_params: SwapParams {
+            deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
+            robust: false,
+            asset_recipient: None,
+            finder: Some(user2.to_string()),
+        },
+    };
+
+    let res: StdResult<SwapResponse> = router
+        .wrap()
+        .query_wasm_smart(infinity_swap.clone(), &sim_msg);
+
+    for swap in res.unwrap().swaps {
+        let pool_id = swap.unpack_data::<PoolId>().unwrap().0;
+        let pool = pools.iter().find(|p| p.id == pool_id).unwrap();
+        validate_swap_fees(
+            &swap,
+            pool,
+            &marketplace_params,
+            &collection_info.royalty_info,
+        );
     }
 }

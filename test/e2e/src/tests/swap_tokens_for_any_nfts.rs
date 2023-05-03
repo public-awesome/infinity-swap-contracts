@@ -7,10 +7,8 @@ use crate::helpers::{
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::Uint128;
-use infinity_swap::msg::{
-    ExecuteMsg as InfinitySwapExecuteMsg, QueryMsg as InfinitySwapQueryMsg, SwapParams,
-    SwapResponse,
-};
+use infinity_swap::interface::{SwapParams, SwapResponse};
+use infinity_swap::msg::{ExecuteMsg as InfinitySwapExecuteMsg, QueryMsg as InfinitySwapQueryMsg};
 use test_context::test_context;
 
 #[test_context(Chain)]
@@ -54,14 +52,13 @@ fn swap_small(chain: &mut Chain) {
     let collection = chain.orc.contract_map.address(SG721_NAME).unwrap();
 
     let num_swaps: u8 = 10;
-    let max_expected_token_input: Vec<Uint128> =
-        vec![Uint128::from(1_000_000u128); num_swaps as usize];
+    let orders: Vec<Uint128> = vec![Uint128::from(1_000_000u128); num_swaps as usize];
 
     let sim_res: SwapResponse = pool_query_message(
         chain,
         InfinitySwapQueryMsg::SimSwapTokensForAnyNfts {
             collection: collection.to_string(),
-            max_expected_token_input: max_expected_token_input.clone(),
+            orders: orders.clone(),
             sender: taker_addr.to_string(),
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
@@ -73,13 +70,13 @@ fn swap_small(chain: &mut Chain) {
     );
     assert!(!sim_res.swaps.is_empty());
 
-    let total_amount: Uint128 = max_expected_token_input.iter().sum();
+    let total_amount: Uint128 = orders.iter().sum();
 
     let exec_resp = pool_execute_message(
         chain,
         InfinitySwapExecuteMsg::SwapTokensForAnyNfts {
             collection,
-            max_expected_token_input,
+            orders,
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                 robust: false,

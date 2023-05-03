@@ -3,7 +3,9 @@ use crate::helpers::pool_functions::prepare_pool_variations;
 use crate::helpers::swap_functions::{setup_swap_test, validate_swap_fees, SwapTestSetup};
 use crate::setup::setup_accounts::setup_addtl_account;
 use cosmwasm_std::{StdError, StdResult, Timestamp, Uint128};
-use infinity_swap::msg::{NftSwap, QueryMsg, SwapParams, SwapResponse};
+use infinity_shared::interface::{NftOrder, SwapParams, SwapResponse};
+use infinity_swap::msg::QueryMsg;
+use infinity_swap::state::PoolId;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::GENESIS_MINT_START_TIME;
@@ -62,17 +64,17 @@ fn cant_swap_inactive_pools() {
         0,
     );
 
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .to_vec()
         .drain(0..3_usize)
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(100_000u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(100_000u128),
         })
         .collect();
     let sim_msg = QueryMsg::SimSwapNftsForTokens {
         collection: collection.to_string(),
-        nfts_to_swap,
+        nft_orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -142,17 +144,17 @@ fn can_swap_active_pools() {
         0,
     );
 
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .to_vec()
         .drain(0..3_usize)
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(10u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(10u128),
         })
         .collect();
     let sim_msg = QueryMsg::SimSwapNftsForTokens {
         collection: collection.to_string(),
-        nfts_to_swap,
+        nft_orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -223,17 +225,17 @@ fn sale_price_below_min_expected() {
         0,
     );
 
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .to_vec()
         .drain(0..3_usize)
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(100_000u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(100_000u128),
         })
         .collect();
     let sim_msg = QueryMsg::SimSwapNftsForTokens {
         collection: collection.to_string(),
-        nfts_to_swap,
+        nft_orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -309,17 +311,17 @@ fn robust_query_does_not_revert_whole_tx() {
         0,
     );
 
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .to_vec()
         .drain(0..3_usize)
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(1_000u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(1_000u128),
         })
         .collect();
     let sim_msg = QueryMsg::SimSwapNftsForTokens {
         collection: collection.to_string(),
-        nfts_to_swap,
+        nft_orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -400,17 +402,17 @@ fn minimal_fee_tx_is_handled_correctly() {
         .query_wasm_smart(collection.clone(), &Sg721QueryMsg::CollectionInfo {})
         .unwrap();
 
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .to_vec()
         .drain(0..3_usize)
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(10u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(10u128),
         })
         .collect();
     let sim_msg = QueryMsg::SimSwapNftsForTokens {
         collection: collection.to_string(),
-        nfts_to_swap,
+        nft_orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -425,7 +427,8 @@ fn minimal_fee_tx_is_handled_correctly() {
         .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     for swap in res.unwrap().swaps {
-        let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
+        let pool_id = swap.unpack_data::<PoolId>().unwrap().0;
+        let pool = pools.iter().find(|p| p.id == pool_id).unwrap();
         validate_swap_fees(
             &swap,
             pool,
@@ -499,17 +502,17 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         .query_wasm_smart(collection.clone(), &Sg721QueryMsg::CollectionInfo {})
         .unwrap();
 
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .to_vec()
         .drain(0..3_usize)
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(10u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(10u128),
         })
         .collect();
     let sim_msg = QueryMsg::SimSwapNftsForTokens {
         collection: collection.to_string(),
-        nfts_to_swap,
+        nft_orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -524,7 +527,8 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     for swap in res.unwrap().swaps {
-        let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
+        let pool_id = swap.unpack_data::<PoolId>().unwrap().0;
+        let pool = pools.iter().find(|p| p.id == pool_id).unwrap();
         validate_swap_fees(
             &swap,
             pool,
@@ -588,18 +592,18 @@ fn trades_are_routed_correctly() {
     );
 
     let num_swaps: usize = 50;
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .to_vec()
         .drain(0..num_swaps)
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(10u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(10u128),
         })
         .collect();
 
     let sim_msg = QueryMsg::SimSwapNftsForTokens {
         collection: collection.to_string(),
-        nfts_to_swap,
+        nft_orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -619,6 +623,6 @@ fn trades_are_routed_correctly() {
         if idx == 0 {
             continue;
         }
-        assert!(swaps[idx - 1].spot_price >= swap.spot_price);
+        assert!(swaps[idx - 1].sale_price >= swap.sale_price);
     }
 }

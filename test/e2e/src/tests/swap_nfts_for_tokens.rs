@@ -7,10 +7,8 @@ use crate::helpers::{
     pool::{create_pools_from_fixtures, pool_execute_message, pool_query_message},
 };
 use cosmwasm_std::Uint128;
-use infinity_swap::msg::{
-    ExecuteMsg as InfinitySwapExecuteMsg, NftSwap, QueryMsg as InfinitySwapQueryMsg, SwapParams,
-    SwapResponse,
-};
+use infinity_swap::interface::{NftOrder, SwapParams, SwapResponse};
+use infinity_swap::msg::{ExecuteMsg as InfinitySwapExecuteMsg, QueryMsg as InfinitySwapQueryMsg};
 use test_context::test_context;
 
 #[test_context(Chain)]
@@ -62,12 +60,12 @@ fn swap_small(chain: &mut Chain) {
 
     let num_swaps: u8 = 10;
 
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .to_vec()
         .drain(0..(num_swaps as usize))
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(100u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(100u128),
         })
         .collect();
 
@@ -75,7 +73,7 @@ fn swap_small(chain: &mut Chain) {
         chain,
         InfinitySwapQueryMsg::SimSwapNftsForTokens {
             collection: collection.to_string(),
-            nfts_to_swap: nfts_to_swap.clone(),
+            nft_orders: nft_orders.clone(),
             sender: taker_addr.to_string(),
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
@@ -91,7 +89,7 @@ fn swap_small(chain: &mut Chain) {
         chain,
         InfinitySwapExecuteMsg::SwapNftsForTokens {
             collection,
-            nfts_to_swap,
+            nft_orders,
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                 robust: false,

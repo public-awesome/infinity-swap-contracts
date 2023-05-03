@@ -131,6 +131,7 @@ fn sim_token_for_specific_nfts_marketplace_adapter() {
             network_fee: Uint128::from(19u128),
             nft_payments: vec![NftPayment {
                 label: "buyer".to_string(),
+                collection: collection.to_string(),
                 token_id: owner_token_ids[0].to_string(),
                 address: bidder.to_string()
             }],
@@ -166,6 +167,7 @@ fn sim_token_for_specific_nfts_marketplace_adapter() {
             network_fee: Uint128::from(20u128),
             nft_payments: vec![NftPayment {
                 label: "buyer".to_string(),
+                collection: collection.to_string(),
                 token_id: owner_token_ids[3].to_string(),
                 address: bidder.to_string()
             }],

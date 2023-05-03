@@ -7,12 +7,11 @@ use crate::helpers::{
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::Uint128;
+use infinity_swap::interface::{NftOrder, SwapParams, SwapResponse};
 use infinity_swap::msg::{
-    ExecuteMsg as InfinitySwapExecuteMsg, NftSwap, NftTokenIdsResponse, PoolNftSwap,
-    QueryMsg as InfinitySwapQueryMsg, QueryOptions, SwapParams, SwapResponse,
+    ExecuteMsg as InfinitySwapExecuteMsg, NftTokenIdsResponse, QueryMsg as InfinitySwapQueryMsg,
+    QueryOptions,
 };
-use infinity_swap::state::Pool;
-use itertools::Itertools;
 use test_context::test_context;
 
 #[test_context(Chain)]
@@ -55,89 +54,70 @@ fn swap_small(chain: &mut Chain) {
         300,
     );
 
-    let pool_chunks: Vec<Vec<&Pool>> = pools
-        .iter()
-        .filter(|&p| p.can_sell_nfts())
-        .chunks(3_usize)
-        .into_iter()
-        .map(|chunk| chunk.collect())
-        .collect();
+    let mut nft_orders: Vec<NftOrder> = vec![];
+    let mut sender_amount = Uint128::zero();
 
-    for chunk in pool_chunks {
-        let mut pool_nfts_to_swap_for: Vec<PoolNftSwap> = vec![];
-        let mut sender_amount = Uint128::zero();
-
-        let swaps_per_chunk: u8 = 3;
-        for pool in &chunk {
-            let nft_token_ids_res: NftTokenIdsResponse = pool_query_message(
-                chain,
-                InfinitySwapQueryMsg::PoolNftTokenIds {
-                    pool_id: pool.id,
-                    query_options: QueryOptions {
-                        descending: None,
-                        start_after: None,
-                        limit: Some(swaps_per_chunk as u32),
-                    },
-                },
-            );
-
-            pool_nfts_to_swap_for.push(PoolNftSwap {
+    for pool in &pools {
+        let nft_token_ids_res: NftTokenIdsResponse = pool_query_message(
+            chain,
+            InfinitySwapQueryMsg::PoolNftTokenIds {
                 pool_id: pool.id,
-                nft_swaps: nft_token_ids_res
-                    .nft_token_ids
-                    .iter()
-                    .take(swaps_per_chunk as usize)
-                    .map(|token_id| {
-                        let nft_swap = NftSwap {
-                            nft_token_id: token_id.to_string(),
-                            token_amount: Uint128::from(1_000_000u128),
-                        };
-                        sender_amount += nft_swap.token_amount;
-                        nft_swap
-                    })
-                    .collect(),
-            });
-        }
-
-        let sim_res: SwapResponse = pool_query_message(
-            chain,
-            InfinitySwapQueryMsg::SimSwapTokensForSpecificNfts {
-                collection: collection.to_string(),
-                pool_nfts_to_swap_for: pool_nfts_to_swap_for.clone(),
-                sender: taker_addr.to_string(),
-                swap_params: SwapParams {
-                    deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
-                    robust: false,
-                    asset_recipient: None,
-                    finder: None,
+                query_options: QueryOptions {
+                    descending: None,
+                    start_after: None,
+                    limit: None,
                 },
             },
         );
-        assert!(!sim_res.swaps.is_empty());
 
-        let exec_resp = pool_execute_message(
-            chain,
-            InfinitySwapExecuteMsg::SwapTokensForSpecificNfts {
-                collection: collection.to_string(),
-                pool_nfts_to_swap_for: pool_nfts_to_swap_for.clone(),
-                swap_params: SwapParams {
-                    deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
-                    robust: false,
-                    asset_recipient: None,
-                    finder: None,
-                },
-            },
-            "infinity-swap-swap-tokens-for-specific-nfts",
-            vec![OrcCoin {
-                amount: sender_amount.u128(),
-                denom: denom.parse().unwrap(),
-            }],
-            &taker,
-        );
-
-        let tags = exec_resp
-            .res
-            .find_event_tags("wasm-swap".to_string(), "pool_id".to_string());
-        assert!(tags.len() == chunk.len() * swaps_per_chunk as usize);
+        nft_orders.extend(nft_token_ids_res.nft_token_ids.iter().map(|token_id| {
+            let nft_swap = NftOrder {
+                token_id: token_id.to_string(),
+                amount: Uint128::from(1_000_000u128),
+            };
+            sender_amount += nft_swap.amount;
+            nft_swap
+        }));
     }
+
+    let sim_res: SwapResponse = pool_query_message(
+        chain,
+        InfinitySwapQueryMsg::SimSwapTokensForSpecificNfts {
+            collection: collection.to_string(),
+            nft_orders: nft_orders.clone(),
+            sender: taker_addr.to_string(),
+            swap_params: SwapParams {
+                deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
+                robust: false,
+                asset_recipient: None,
+                finder: None,
+            },
+        },
+    );
+    assert!(!sim_res.swaps.is_empty());
+
+    let exec_resp = pool_execute_message(
+        chain,
+        InfinitySwapExecuteMsg::SwapTokensForSpecificNfts {
+            collection: collection.to_string(),
+            nft_orders: nft_orders.clone(),
+            swap_params: SwapParams {
+                deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
+                robust: false,
+                asset_recipient: None,
+                finder: None,
+            },
+        },
+        "infinity-swap-swap-tokens-for-specific-nfts",
+        vec![OrcCoin {
+            amount: sender_amount.u128(),
+            denom: denom.parse().unwrap(),
+        }],
+        &taker,
+    );
+
+    let tags = exec_resp
+        .res
+        .find_event_tags("wasm-swap".to_string(), "pool_id".to_string());
+    assert!(tags.len() == nft_orders.len() as usize);
 }

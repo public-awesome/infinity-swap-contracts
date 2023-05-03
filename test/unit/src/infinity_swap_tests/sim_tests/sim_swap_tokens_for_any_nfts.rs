@@ -4,8 +4,9 @@ use crate::helpers::swap_functions::{setup_swap_test, validate_swap_fees, SwapTe
 use crate::setup::setup_accounts::setup_addtl_account;
 use cosmwasm_std::{coins, StdError, StdResult, Timestamp, Uint128};
 use cw_multi_test::Executor;
-use infinity_swap::msg::{ExecuteMsg, QueryMsg, SwapParams, SwapResponse};
-use infinity_swap::state::BondingCurve;
+use infinity_shared::interface::{SwapParams, SwapResponse};
+use infinity_swap::msg::{ExecuteMsg, QueryMsg};
+use infinity_swap::state::{BondingCurve, PoolId};
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
@@ -55,11 +56,10 @@ fn cant_swap_inactive_pools() {
         0,
     );
 
-    let max_expected_token_input: Vec<Uint128> =
-        vec![Uint128::from(1_000_000u128), Uint128::from(1_000_000u128)];
+    let orders: Vec<Uint128> = vec![Uint128::from(1_000_000u128), Uint128::from(1_000_000u128)];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input,
+        orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -119,11 +119,10 @@ fn can_swap_active_pools() {
         0,
     );
 
-    let max_expected_token_input: Vec<Uint128> =
-        vec![Uint128::from(1_000_000u128), Uint128::from(1_000_000u128)];
+    let orders: Vec<Uint128> = vec![Uint128::from(1_000_000u128), Uint128::from(1_000_000u128)];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input,
+        orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -184,10 +183,10 @@ fn sale_price_above_max_expected() {
         0,
     );
 
-    let max_expected_token_input: Vec<Uint128> = vec![Uint128::from(10u128), Uint128::from(10u128)];
+    let orders: Vec<Uint128> = vec![Uint128::from(10u128), Uint128::from(10u128)];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input,
+        orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -254,14 +253,14 @@ fn robust_query_does_not_revert_whole_tx() {
         0,
     );
 
-    let max_expected_token_input: Vec<Uint128> = vec![
+    let orders: Vec<Uint128> = vec![
         Uint128::from(320u128),
         Uint128::from(340u128),
         Uint128::from(350u128),
     ];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input,
+        orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -332,14 +331,14 @@ fn minimal_fee_tx_is_handled_correctly() {
         .query_wasm_smart(collection.clone(), &Sg721QueryMsg::CollectionInfo {})
         .unwrap();
 
-    let max_expected_token_input: Vec<Uint128> = vec![
+    let orders: Vec<Uint128> = vec![
         Uint128::from(1_000_000u128),
         Uint128::from(1_000_000u128),
         Uint128::from(1_000_000u128),
     ];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input,
+        orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -353,7 +352,8 @@ fn minimal_fee_tx_is_handled_correctly() {
         .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     for swap in res.unwrap().swaps {
-        let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
+        let pool_id = swap.unpack_data::<PoolId>().unwrap().0;
+        let pool = pools.iter().find(|p| p.id == pool_id).unwrap();
         validate_swap_fees(
             &swap,
             pool,
@@ -418,14 +418,14 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         .query_wasm_smart(collection.clone(), &Sg721QueryMsg::CollectionInfo {})
         .unwrap();
 
-    let max_expected_token_input: Vec<Uint128> = vec![
+    let orders: Vec<Uint128> = vec![
         Uint128::from(1_000_000u128),
         Uint128::from(1_000_000u128),
         Uint128::from(1_000_000u128),
     ];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input,
+        orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -439,7 +439,8 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         .query_wasm_smart(infinity_swap.clone(), &sim_msg);
 
     for swap in res.unwrap().swaps {
-        let pool = pools.iter().find(|p| p.id == swap.pool_id).unwrap();
+        let pool_id = swap.unpack_data::<PoolId>().unwrap().0;
+        let pool = pools.iter().find(|p| p.id == pool_id).unwrap();
         validate_swap_fees(
             &swap,
             pool,
@@ -494,10 +495,10 @@ fn trades_are_routed_correctly() {
     );
 
     let num_swaps: usize = 50;
-    let max_expected_token_input: Vec<Uint128> = vec![Uint128::from(1_000_000u128); num_swaps];
+    let orders: Vec<Uint128> = vec![Uint128::from(1_000_000u128); num_swaps];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input,
+        orders,
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -516,7 +517,7 @@ fn trades_are_routed_correctly() {
         if idx == 0 {
             continue;
         }
-        assert!(swaps[idx - 1].spot_price <= swap.spot_price);
+        assert!(swaps[idx - 1].sale_price <= swap.sale_price);
     }
 }
 
@@ -570,10 +571,10 @@ fn constant_product_pools_with_little_nfts() {
     .unwrap();
 
     let num_swaps: usize = 4;
-    let max_expected_token_input: Vec<Uint128> = vec![Uint128::from(100_000_000u128); num_swaps];
+    let orders: Vec<Uint128> = vec![Uint128::from(100_000_000u128); num_swaps];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input: max_expected_token_input.clone(),
+        orders: orders.clone(),
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -590,7 +591,7 @@ fn constant_product_pools_with_little_nfts() {
 
     let exec_msg = ExecuteMsg::SwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input: max_expected_token_input.clone(),
+        orders: orders.clone(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust: true,
@@ -599,7 +600,7 @@ fn constant_product_pools_with_little_nfts() {
         },
     };
 
-    let funds: Uint128 = max_expected_token_input.iter().sum();
+    let funds: Uint128 = orders.iter().sum();
     let exec_res = router.execute_contract(
         accts.bidder.clone(),
         infinity_swap.clone(),

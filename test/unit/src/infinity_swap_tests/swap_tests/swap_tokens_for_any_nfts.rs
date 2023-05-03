@@ -4,7 +4,8 @@ use crate::helpers::swap_functions::{setup_swap_test, validate_swap_outcome, Swa
 use crate::helpers::utils::get_native_balances;
 use cosmwasm_std::{coins, Addr, Timestamp, Uint128};
 use cw_multi_test::Executor;
-use infinity_swap::msg::{ExecuteMsg, QueryMsg, SwapParams, SwapResponse};
+use infinity_shared::interface::{SwapParams, SwapResponse};
+use infinity_swap::msg::{ExecuteMsg, QueryMsg};
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_std::{GENESIS_MINT_START_TIME, NATIVE_DENOM};
 use test_suite::common_setup::msg::MinterTemplateResponse;
@@ -72,11 +73,10 @@ fn correct_swap_simple() {
     }
 
     let num_swaps: u8 = 10;
-    let max_expected_token_input: Vec<Uint128> =
-        vec![Uint128::from(1_000_000u128); num_swaps as usize];
+    let orders: Vec<Uint128> = vec![Uint128::from(1_000_000u128); num_swaps as usize];
     let sim_msg = QueryMsg::SimSwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input: max_expected_token_input.clone(),
+        orders: orders.clone(),
         sender: accts.bidder.to_string(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -93,7 +93,7 @@ fn correct_swap_simple() {
 
     let exec_msg = ExecuteMsg::SwapTokensForAnyNfts {
         collection: collection.to_string(),
-        max_expected_token_input: max_expected_token_input.clone(),
+        orders: orders.clone(),
         swap_params: SwapParams {
             deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
             robust: false,
@@ -102,7 +102,7 @@ fn correct_swap_simple() {
         },
     };
 
-    let sender_amount = max_expected_token_input.iter().sum::<Uint128>();
+    let sender_amount = orders.iter().sum::<Uint128>();
 
     let pre_swap_balances = get_native_balances(&router, &check_addresses);
     let exec_res = router

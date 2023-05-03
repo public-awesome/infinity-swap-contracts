@@ -3,7 +3,8 @@ use crate::helpers::pool_functions::prepare_pool_variations;
 use crate::helpers::swap_functions::{setup_swap_test, validate_swap_fees, SwapTestSetup};
 use crate::setup::setup_accounts::setup_addtl_account;
 use cosmwasm_std::{StdError, StdResult, Timestamp, Uint128};
-use infinity_swap::msg::{NftSwap, QueryMsg, SwapParams, SwapResponse};
+use infinity_shared::interface::{NftOrder, SwapParams, SwapResponse};
+use infinity_swap::msg::QueryMsg;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_marketplace::msg::{ParamsResponse, QueryMsg as MarketplaceQueryMsg};
 use sg_std::GENESIS_MINT_START_TIME;
@@ -66,17 +67,17 @@ fn cant_swap_inactive_pool() {
         if !pool.can_buy_nfts() {
             continue;
         }
-        let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+        let nft_orders: Vec<NftOrder> = bidder_token_ids
             .to_vec()
             .drain(0..3_usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id,
-                token_amount: Uint128::from(100_000u128),
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(100_000u128),
             })
             .collect();
         let sim_msg = QueryMsg::SimDirectSwapNftsForTokens {
             pool_id: pool.id,
-            nfts_to_swap,
+            nft_orders,
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -156,17 +157,17 @@ fn cant_swap_invalid_pool_type() {
         if pool.can_buy_nfts() {
             continue;
         }
-        let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+        let nft_orders: Vec<NftOrder> = bidder_token_ids
             .to_vec()
             .drain(0..3_usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id,
-                token_amount: Uint128::from(100_000u128),
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(100_000u128),
             })
             .collect();
         let sim_msg = QueryMsg::SimDirectSwapNftsForTokens {
             pool_id: pool.id,
-            nfts_to_swap,
+            nft_orders,
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -246,18 +247,18 @@ fn can_swap_active_pool() {
         if !pool.can_buy_nfts() {
             continue;
         }
-        let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+        let nft_orders: Vec<NftOrder> = bidder_token_ids
             .to_vec()
             .drain(0..3_usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id,
-                token_amount: Uint128::from(10u128),
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(10u128),
             })
             .collect();
 
         let sim_msg = QueryMsg::SimDirectSwapNftsForTokens {
             pool_id: pool.id,
-            nfts_to_swap,
+            nft_orders,
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -331,17 +332,17 @@ fn insufficient_tokens_error() {
         if !pool.can_buy_nfts() {
             continue;
         }
-        let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+        let nft_orders: Vec<NftOrder> = bidder_token_ids
             .to_vec()
             .drain(0..3_usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id,
-                token_amount: Uint128::from(100_000u128),
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(100_000u128),
             })
             .collect();
         let sim_msg = QueryMsg::SimDirectSwapNftsForTokens {
             pool_id: pool.id,
-            nfts_to_swap,
+            nft_orders,
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -421,17 +422,17 @@ fn sale_price_below_min_expected() {
         if !pool.can_buy_nfts() {
             continue;
         }
-        let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+        let nft_orders: Vec<NftOrder> = bidder_token_ids
             .to_vec()
             .drain(0..3_usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id,
-                token_amount: Uint128::from(1_000_000u128),
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(1_000_000u128),
             })
             .collect();
         let sim_msg = QueryMsg::SimDirectSwapNftsForTokens {
             pool_id: pool.id,
-            nfts_to_swap,
+            nft_orders,
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -511,28 +512,28 @@ fn robust_query_does_not_revert_whole_tx_on_error() {
         if !pool.can_buy_nfts() {
             continue;
         }
-        let mut nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+        let mut nft_orders: Vec<NftOrder> = bidder_token_ids
             .to_vec()
             .drain(0..2_usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id,
-                token_amount: Uint128::from(10u128),
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(10u128),
             })
             .collect();
-        nfts_to_swap.extend(
+        nft_orders.extend(
             bidder_token_ids
                 .to_vec()
                 .drain(0..1_usize)
-                .map(|token_id| NftSwap {
-                    nft_token_id: token_id,
-                    token_amount: Uint128::from(1_000_000u128),
+                .map(|token_id| NftOrder {
+                    token_id,
+                    amount: Uint128::from(1_000_000u128),
                 })
-                .collect::<Vec<NftSwap>>(),
+                .collect::<Vec<NftOrder>>(),
         );
 
         let sim_msg = QueryMsg::SimDirectSwapNftsForTokens {
             pool_id: pool.id,
-            nfts_to_swap,
+            nft_orders,
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -616,18 +617,18 @@ fn minimal_fee_tx_is_handled_correctly() {
         if !pool.can_buy_nfts() {
             continue;
         }
-        let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+        let nft_orders: Vec<NftOrder> = bidder_token_ids
             .to_vec()
             .drain(0..3_usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id,
-                token_amount: Uint128::from(10u128),
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(10u128),
             })
             .collect();
 
         let sim_msg = QueryMsg::SimDirectSwapNftsForTokens {
             pool_id: pool.id,
-            nfts_to_swap,
+            nft_orders,
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),
@@ -720,18 +721,18 @@ fn finders_and_swap_fee_tx_is_handled_correctly() {
         if !pool.can_buy_nfts() {
             continue;
         }
-        let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+        let nft_orders: Vec<NftOrder> = bidder_token_ids
             .to_vec()
             .drain(0..3_usize)
-            .map(|token_id| NftSwap {
-                nft_token_id: token_id,
-                token_amount: Uint128::from(10u128),
+            .map(|token_id| NftOrder {
+                token_id,
+                amount: Uint128::from(10u128),
             })
             .collect();
 
         let sim_msg = QueryMsg::SimDirectSwapNftsForTokens {
             pool_id: pool.id,
-            nfts_to_swap,
+            nft_orders,
             sender: accts.bidder.to_string(),
             swap_params: SwapParams {
                 deadline: Timestamp::from_nanos(GENESIS_MINT_START_TIME).plus_seconds(1000),

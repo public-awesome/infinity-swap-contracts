@@ -401,7 +401,7 @@ fn try_query_pool_nft_token_ids() {
     let mut expected_token_ids = vec![];
     let mut start_after = None;
     loop {
-        let response: NftTokenIdsResponse = router
+        let nft_token_ids_response: NftTokenIdsResponse = router
             .wrap()
             .query_wasm_smart(
                 infinity_swap.clone(),
@@ -415,11 +415,17 @@ fn try_query_pool_nft_token_ids() {
                 },
             )
             .unwrap();
-        if response.nft_token_ids.is_empty() {
+        if nft_token_ids_response.nft_token_ids.is_empty() {
             break;
         }
-        start_after = Some(response.nft_token_ids.last().unwrap().to_string());
-        expected_token_ids.extend(response.nft_token_ids);
+        start_after = Some(
+            nft_token_ids_response
+                .nft_token_ids
+                .last()
+                .unwrap()
+                .to_string(),
+        );
+        expected_token_ids.extend(nft_token_ids_response.nft_token_ids);
     }
     assert_eq!(expected_token_ids.len(), owner_token_ids.len());
 }

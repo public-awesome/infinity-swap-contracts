@@ -8,9 +8,9 @@ use crate::helpers::{
 };
 use cosm_orc::orchestrator::Coin as OrcCoin;
 use cosmwasm_std::{Addr, Decimal, Uint128};
+use infinity_swap::interface::{NftOrder, SwapParams};
 use infinity_swap::msg::{
-    ExecuteMsg as InfinitySwapExecuteMsg, NftSwap, PoolsByIdResponse,
-    QueryMsg as InfinitySwapQueryMsg, SwapParams,
+    ExecuteMsg as InfinitySwapExecuteMsg, PoolsByIdResponse, QueryMsg as InfinitySwapQueryMsg,
 };
 use infinity_swap::state::Pool;
 use infinity_swap::state::{BondingCurve, PoolType};
@@ -149,11 +149,11 @@ fn large_single_pool_nft_for_token_swap(chain: &mut Chain) {
     );
 
     let bidder_token_ids = mint_nfts(chain, LARGE_NUM_SWAPS as u32, &user);
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .into_iter()
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(10u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(10u128),
         })
         .collect();
 
@@ -161,7 +161,7 @@ fn large_single_pool_nft_for_token_swap(chain: &mut Chain) {
         chain,
         InfinitySwapExecuteMsg::SwapNftsForTokens {
             collection,
-            nfts_to_swap,
+            nft_orders,
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                 robust: false,
@@ -229,11 +229,11 @@ fn large_many_pool_nft_for_token_swap(chain: &mut Chain) {
     }
 
     let bidder_token_ids = mint_nfts(chain, LARGE_NUM_SWAPS as u32, &taker);
-    let nfts_to_swap: Vec<NftSwap> = bidder_token_ids
+    let nft_orders: Vec<NftOrder> = bidder_token_ids
         .into_iter()
-        .map(|token_id| NftSwap {
-            nft_token_id: token_id,
-            token_amount: Uint128::from(10u128),
+        .map(|token_id| NftOrder {
+            token_id,
+            amount: Uint128::from(10u128),
         })
         .collect();
 
@@ -247,7 +247,7 @@ fn large_many_pool_nft_for_token_swap(chain: &mut Chain) {
         chain,
         InfinitySwapExecuteMsg::SwapNftsForTokens {
             collection,
-            nfts_to_swap,
+            nft_orders,
             swap_params: SwapParams {
                 deadline: latest_block_time(&chain.orc).plus_seconds(1_000),
                 robust: false,
