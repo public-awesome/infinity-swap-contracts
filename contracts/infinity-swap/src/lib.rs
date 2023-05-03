@@ -12,3 +12,5 @@ mod error;
 mod helpers;
 
 pub use error::ContractError;
+
+pub use infinity_shared::interface;

@@ -9,3 +9,5 @@ pub mod state;
 mod error;
 
 pub use error::ContractError;
+
+pub use infinity_shared::interface;

@@ -1,13 +1,18 @@
 use crate::error::ContractError;
-use crate::helpers::{get_nft_deposit, transfer_nft, transfer_token, verify_nft_deposit};
-use crate::msg::{NftSwap, PoolNftSwap, SwapParams, TransactionType};
-use crate::state::{buy_from_pool_quotes, pools, sell_to_pool_quotes, Pool, PoolQuote, PoolType};
+use crate::helpers::{get_nft_deposit, transfer_nft, transfer_token};
+use crate::state::{
+    buy_from_pool_quotes, nft_deposit_key, nft_deposits, pools, sell_to_pool_quotes, Pool, PoolId,
+    PoolQuote, PoolType,
+};
 
 use core::cmp::Ordering;
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{attr, coin, Addr, Decimal, Event, Order, StdResult, Storage, Uint128};
+use cosmwasm_std::{coin, Addr, Decimal, Order, StdResult, Storage, Uint128};
+use infinity_shared::interface::{
+    tx_fees_to_swap, NftOrder, Swap, SwapParamsInternal, TransactionType,
+};
 use sg1::fair_burn;
-use sg721::RoyaltyInfoResponse;
+use sg721::RoyaltyInfo;
+use sg_marketplace_common::calculate_nft_sale_fees;
 use sg_std::{Response, NATIVE_DENOM};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -50,76 +55,6 @@ impl PartialEq for PoolQueueItem {
 
 impl Eq for PoolQueueItem {}
 
-/// A token payment that needs to be executed at the end of a transaction
-#[cw_serde]
-pub struct TokenPayment {
-    pub amount: Uint128,
-    pub address: String,
-}
-
-/// An NFT payment that needs to be executed at the end of a transaction
-#[cw_serde]
-pub struct NftPayment {
-    pub nft_token_id: String,
-    pub address: String,
-}
-
-/// A summary of an individual swap
-#[cw_serde]
-pub struct Swap {
-    pub pool_id: u64,
-    pub transaction_type: TransactionType,
-    pub spot_price: Uint128,
-    pub network_fee: Uint128,
-    pub nft_payment: NftPayment,
-    pub finder_payment: Option<TokenPayment>,
-    pub royalty_payment: Option<TokenPayment>,
-    pub seller_payment: Option<TokenPayment>,
-}
-
-impl From<&Swap> for Event {
-    fn from(val: &Swap) -> Self {
-        let mut attributes = vec![
-            attr("pool_id", val.pool_id.to_string()),
-            attr("transaction_type", val.transaction_type.to_string()),
-            attr("spot_price", val.spot_price.to_string()),
-            attr("network_fee", val.network_fee.to_string()),
-        ];
-        attributes.extend([
-            attr("nft_payment_address", val.nft_payment.address.to_string()),
-            attr(
-                "nft_payment_token_id",
-                val.nft_payment.nft_token_id.to_string(),
-            ),
-        ]);
-        if val.finder_payment.is_some() {
-            let finder_payment = val.finder_payment.as_ref().unwrap();
-            attributes.extend([
-                attr("finder_payment_address", finder_payment.address.to_string()),
-                attr("finder_payment_amount", finder_payment.amount.to_string()),
-            ]);
-        }
-        if val.royalty_payment.is_some() {
-            let royalty_payment = val.royalty_payment.as_ref().unwrap();
-            attributes.extend([
-                attr(
-                    "royalty_payment_address",
-                    royalty_payment.address.to_string(),
-                ),
-                attr("royalty_payment_amount", royalty_payment.amount.to_string()),
-            ]);
-        }
-        if val.seller_payment.is_some() {
-            let seller_payment = val.seller_payment.as_ref().unwrap();
-            attributes.extend([
-                attr("seller_payment_address", seller_payment.address.to_string()),
-                attr("seller_payment_amount", seller_payment.amount.to_string()),
-            ]);
-        }
-        Event::new("swap").add_attributes(attributes)
-    }
-}
-
 type IterResults = StdResult<(u64, PoolQuote)>;
 
 /// A struct for managing a series of swaps
@@ -141,7 +76,7 @@ pub struct SwapProcessor<'a> {
     /// The minimum quote price to be handled by the contract
     min_quote: Uint128,
     /// The royalty info for the NFT collection
-    royalty: Option<RoyaltyInfoResponse>,
+    royalty: Option<RoyaltyInfo>,
     /// The address of the finder of the transaction
     finder: Option<Addr>,
     /// The address to receive developer burn fees
@@ -171,7 +106,7 @@ impl<'a> SwapProcessor<'a> {
         seller_recipient: Addr,
         trading_fee_percent: Decimal,
         min_quote: Uint128,
-        royalty: Option<RoyaltyInfoResponse>,
+        royalty: Option<RoyaltyInfo>,
         finder: Option<Addr>,
         developer: Option<Addr>,
     ) -> Self {
@@ -197,42 +132,15 @@ impl<'a> SwapProcessor<'a> {
     }
 
     /// Create an individual swap object
-    fn create_swap(&mut self, pool: &Pool, payment_amount: Uint128, nft_token_id: String) -> Swap {
+    fn create_swap(
+        &mut self,
+        pool: &Pool,
+        payment_amount: Uint128,
+        nft_token_id: String,
+    ) -> Result<Swap, ContractError> {
         // Subtract from received amount in the case of a buy
         if self.tx_type == TransactionType::UserSubmitsTokens {
             self.remaining_balance -= payment_amount;
-        }
-
-        // Calculate burn fee
-        let network_fee = payment_amount * self.trading_fee_percent / Uint128::from(100u128);
-
-        // Calculate seller payment (mutable)
-        let mut seller_amount = payment_amount - network_fee;
-
-        // Calculate finder payment, deduct from seller payment
-        let mut finder_payment = None;
-        if self.finder.is_some() && !pool.finders_fee_percent.is_zero() {
-            let finder_amount = payment_amount * pool.finders_fee_percent / Uint128::from(100u128);
-            if !finder_amount.is_zero() {
-                seller_amount -= finder_amount;
-                finder_payment = Some(TokenPayment {
-                    amount: finder_amount,
-                    address: self.finder.as_ref().unwrap().to_string(),
-                });
-            }
-        }
-
-        // Calculate royalty payment, deduct from seller payment
-        let mut royalty_payment = None;
-        if let Some(_royalty) = &self.royalty {
-            let royalty_amount = payment_amount * _royalty.share;
-            if !royalty_amount.is_zero() {
-                seller_amount -= royalty_amount;
-                royalty_payment = Some(TokenPayment {
-                    amount: royalty_amount,
-                    address: _royalty.payment_address.clone(),
-                });
-            }
         }
 
         // Set the addresses that will receive the NFT and token payment
@@ -245,29 +153,34 @@ impl<'a> SwapProcessor<'a> {
             }
         };
 
-        Swap {
-            pool_id: pool.id,
-            transaction_type: self.tx_type.clone(),
-            spot_price: payment_amount,
-            network_fee,
-            nft_payment: NftPayment {
-                nft_token_id,
-                address: nft_recipient.to_string(),
-            },
-            finder_payment,
-            royalty_payment,
-            seller_payment: Some(TokenPayment {
-                amount: seller_amount,
-                address: token_recipient.to_string(),
-            }),
-        }
+        let tx_fees = calculate_nft_sale_fees(
+            payment_amount,
+            self.trading_fee_percent,
+            &token_recipient,
+            self.finder.as_ref(),
+            Some(pool.finders_fee_percent),
+            self.royalty.as_ref(),
+        )?;
+
+        let mut swap = tx_fees_to_swap(
+            tx_fees,
+            self.tx_type.clone(),
+            &self.collection,
+            &nft_token_id,
+            payment_amount,
+            &nft_recipient,
+            &self.contract,
+        );
+        swap.set_data(PoolId(pool.id));
+
+        Ok(swap)
     }
 
     /// Process a swap
     fn process_swap(
         &mut self,
         pool_queue_item: PoolQueueItem,
-        nft_swap: NftSwap,
+        nft_order: NftOrder,
         robust: bool,
     ) -> Result<(PoolQueueItem, bool), ContractError> {
         let mut pool_queue_item = pool_queue_item;
@@ -276,10 +189,10 @@ impl<'a> SwapProcessor<'a> {
         let result = match self.tx_type {
             TransactionType::UserSubmitsNfts => pool_queue_item
                 .pool
-                .sell_nft_to_pool(&nft_swap, pool_queue_item.quote_price),
+                .sell_nft_to_pool(&nft_order, pool_queue_item.quote_price),
             TransactionType::UserSubmitsTokens => pool_queue_item
                 .pool
-                .buy_nft_from_pool(&nft_swap, pool_queue_item.quote_price),
+                .buy_nft_from_pool(&nft_order, pool_queue_item.quote_price),
         };
         match result {
             Ok(_) => {}
@@ -299,24 +212,29 @@ impl<'a> SwapProcessor<'a> {
         let mut swap = self.create_swap(
             &pool_queue_item.pool,
             pool_queue_item.quote_price,
-            nft_swap.nft_token_id,
-        );
+            nft_order.token_id,
+        )?;
 
         // Reinvest tokens or NFTs if applicable
         if pool_queue_item.pool.pool_type == PoolType::Trade {
             if self.tx_type == TransactionType::UserSubmitsTokens
                 && pool_queue_item.pool.reinvest_tokens
             {
-                let reinvest_amount = swap.seller_payment.unwrap().amount;
-                swap.seller_payment = None;
+                let index = swap
+                    .token_payments
+                    .iter()
+                    .position(|p| p.label == "seller")
+                    .unwrap();
+                let reinvest_amount = swap.token_payments[index].amount;
+                swap.token_payments.remove(index);
                 pool_queue_item.pool.deposit_tokens(reinvest_amount)?;
             } else if self.tx_type == TransactionType::UserSubmitsNfts
                 && pool_queue_item.pool.reinvest_nfts
             {
-                swap.nft_payment.address = self.contract.to_string();
+                swap.nft_payments[0].address = self.contract.to_string();
                 pool_queue_item
                     .pool
-                    .deposit_nfts(&vec![swap.nft_payment.nft_token_id.clone()])?;
+                    .deposit_nfts(&vec![swap.nft_payments[0].token_id.clone()])?;
             }
         }
         self.swaps.push(swap);
@@ -372,35 +290,20 @@ impl<'a> SwapProcessor<'a> {
             total_network_fee += swap.network_fee;
 
             // Push transfer NFT messages
+            let nft_payment = swap.nft_payments.first().unwrap();
             transfer_nft(
-                &swap.nft_payment.nft_token_id,
-                &swap.nft_payment.address,
+                &nft_payment.token_id,
+                &nft_payment.address,
                 self.collection.as_ref(),
                 response,
             )?;
 
-            // Track finder payments
-            if let Some(_finder_payment) = &swap.finder_payment {
+            // Track token payments
+            for token_payment in &swap.token_payments {
                 let payment = token_payments
-                    .entry(&_finder_payment.address)
+                    .entry(&token_payment.address)
                     .or_insert(Uint128::zero());
-                *payment += _finder_payment.amount;
-            }
-
-            // Track royalty payments
-            if let Some(_royalty_payment) = &swap.royalty_payment {
-                let payment = token_payments
-                    .entry(&_royalty_payment.address)
-                    .or_insert(Uint128::zero());
-                *payment += _royalty_payment.amount;
-            }
-
-            // Track seller payments
-            if let Some(_seller_payment) = &swap.seller_payment {
-                let payment = token_payments
-                    .entry(&_seller_payment.address)
-                    .or_insert(Uint128::zero());
-                *payment += _seller_payment.amount;
+                *payment += token_payment.amount;
             }
         }
 
@@ -500,8 +403,8 @@ impl<'a> SwapProcessor<'a> {
     pub fn direct_swap_nfts_for_tokens(
         &mut self,
         pool: Pool,
-        nfts_to_swap: Vec<NftSwap>,
-        swap_params: SwapParams,
+        nft_orders: Vec<NftOrder>,
+        swap_params: SwapParamsInternal,
     ) -> Result<(), ContractError> {
         let quote_price = pool.get_sell_to_pool_quote(self.min_quote)?;
         if quote_price.is_none() {
@@ -519,9 +422,9 @@ impl<'a> SwapProcessor<'a> {
         };
         let mut success: bool;
 
-        for nft_swap in nfts_to_swap {
+        for nft_order in nft_orders {
             (pool_queue_item, success) =
-                self.process_swap(pool_queue_item, nft_swap, swap_params.robust)?;
+                self.process_swap(pool_queue_item, nft_order, swap_params.robust)?;
 
             // If the swap failed, stop processing swaps
             if !success {
@@ -540,10 +443,10 @@ impl<'a> SwapProcessor<'a> {
     pub fn swap_nfts_for_tokens(
         &mut self,
         storage: &'a dyn Storage,
-        nfts_to_swap: Vec<NftSwap>,
-        swap_params: SwapParams,
+        nft_orders: Vec<NftOrder>,
+        swap_params: SwapParamsInternal,
     ) -> Result<(), ContractError> {
-        for nft_swap in nfts_to_swap {
+        for nft_order in nft_orders {
             // Load best priced pool
             let pool_queue_item_option = self.load_next_pool(storage)?;
             // No pools found, so return empty
@@ -552,7 +455,7 @@ impl<'a> SwapProcessor<'a> {
             }
             let (pool_queue_item, success) = self.process_swap(
                 pool_queue_item_option.unwrap(),
-                nft_swap,
+                nft_order,
                 swap_params.robust,
             )?;
 
@@ -577,23 +480,36 @@ impl<'a> SwapProcessor<'a> {
     pub fn swap_tokens_for_specific_nfts(
         &mut self,
         storage: &'a dyn Storage,
-        nfts_to_swap_for: Vec<PoolNftSwap>,
-        swap_params: SwapParams,
+        nft_orders: Vec<NftOrder>,
+        swap_params: SwapParamsInternal,
     ) -> Result<(), ContractError> {
         // Create a pool_queue_item map for tracking swap pools
         let mut pool_queue_item_map: BTreeMap<u64, PoolQueueItem> = BTreeMap::new();
 
-        for pool_nfts in nfts_to_swap_for {
-            let mut pool_queue_item =
-                if let Some(_pool_queue_item) = pool_queue_item_map.remove(&pool_nfts.pool_id) {
-                    _pool_queue_item
+        for nft_order in nft_orders {
+            // Load nft_deposit
+            let nft_deposit = nft_deposits().may_load(
+                storage,
+                nft_deposit_key(&self.collection, &nft_order.token_id),
+            )?;
+            if nft_deposit.is_none() {
+                if swap_params.robust {
+                    continue;
                 } else {
-                    let pool_option = pools().may_load(storage, pool_nfts.pool_id)?;
+                    return Err(ContractError::NftNotFound(nft_order.token_id));
+                }
+            }
+            let nft_deposit = nft_deposit.unwrap();
+
+            let mut pool_queue_item = match pool_queue_item_map.remove(&nft_deposit.pool_id) {
+                Some(_pool_queue_item) => _pool_queue_item,
+                None => {
+                    let pool_option = pools().may_load(storage, nft_deposit.pool_id)?;
                     // If pool is not found, return error
                     if pool_option.is_none() {
                         return Err(ContractError::PoolNotFound(format!(
                             "pool {} not found",
-                            pool_nfts.pool_id
+                            nft_deposit.pool_id
                         )));
                     }
                     // Create PoolQueueItem and insert into pool_queue_item_map
@@ -622,47 +538,31 @@ impl<'a> SwapProcessor<'a> {
                         usable: true,
                         num_swaps: 0,
                     }
-                };
-
-            // Iterate over all NFTs selected for the given pool
-            for nft_swap in pool_nfts.nft_swaps {
-                if !pool_queue_item.usable {
-                    if swap_params.robust {
-                        break;
-                    } else {
-                        return Err(ContractError::SwapError(
-                            "unable to process swap".to_string(),
-                        ));
-                    }
                 }
+            };
 
-                // Check if specified NFT is deposited into pool
-                let pool_owns_nft =
-                    verify_nft_deposit(storage, pool_nfts.pool_id, &nft_swap.nft_token_id);
-                if !pool_owns_nft {
-                    if swap_params.robust {
-                        break;
-                    } else {
-                        return Err(ContractError::SwapError(format!(
-                            "pool {} does not own NFT {}",
-                            pool_queue_item.pool.id, nft_swap.nft_token_id
-                        )));
-                    }
+            if !pool_queue_item.usable {
+                if swap_params.robust {
+                    break;
+                } else {
+                    return Err(ContractError::SwapError(
+                        "unable to process swap".to_string(),
+                    ));
                 }
+            }
 
-                let (_pool_queue_item, success) =
-                    self.process_swap(pool_queue_item, nft_swap, swap_params.robust)?;
-                pool_queue_item = _pool_queue_item;
+            let (_pool_queue_item, success) =
+                self.process_swap(pool_queue_item, nft_order, swap_params.robust)?;
+            pool_queue_item = _pool_queue_item;
 
-                // If the swap failed, stop processing swaps
-                if !success {
-                    if swap_params.robust {
-                        break;
-                    } else {
-                        return Err(ContractError::SwapError(
-                            "unable to process swap".to_string(),
-                        ));
-                    }
+            // If the swap failed, stop processing swaps
+            if !success {
+                if swap_params.robust {
+                    break;
+                } else {
+                    return Err(ContractError::SwapError(
+                        "unable to process swap".to_string(),
+                    ));
                 }
             }
 
@@ -683,10 +583,10 @@ impl<'a> SwapProcessor<'a> {
     pub fn swap_tokens_for_any_nfts(
         &mut self,
         storage: &'a dyn Storage,
-        min_expected_token_input: Vec<Uint128>,
-        swap_params: SwapParams,
+        orders: Vec<Uint128>,
+        swap_params: SwapParamsInternal,
     ) -> Result<(), ContractError> {
-        for token_amount in min_expected_token_input {
+        for order in orders {
             // Load best priced pool
             let pool_queue_item_option = self.load_next_pool(storage)?;
             // No pools found, so return empty;
@@ -696,9 +596,9 @@ impl<'a> SwapProcessor<'a> {
             let pool_queue_item = pool_queue_item_option.unwrap();
             {
                 // Grab first NFT from the pool
-                let nft_token_id =
+                let nft_deposit =
                     get_nft_deposit(storage, pool_queue_item.pool.id, pool_queue_item.num_swaps)?;
-                if nft_token_id.is_none() {
+                if nft_deposit.is_none() {
                     return Err(ContractError::SwapError(format!(
                         "pool {} does not own any NFTs",
                         pool_queue_item.pool.id
@@ -707,9 +607,9 @@ impl<'a> SwapProcessor<'a> {
 
                 let (pool_queue_item, success) = self.process_swap(
                     pool_queue_item,
-                    NftSwap {
-                        nft_token_id: nft_token_id.unwrap(),
-                        token_amount,
+                    NftOrder {
+                        token_id: nft_deposit.unwrap().token_id,
+                        amount: order,
                     },
                     swap_params.robust,
                 )?;

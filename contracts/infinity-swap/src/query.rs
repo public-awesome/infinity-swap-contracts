@@ -1,17 +1,19 @@
 use crate::helpers::{option_bool_to_order, prep_for_swap};
 use crate::msg::{
-    ConfigResponse, NftSwap, NftTokenIdsResponse, PoolNftSwap, PoolQuoteResponse,
-    PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
-    TransactionType,
+    ConfigResponse, NftTokenIdsResponse, PoolQuoteResponse, PoolsByIdResponse, PoolsResponse,
+    QueryMsg, QueryOptions,
 };
 use crate::state::{
-    buy_from_pool_quotes, pools, sell_to_pool_quotes, PoolQuote, CONFIG, NFT_DEPOSITS,
+    buy_from_pool_quotes, nft_deposits, pools, sell_to_pool_quotes, NftDeposit, PoolQuote, CONFIG,
 };
 use crate::swap_processor::SwapProcessor;
 use cosmwasm_std::{
     entry_point, to_binary, Addr, Binary, Deps, Env, Order, StdError, StdResult, Uint128,
 };
 use cw_storage_plus::Bound;
+use infinity_shared::interface::{
+    transform_swap_params, NftOrder, SwapParamsInternal, SwapResponse, TransactionType,
+};
 
 // Query limits
 const DEFAULT_QUERY_LIMIT: u32 = 10;
@@ -54,69 +56,56 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             query_options,
         )?),
         QueryMsg::SimDirectSwapNftsForTokens {
-            pool_id,
-            nfts_to_swap,
             sender,
+            pool_id,
+            nft_orders,
             swap_params,
         } => to_binary(&sim_direct_swap_nfts_for_tokens(
             deps,
             env,
-            pool_id,
-            nfts_to_swap,
             api.addr_validate(&sender)?,
-            swap_params,
+            pool_id,
+            nft_orders,
+            transform_swap_params(api, swap_params)?,
         )?),
         QueryMsg::SimSwapNftsForTokens {
-            collection,
-            nfts_to_swap,
             sender,
+            collection,
+            nft_orders,
             swap_params,
         } => to_binary(&sim_swap_nfts_for_tokens(
             deps,
             env,
+            api.addr_validate(&sender)?,
             api.addr_validate(&collection)?,
-            nfts_to_swap,
-            api.addr_validate(&sender)?,
-            swap_params,
-        )?),
-        QueryMsg::SimDirectSwapTokensForSpecificNfts {
-            pool_id,
-            nfts_to_swap_for,
-            sender,
-            swap_params,
-        } => to_binary(&sim_direct_swap_tokens_for_specific_nfts(
-            deps,
-            env,
-            pool_id,
-            nfts_to_swap_for,
-            api.addr_validate(&sender)?,
-            swap_params,
+            nft_orders,
+            transform_swap_params(api, swap_params)?,
         )?),
         QueryMsg::SimSwapTokensForSpecificNfts {
-            collection,
-            pool_nfts_to_swap_for,
             sender,
+            collection,
+            nft_orders,
             swap_params,
         } => to_binary(&sim_swap_tokens_for_specific_nfts(
             deps,
             env,
-            api.addr_validate(&collection)?,
-            pool_nfts_to_swap_for,
             api.addr_validate(&sender)?,
-            swap_params,
+            api.addr_validate(&collection)?,
+            nft_orders,
+            transform_swap_params(api, swap_params)?,
         )?),
         QueryMsg::SimSwapTokensForAnyNfts {
-            collection,
-            max_expected_token_input,
             sender,
+            collection,
+            orders,
             swap_params,
         } => to_binary(&sim_swap_tokens_for_any_nfts(
             deps,
             env,
             api.addr_validate(&collection)?,
-            max_expected_token_input,
+            orders,
             api.addr_validate(&sender)?,
-            swap_params,
+            transform_swap_params(api, swap_params)?,
         )?),
     }
 }
@@ -186,18 +175,31 @@ pub fn query_pool_nft_token_ids(
         .unwrap_or(DEFAULT_QUERY_LIMIT)
         .min(MAX_QUERY_LIMIT) as usize;
 
-    let start = query_options.start_after.as_ref().map(Bound::exclusive);
+    let pool = pools().load(deps.storage, pool_id)?;
+
+    let start = query_options
+        .start_after
+        .as_ref()
+        .map(|token_id| Bound::exclusive((pool.collection.clone(), token_id.to_string())));
     let order = option_bool_to_order(query_options.descending, Order::Ascending);
 
-    let nft_token_ids: Vec<String> = NFT_DEPOSITS
+    let nft_deposits: Vec<NftDeposit> = nft_deposits()
+        .idx
+        .pool_deposits
         .prefix(pool_id)
         .range(deps.storage, start, None, order)
         .take(limit)
-        .map(|item| item.map(|(nft_token_id, _)| nft_token_id))
+        .map(|item| item.map(|(_, nft_deposit)| nft_deposit))
         .collect::<StdResult<_>>()?;
+
+    let nft_token_ids: Vec<String> = nft_deposits
+        .iter()
+        .map(|nd| nd.token_id.to_string())
+        .collect::<Vec<_>>();
 
     Ok(NftTokenIdsResponse {
         pool_id,
+        collection: pool.collection.to_string(),
         nft_token_ids,
     })
 }
@@ -259,10 +261,10 @@ pub fn query_quotes_sell_to_pool(
 pub fn sim_direct_swap_nfts_for_tokens(
     deps: Deps,
     env: Env,
-    pool_id: u64,
-    nfts_to_swap: Vec<NftSwap>,
     sender: Addr,
-    swap_params: SwapParams,
+    pool_id: u64,
+    nft_orders: Vec<NftOrder>,
+    swap_params: SwapParamsInternal,
 ) -> StdResult<SwapResponse> {
     let pool = pools().load(deps.storage, pool_id)?;
 
@@ -276,17 +278,14 @@ pub fn sim_direct_swap_nfts_for_tokens(
         sender,
         Uint128::zero(),
         swap_prep_result.asset_recipient,
-        swap_prep_result
-            .marketplace_params
-            .params
-            .trading_fee_percent,
-        swap_prep_result.marketplace_params.params.min_price,
+        swap_prep_result.marketplace_params.trading_fee_percent,
+        swap_prep_result.marketplace_params.min_price,
         swap_prep_result.collection_royalties,
         swap_prep_result.finder,
         swap_prep_result.developer,
     );
     processor
-        .direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)
+        .direct_swap_nfts_for_tokens(pool, nft_orders, swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     Ok(SwapResponse {
@@ -297,10 +296,10 @@ pub fn sim_direct_swap_nfts_for_tokens(
 pub fn sim_swap_nfts_for_tokens(
     deps: Deps,
     env: Env,
-    collection: Addr,
-    nfts_to_swap: Vec<NftSwap>,
     sender: Addr,
-    swap_params: SwapParams,
+    collection: Addr,
+    nft_orders: Vec<NftOrder>,
+    swap_params: SwapParamsInternal,
 ) -> StdResult<SwapResponse> {
     let swap_prep_result = prep_for_swap(deps, &None, &sender, &collection, &swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
@@ -312,17 +311,14 @@ pub fn sim_swap_nfts_for_tokens(
         sender,
         Uint128::zero(),
         swap_prep_result.asset_recipient,
-        swap_prep_result
-            .marketplace_params
-            .params
-            .trading_fee_percent,
-        swap_prep_result.marketplace_params.params.min_price,
+        swap_prep_result.marketplace_params.trading_fee_percent,
+        swap_prep_result.marketplace_params.min_price,
         swap_prep_result.collection_royalties,
         swap_prep_result.finder,
         swap_prep_result.developer,
     );
     processor
-        .swap_nfts_for_tokens(deps.storage, nfts_to_swap, swap_params)
+        .swap_nfts_for_tokens(deps.storage, nft_orders, swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     Ok(SwapResponse {
@@ -330,46 +326,20 @@ pub fn sim_swap_nfts_for_tokens(
     })
 }
 
-pub fn sim_direct_swap_tokens_for_specific_nfts(
-    deps: Deps,
-    env: Env,
-    pool_id: u64,
-    nfts_to_swap_for: Vec<NftSwap>,
-    sender: Addr,
-    swap_params: SwapParams,
-) -> StdResult<SwapResponse> {
-    let pool = pools().load(deps.storage, pool_id)?;
-
-    sim_swap_tokens_for_specific_nfts(
-        deps,
-        env,
-        pool.collection,
-        vec![PoolNftSwap {
-            pool_id,
-            nft_swaps: nfts_to_swap_for,
-        }],
-        sender,
-        swap_params,
-    )
-}
-
 pub fn sim_swap_tokens_for_specific_nfts(
     deps: Deps,
     env: Env,
-    collection: Addr,
-    pool_nfts_to_swap_for: Vec<PoolNftSwap>,
     sender: Addr,
-    swap_params: SwapParams,
+    collection: Addr,
+    nft_orders: Vec<NftOrder>,
+    swap_params: SwapParamsInternal,
 ) -> StdResult<SwapResponse> {
     let swap_prep_result = prep_for_swap(deps, &None, &sender, &collection, &swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
-    let mut spend_amount = 0_u128;
-    for pool in pool_nfts_to_swap_for.iter() {
-        for nft_swap in pool.nft_swaps.iter() {
-            spend_amount += nft_swap.token_amount.u128();
-        }
-    }
+    let spend_amount = nft_orders
+        .iter()
+        .fold(0u128, |acc, order| acc + order.amount.u128());
 
     let mut processor = SwapProcessor::new(
         TransactionType::UserSubmitsTokens,
@@ -378,17 +348,14 @@ pub fn sim_swap_tokens_for_specific_nfts(
         sender,
         spend_amount.into(),
         swap_prep_result.asset_recipient,
-        swap_prep_result
-            .marketplace_params
-            .params
-            .trading_fee_percent,
-        swap_prep_result.marketplace_params.params.min_price,
+        swap_prep_result.marketplace_params.trading_fee_percent,
+        swap_prep_result.marketplace_params.min_price,
         swap_prep_result.collection_royalties,
         swap_prep_result.finder,
         swap_prep_result.developer,
     );
     processor
-        .swap_tokens_for_specific_nfts(deps.storage, pool_nfts_to_swap_for, swap_params)
+        .swap_tokens_for_specific_nfts(deps.storage, nft_orders, swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     Ok(SwapResponse {
@@ -402,7 +369,7 @@ pub fn sim_swap_tokens_for_any_nfts(
     collection: Addr,
     max_expected_token_input: Vec<Uint128>,
     sender: Addr,
-    swap_params: SwapParams,
+    swap_params: SwapParamsInternal,
 ) -> StdResult<SwapResponse> {
     let swap_prep_result = prep_for_swap(deps, &None, &sender, &collection, &swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
@@ -416,11 +383,8 @@ pub fn sim_swap_tokens_for_any_nfts(
         sender,
         total_tokens,
         swap_prep_result.asset_recipient,
-        swap_prep_result
-            .marketplace_params
-            .params
-            .trading_fee_percent,
-        swap_prep_result.marketplace_params.params.min_price,
+        swap_prep_result.marketplace_params.trading_fee_percent,
+        swap_prep_result.marketplace_params.min_price,
         swap_prep_result.collection_royalties,
         swap_prep_result.finder,
         swap_prep_result.developer,

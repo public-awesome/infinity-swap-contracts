@@ -1,8 +1,8 @@
-use crate::msg::{NftSwap, TransactionType};
 use crate::state::{BondingCurve, Pool, PoolType};
 use crate::ContractError;
 use cosmwasm_std::{attr, Addr, Attribute, Decimal, Event, OverflowError, StdError, Uint128};
-use sg_marketplace::msg::ParamsResponse;
+use infinity_shared::interface::{NftOrder, TransactionType};
+use sg_marketplace::state::SudoParams;
 
 /// 100% represented as basis points
 const MAX_BASIS_POINTS: u128 = 10000u128;
@@ -45,8 +45,8 @@ impl Pool {
     }
 
     /// Verify that the pool is valid by checking invariants before save
-    pub fn validate(&self, marketplace_params: &ParamsResponse) -> Result<(), ContractError> {
-        if self.finders_fee_percent > marketplace_params.params.max_finders_fee_percent {
+    pub fn validate(&self, marketplace_params: &SudoParams) -> Result<(), ContractError> {
+        if self.finders_fee_percent > marketplace_params.max_finders_fee_percent {
             return Err(ContractError::InvalidPool(
                 "finders_fee_percent is above marketplace max_finders_fee_percent".to_string(),
             ));
@@ -298,7 +298,7 @@ impl Pool {
     /// Buy an NFT from the pool
     pub fn buy_nft_from_pool(
         &mut self,
-        nft_swap: &NftSwap,
+        nft_order: &NftOrder,
         sale_price: Uint128,
     ) -> Result<(), ContractError> {
         if !self.can_sell_nfts() {
@@ -311,7 +311,7 @@ impl Pool {
         }
 
         // If sale price exceeds the max expected, return an error
-        if sale_price > nft_swap.token_amount {
+        if sale_price > nft_order.amount {
             return Err(ContractError::SwapError(
                 "pool sale price is above max expected".to_string(),
             ));
@@ -332,7 +332,7 @@ impl Pool {
     /// Sell an NFT to the pool
     pub fn sell_nft_to_pool(
         &mut self,
-        nft_swap: &NftSwap,
+        nft_order: &NftOrder,
         sale_price: Uint128,
     ) -> Result<(), ContractError> {
         if !self.can_buy_nfts() {
@@ -345,7 +345,7 @@ impl Pool {
         }
 
         // If sale price is below the min expected, return an error
-        if sale_price < nft_swap.token_amount {
+        if sale_price < nft_order.amount {
             return Err(ContractError::SwapError(
                 "pool sale price is below min expected".to_string(),
             ));

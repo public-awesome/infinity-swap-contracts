@@ -1,13 +1,13 @@
 use crate::helpers::{
     match_nfts_against_tokens, match_tokens_against_any_nfts, match_tokens_against_specific_nfts,
-    set_ask_swap_data, set_bid_swap_data, tx_fees_to_swap, validate_nft_orders, validate_nft_owner,
-    MatchedBid,
+    set_ask_swap_data, set_bid_swap_data, validate_nft_orders, validate_nft_owner, MatchedBid,
 };
 use crate::msg::QueryMsg;
 use crate::state::CONFIG;
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult, Uint128};
+use cosmwasm_std::{to_binary, Addr, Binary, Decimal, Deps, Env, StdError, StdResult, Uint128};
 use infinity_shared::interface::{
-    transform_swap_params, NftOrder, Swap, SwapParamsInternal, SwapResponse, TransactionType,
+    transform_swap_params, tx_fees_to_swap, NftOrder, Swap, SwapParamsInternal, SwapResponse,
+    TransactionType,
 };
 
 #[cfg(not(feature = "library"))]
@@ -110,19 +110,21 @@ pub fn query_sim_swap_nfts_for_tokens(
         };
 
         let token_id = matched_order.nft_order.token_id;
+        let finders_fee_percent = finders_fee_bps.map(Decimal::percent);
 
         let tx_fees = calculate_nft_sale_fees(
             sale_price,
             marketplace_params.trading_fee_percent,
             &sender_recipient,
             swap_params.finder.as_ref(),
-            finders_fee_bps,
+            finders_fee_percent,
             royalty_info.as_ref(),
         )?;
 
         let mut swap = tx_fees_to_swap(
             tx_fees,
             TransactionType::UserSubmitsNfts,
+            &collection,
             &token_id,
             sale_price,
             &bidder,
@@ -176,18 +178,21 @@ pub fn query_sim_swap_tokens_for_specific_nfts(
             .unwrap_or(&matched_ask.seller)
             .clone();
 
+        let finders_fee_percent = matched_ask.finders_fee_bps.map(Decimal::percent);
+
         let tx_fees = calculate_nft_sale_fees(
             matched_ask.price,
             marketplace_params.trading_fee_percent,
             &ask_recipient,
             swap_params.finder.as_ref(),
-            matched_ask.finders_fee_bps,
+            finders_fee_percent,
             royalty_info.as_ref(),
         )?;
 
         let mut swap = tx_fees_to_swap(
             tx_fees,
             TransactionType::UserSubmitsTokens,
+            &collection,
             &token_id,
             matched_ask.price,
             &sender_recipient,
@@ -246,18 +251,21 @@ pub fn query_sim_swap_tokens_for_any_nfts(
             .unwrap_or(&matched_ask.seller)
             .clone();
 
+        let finders_fee_percent = matched_ask.finders_fee_bps.map(Decimal::percent);
+
         let tx_fees = calculate_nft_sale_fees(
             matched_ask.price,
             marketplace_params.trading_fee_percent,
             &ask_recipient,
             swap_params.finder.as_ref(),
-            matched_ask.finders_fee_bps,
+            finders_fee_percent,
             royalty_info.as_ref(),
         )?;
 
         let mut swap = tx_fees_to_swap(
             tx_fees,
             TransactionType::UserSubmitsTokens,
+            &collection,
             &token_id,
             matched_ask.price,
             &sender_recipient,

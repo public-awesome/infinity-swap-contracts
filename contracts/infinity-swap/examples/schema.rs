@@ -1,9 +1,7 @@
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
-use cosmwasm_std::Uint128;
 use infinity_swap::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, NftSwap, NftTokenIdsResponse, PoolNftSwap,
-    PoolQuoteResponse, PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions, SwapParams,
-    SwapResponse,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, PoolQuoteResponse, PoolsByIdResponse,
+    PoolsResponse, QueryMsg,
 };
 use std::env::current_dir;
 use std::fs::create_dir_all;
@@ -17,15 +15,8 @@ fn main() {
     export_schema(&schema_for!(ConfigResponse), &out_dir);
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
-    export_schema(&schema_for!(NftSwap), &out_dir);
-    export_schema(&schema_for!(PoolNftSwap), &out_dir);
     export_schema(&schema_for!(PoolQuoteResponse), &out_dir);
     export_schema(&schema_for!(PoolsByIdResponse), &out_dir);
-    export_schema(&schema_for!(NftTokenIdsResponse), &out_dir);
     export_schema(&schema_for!(PoolsResponse), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
-    export_schema(&schema_for!(QueryOptions<u64>), &out_dir);
-    export_schema(&schema_for!(QueryOptions<(Uint128, u64)>), &out_dir);
-    export_schema(&schema_for!(SwapParams), &out_dir);
-    export_schema(&schema_for!(SwapResponse), &out_dir);
 }

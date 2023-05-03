@@ -6,7 +6,7 @@ use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
     coins, to_binary, Addr, BlockInfo, Deps, QuerierWrapper, SubMsg, Uint128, WasmMsg,
 };
-use infinity_shared::interface::{NftOrder, NftPayment, Swap, TokenPayment, TransactionType};
+use infinity_shared::interface::{NftOrder, Swap};
 use sg_marketplace::msg::{
     AskOffset, AskResponse, AsksResponse, BidsResponse, CollectionBidOffset,
     CollectionBidsResponse, ExecuteMsg as MarketplaceExecuteMsg, QueryMsg as MarketplaceQueryMsg,
@@ -15,7 +15,7 @@ use sg_marketplace::state::{
     ask_key, bid_key, collection_bid_key, Ask, AskKey, Bid, BidKey, CollectionBid,
     CollectionBidKey, Order,
 };
-use sg_marketplace_common::{only_owner, TransactionFees};
+use sg_marketplace_common::only_owner;
 use sg_std::{Response, NATIVE_DENOM};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
@@ -147,50 +147,6 @@ pub fn fetch_asks(
 
     asks.reverse();
     Ok(asks)
-}
-
-pub fn tx_fees_to_swap(
-    tx_fees: TransactionFees,
-    transaction_type: TransactionType,
-    token_id: &str,
-    sale_price: Uint128,
-    buyer: &Addr,
-    source: &Addr,
-) -> Swap {
-    let mut token_payments: Vec<TokenPayment> = vec![];
-    if let Some(finders_fee) = tx_fees.finders_fee {
-        token_payments.push(TokenPayment {
-            label: "finder".to_string(),
-            address: finders_fee.recipient.to_string(),
-            amount: finders_fee.coin.amount,
-        });
-    }
-    if let Some(royalty_fee) = tx_fees.royalty_fee {
-        token_payments.push(TokenPayment {
-            label: "royalty".to_string(),
-            address: royalty_fee.recipient.to_string(),
-            amount: royalty_fee.coin.amount,
-        });
-    }
-    token_payments.push(TokenPayment {
-        label: "seller".to_string(),
-        address: tx_fees.seller_payment.recipient.to_string(),
-        amount: tx_fees.seller_payment.coin.amount,
-    });
-
-    Swap {
-        source: source.to_string(),
-        transaction_type,
-        sale_price,
-        network_fee: tx_fees.fair_burn_fee,
-        nft_payments: vec![NftPayment {
-            label: "buyer".to_string(),
-            token_id: token_id.to_string(),
-            address: buyer.to_string(),
-        }],
-        token_payments,
-        data: None,
-    }
 }
 
 #[cw_serde]

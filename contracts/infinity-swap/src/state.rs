@@ -1,6 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::{Index, IndexList, IndexedMap, Item, Map, MultiIndex};
+use cw_storage_macro::index_list;
+use cw_storage_plus::{IndexedMap, Item, MultiIndex};
 use std::fmt;
 
 /// An incrementing uint used as the primary key for pools
@@ -90,28 +91,21 @@ pub struct Pool {
     pub reinvest_nfts: bool,
 }
 
+#[cw_serde]
+pub struct PoolId(pub u64);
+
 /// PoolIndices defines the indices for the Pool type
+#[index_list(Pool)]
 pub struct PoolIndices<'a> {
     /// Indexes pools by the owner address
     pub owner: MultiIndex<'a, Addr, Pool, u64>,
 }
 
-impl<'a> IndexList<Pool> for PoolIndices<'a> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Pool>> + '_> {
-        let v: Vec<&dyn Index<Pool>> = vec![&self.owner];
-        Box::new(v.into_iter())
-    }
-}
-
 pub fn pools<'a>() -> IndexedMap<'a, u64, Pool, PoolIndices<'a>> {
     let indexes = PoolIndices {
-        owner: MultiIndex::new(
-            |_pk: &[u8], p: &Pool| p.owner.clone(),
-            "pools",
-            "pools__owner",
-        ),
+        owner: MultiIndex::new(|_pk: &[u8], p: &Pool| p.owner.clone(), "p", "p__o"),
     };
-    IndexedMap::new("pools", indexes)
+    IndexedMap::new("p", indexes)
 }
 
 /// PoolQuote represents a quote at which assets can be bought or sold from a pool
@@ -126,55 +120,64 @@ pub struct PoolQuote {
 }
 
 /// BuyPoolQuoteIndices defines the indices for the PoolQuote type
+#[index_list(PoolQuote)]
 pub struct BuyPoolQuoteIndices<'a> {
     /// Indexes pool quotes by the collection address and buy quote price
     pub collection_buy_price: MultiIndex<'a, (Addr, u128), PoolQuote, u64>,
-}
-
-impl<'a> IndexList<PoolQuote> for BuyPoolQuoteIndices<'a> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<PoolQuote>> + '_> {
-        let v: Vec<&dyn Index<PoolQuote>> = vec![&self.collection_buy_price];
-        Box::new(v.into_iter())
-    }
 }
 
 pub fn buy_from_pool_quotes<'a>() -> IndexedMap<'a, u64, PoolQuote, BuyPoolQuoteIndices<'a>> {
     let indexes = BuyPoolQuoteIndices {
         collection_buy_price: MultiIndex::new(
             |_pk: &[u8], p: &PoolQuote| (p.collection.clone(), p.quote_price.u128()),
-            "buy_from_pool_quotes",
-            "buy_from_pool_quotes__collection_buy_price",
+            "bfpq",
+            "bfpq__cbp",
         ),
     };
-    IndexedMap::new("buy_from_pool_quotes", indexes)
+    IndexedMap::new("bfpq", indexes)
 }
 
 /// SellPoolQuoteIndices defines the indices for the PoolQuote type
+#[index_list(PoolQuote)]
 pub struct SellPoolQuoteIndices<'a> {
     /// Indexes pool quotes by the collection address and sell quote price
     pub collection_sell_price: MultiIndex<'a, (Addr, u128), PoolQuote, u64>,
-}
-
-impl<'a> IndexList<PoolQuote> for SellPoolQuoteIndices<'a> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<PoolQuote>> + '_> {
-        let v: Vec<&dyn Index<PoolQuote>> = vec![&self.collection_sell_price];
-        Box::new(v.into_iter())
-    }
 }
 
 pub fn sell_to_pool_quotes<'a>() -> IndexedMap<'a, u64, PoolQuote, SellPoolQuoteIndices<'a>> {
     let indexes = SellPoolQuoteIndices {
         collection_sell_price: MultiIndex::new(
             |_pk: &[u8], p: &PoolQuote| (p.collection.clone(), p.quote_price.u128()),
-            "sell_to_pool_quotes",
-            "sell_to_pool_quotes__collection_sell_price",
+            "stpq",
+            "stpq__csp",
         ),
     };
-    IndexedMap::new("sell_to_pool_quotes", indexes)
+    IndexedMap::new("stpq", indexes)
 }
 
 /// NftDepositKey is comprised of the pool id and the token id
-pub type NftDepositKey = (u64, String);
+pub type NftDepositKey = (Addr, String);
 
-/// Nft deposits are used to track the NFTs that have been deposited into a pool
-pub const NFT_DEPOSITS: Map<NftDepositKey, bool> = Map::new("nft_deposits");
+pub fn nft_deposit_key(collection: &Addr, token_id: &str) -> NftDepositKey {
+    (collection.clone(), token_id.to_string())
+}
+
+#[cw_serde]
+pub struct NftDeposit {
+    pub collection: Addr,
+    pub token_id: String,
+    pub pool_id: u64,
+}
+
+/// SellPoolQuoteIndices defines the indices for the PoolQuote type
+#[index_list(NftDeposit)]
+pub struct NftDepositIndices<'a> {
+    pub pool_deposits: MultiIndex<'a, u64, NftDeposit, NftDepositKey>,
+}
+
+pub fn nft_deposits<'a>() -> IndexedMap<'a, NftDepositKey, NftDeposit, NftDepositIndices<'a>> {
+    let indexes = NftDepositIndices {
+        pool_deposits: MultiIndex::new(|_pk: &[u8], nd: &NftDeposit| nd.pool_id, "nd", "nd__pd"),
+    };
+    IndexedMap::new("nd", indexes)
+}

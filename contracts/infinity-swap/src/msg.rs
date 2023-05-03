@@ -1,10 +1,8 @@
-use crate::{
-    state::{BondingCurve, Config, Pool, PoolQuote},
-    swap_processor::Swap,
-};
-use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Timestamp, Uint128};
-use std::fmt;
+use crate::state::{BondingCurve, Config, Pool, PoolQuote};
+use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_std::Uint128;
+use infinity_macros::{infinity_module_execute, infinity_module_query};
+use infinity_shared::interface::{NftOrder, SwapParams, SwapResponse};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -16,52 +14,7 @@ pub struct InstantiateMsg {
     pub developer: Option<String>,
 }
 
-/// SwapParams contains the parameters for a swap
-#[cw_serde]
-pub struct SwapParams {
-    /// The deadline after which the swap will be rejected
-    pub deadline: Timestamp,
-    /// Whether or not to revert the entire trade if one of the swaps fails
-    pub robust: bool,
-    /// The address to receive the assets from the swap, if not specified is set to sender
-    pub asset_recipient: Option<String>,
-    /// The address of the finder, will receive a portion of the fees equal to percentage set by the pool
-    pub finder: Option<String>,
-}
-
-/// Defines whether the end user is buying or selling NFTs
-#[cw_serde]
-pub enum TransactionType {
-    UserSubmitsNfts,
-    UserSubmitsTokens,
-}
-
-impl fmt::Display for TransactionType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-/// NftSwap contains the parameters for an NFT swap
-#[cw_serde]
-pub struct NftSwap {
-    /// The id of the NFT to swap
-    pub nft_token_id: String,
-    /// The amount of tokens to accept in exchange for the NFT
-    /// Note: this could be the minimum acceptable amount for a sale
-    /// or the maximum acceptable amount for a purchase
-    pub token_amount: Uint128,
-}
-
-/// PoolNftSwap is the parent of NftSwap and organizes swaps by pool_id
-#[cw_serde]
-pub struct PoolNftSwap {
-    /// The id of the pool to swap in
-    pub pool_id: u64,
-    /// The NFT swaps to execute
-    pub nft_swaps: Vec<NftSwap>,
-}
-
+#[infinity_module_execute]
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Create a new pool, defaults to an inactive state
@@ -148,32 +101,7 @@ pub enum ExecuteMsg {
     /// Swap NFTs for tokens directly with a specified pool
     DirectSwapNftsForTokens {
         pool_id: u64,
-        nfts_to_swap: Vec<NftSwap>,
-        swap_params: SwapParams,
-    },
-    /// Swap NFTs for tokens at optimal sale prices
-    SwapNftsForTokens {
-        collection: String,
-        nfts_to_swap: Vec<NftSwap>,
-        swap_params: SwapParams,
-    },
-    /// Swap tokens for NFTs directly with a specified pool
-    /// Note: client must specify which NFTs they want to swap for
-    DirectSwapTokensForSpecificNfts {
-        pool_id: u64,
-        nfts_to_swap_for: Vec<NftSwap>,
-        swap_params: SwapParams,
-    },
-    /// Swap tokens for specific NFTs at optimal purchase prices
-    SwapTokensForSpecificNfts {
-        collection: String,
-        pool_nfts_to_swap_for: Vec<PoolNftSwap>,
-        swap_params: SwapParams,
-    },
-    /// Swap tokens for any NFTs at optimal purchase prices
-    SwapTokensForAnyNfts {
-        collection: String,
-        max_expected_token_input: Vec<Uint128>,
+        nft_orders: Vec<NftOrder>,
         swap_params: SwapParams,
     },
 }
@@ -189,79 +117,49 @@ pub struct QueryOptions<T> {
     pub limit: Option<u32>,
 }
 
+#[infinity_module_query]
 #[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
     /// Get the global contract configuration object
-    /// Return type: `ConfigResponse`
+    #[returns(ConfigResponse)]
     Config {},
     /// Retrieve pools sorted by their pool id
-    /// Return type: `PoolsResponse`
+    #[returns(PoolsResponse)]
     Pools { query_options: QueryOptions<u64> },
     /// Retrieve pools by their pool id
-    /// Return type: `PoolsByIdResponse`
+    #[returns(PoolsByIdResponse)]
     PoolsById { pool_ids: Vec<u64> },
     /// Retrieve pools by their owner address
-    /// Return type: `PoolsResponse`
+    #[returns(PoolsResponse)]
     PoolsByOwner {
         owner: String,
         query_options: QueryOptions<u64>,
     },
     /// Retrieve the NFT token ids in a pool
-    /// Return type: `NftTokenIdsResponse`
+    #[returns(NftTokenIdsResponse)]
     PoolNftTokenIds {
         pool_id: u64,
         query_options: QueryOptions<String>,
     },
     /// Retrieve pool quotes sorted by their buy quote price
-    /// Return type: `PoolQuoteResponse`
+    #[returns(PoolQuoteResponse)]
     QuotesBuyFromPool {
         collection: String,
         query_options: QueryOptions<(Uint128, u64)>,
     },
     /// Retrieve pool quotes sorted by their sell quote price
-    /// Return type: `PoolQuoteResponse`
+    #[returns(PoolQuoteResponse)]
     QuotesSellToPool {
         collection: String,
         query_options: QueryOptions<(Uint128, u64)>,
     },
     /// Simulate a DirectSwapNftsForTokens transaction
-    /// Return type: `SwapResponse`
+    #[returns(SwapResponse)]
     SimDirectSwapNftsForTokens {
+        sender: String,
         pool_id: u64,
-        nfts_to_swap: Vec<NftSwap>,
-        sender: String,
-        swap_params: SwapParams,
-    },
-    /// Simulate a SwapNftsForTokens transaction
-    /// Return type: `SwapResponse`
-    SimSwapNftsForTokens {
-        collection: String,
-        nfts_to_swap: Vec<NftSwap>,
-        sender: String,
-        swap_params: SwapParams,
-    },
-    /// Simulate a DirectSwapTokensforSpecificNfts transaction
-    /// Return type: `SwapResponse`
-    SimDirectSwapTokensForSpecificNfts {
-        pool_id: u64,
-        nfts_to_swap_for: Vec<NftSwap>,
-        sender: String,
-        swap_params: SwapParams,
-    },
-    /// Simulate a SimSwapTokensForSpecificNfts transaction
-    /// Return type: `SwapResponse`
-    SimSwapTokensForSpecificNfts {
-        collection: String,
-        pool_nfts_to_swap_for: Vec<PoolNftSwap>,
-        sender: String,
-        swap_params: SwapParams,
-    },
-    /// Simulate a SwapTokensForAnyNfts transaction
-    /// Return type: `SwapResponse`
-    SimSwapTokensForAnyNfts {
-        collection: String,
-        max_expected_token_input: Vec<Uint128>,
-        sender: String,
+        nft_orders: Vec<NftOrder>,
         swap_params: SwapParams,
     },
 }
@@ -284,15 +182,11 @@ pub struct PoolsByIdResponse {
 #[cw_serde]
 pub struct NftTokenIdsResponse {
     pub pool_id: u64,
+    pub collection: String,
     pub nft_token_ids: Vec<String>,
 }
 
 #[cw_serde]
 pub struct PoolQuoteResponse {
     pub pool_quotes: Vec<PoolQuote>,
-}
-
-#[cw_serde]
-pub struct SwapResponse {
-    pub swaps: Vec<Swap>,
 }
