@@ -1,7 +1,6 @@
-use cosmwasm_std::{coins, Addr, Coin};
+use cosmwasm_std::{coins, Addr, Coin, StdResult};
 use cw_multi_test::SudoMsg as CwSudoMsg;
 use cw_multi_test::{BankSudo, SudoMsg};
-use sg_marketplace::ContractError;
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
 
@@ -10,7 +9,7 @@ pub const INITIAL_BALANCE: u128 = 5_000_000_000;
 pub const _MINT_PRICE: u128 = 100_000_000;
 
 // initializes accounts with balances
-pub fn setup_accounts(router: &mut StargazeApp) -> Result<(Addr, Addr, Addr), ContractError> {
+pub fn setup_accounts(router: &mut StargazeApp) -> StdResult<(Addr, Addr, Addr)> {
     let owner: Addr = Addr::unchecked("owner");
     let bidder: Addr = Addr::unchecked("bidder");
     let creator: Addr = Addr::unchecked("creator");
@@ -59,7 +58,7 @@ pub fn setup_addtl_account(
     router: &mut StargazeApp,
     input: &str,
     initial_balance: u128,
-) -> Result<Addr, ContractError> {
+) -> StdResult<Addr> {
     let addr: Addr = Addr::unchecked(input);
     let funds: Vec<Coin> = coins(initial_balance, NATIVE_DENOM);
     router

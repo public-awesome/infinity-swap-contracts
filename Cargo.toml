@@ -10,25 +10,32 @@ authors = ["Tasio tasiovictoria@ujulabs.com"]
 license = "BUSL-1.1"
 
 [workspace.dependencies]
-infinity-macros = { path = "./packages/infinity-macros" }
+infinity-router = { path = "./contracts/infinity-router" }
+infinity-index = { path = "./contracts/infinity-index" }
+infinity-pool = { path = "./contracts/infinity-pool" }
 infinity-shared = { path = "./packages/infinity-shared" }
-infinity-swap = { path = "./contracts/infinity-swap" }
-infinity-marketplace-adapter = { path = "./contracts/infinity-marketplace-adapter" }
-cosmwasm-schema  = "1.2.1"
-cosmwasm-std     = "1.2.1"
-cosmwasm-storage = "1.2.1"
+# infinity-macros = { path = "./packages/infinity-macros" }
+# infinity-swap = { path = "./contracts/infinity-swap" }
+# infinity-marketplace-adapter = { path = "./contracts/infinity-marketplace-adapter" }
+cosmwasm-std    = { version = "1.2", features = ["staking", "stargate", "ibc3", "cosmwasm_1_1", "cosmwasm_1_2"] }
+cosmwasm-schema  = "1.2"
+cosmwasm-storage = "1.2"
 cw-storage-plus = "0.16.0"
+cw-storage-macro      = "0.16.0"
 cw-utils = "0.16.0"
 cw2 = "0.16.0"
 cw721-base = { version = "0.16.0", features = ["library"] }
 cw721 = "0.16.0"
-sg1 = "2.1.0"
-sg2 = "2.1.0"
-sg721-base = { version = "2.1.0", features = ["library"] }
-sg721 = { version = "2.1.0", features = ["library"] }
-sg-std = "2.1.0"
-sg-marketplace = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes", features = ["library"] }
-sg-marketplace-common = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes" }
+sg1 = { version = "2.1" }
+sg2 = { version = "2.1" }
+sg721-base = { version = "2.1", features = ["library"] }
+sg721 = { version = "2.1", features = ["library"] }
+sg-std = { version = "2.1" }
+# sg-marketplace = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes", features = ["library"] }
+# sg-marketplace-common = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes" }
+sg-marketplace = { path = "../marketplace/contracts/marketplace", features = ["library"] }
+sg-marketplace-common = { path = "../marketplace/packages/sg-marketplace-common" }
+sha2            = "0.10"
 thiserror = { version = "1.0.31" }
 anyhow = "1.0.51"
 proc-macro2 = "1.0"
@@ -38,12 +45,13 @@ syn = { version = "1.0", features = ["derive"] }
 # dev-dependencies
 itertools       = "0.10.5"
 cw-multi-test   = "0.16.0"
-sg-multi-test   = "2.1.0"
-test-suite      = "2.1.0"
-base-minter     = "2.1.0"
-base-factory    = "2.1.0"
-vending-minter  = "2.1.0"
-vending-factory = "2.1.0"
+# sg-multi-test   = "2.3"
+sg-multi-test   = { version = "2.1" }
+test-suite      = { version = "2.1" }
+base-minter     = { version = "2.1" }
+base-factory    = { version = "2.1" }
+vending-minter  = { version = "2.1" }
+vending-factory = { version = "2.1" }
 mockall         = "0.11.4"
 cosm-orc        = { version = "3.0.1" }
 cosm-tome       = { version = "0.1.1" }
@@ -55,9 +63,9 @@ test-context    = "0.1.4"
 once_cell       = "1.13.0"
 rand            = "0.8"
 
-[profile.release.package.infinity-swap]
-codegen-units = 1
-incremental = false
+# [profile.release.package.infinity-swap]
+# codegen-units = 1
+# incremental = false
 
 [profile.release]
 rpath = false
