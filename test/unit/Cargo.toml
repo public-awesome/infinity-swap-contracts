@@ -6,9 +6,12 @@ repository = { workspace = true }
 license    = { workspace = true }
 
 [dependencies]
-infinity-swap = { workspace = true }
-infinity-marketplace-adapter = { workspace = true }
+infinity-pool = { workspace = true }
+infinity-index = { workspace = true }
+infinity-router = { workspace = true }
 infinity-shared = { workspace = true }
+# infinity-swap = { workspace = true }
+# infinity-marketplace-adapter = { workspace = true }
 cosmwasm-std = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cosmwasm-storage = { workspace = true }
