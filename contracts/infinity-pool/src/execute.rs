@@ -112,10 +112,10 @@ pub fn execute_swap_nfts_for_tokens(
     let tx_fees = calculate_nft_sale_fees(
         sale_price,
         marketplace_params.trading_fee_percent,
-        &seller_recipient,
-        finder.as_ref(),
-        Some(pool.finders_fee_percent()),
-        royalty_info.as_ref(),
+        seller_recipient,
+        finder,
+        None,
+        royalty_info,
     )?;
     println!("tx_fees: {:?}", tx_fees);
     response = payout_nft_sale_fees(response, tx_fees, None)?;

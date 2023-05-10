@@ -3,7 +3,7 @@
 # This script is used to download launchpad wasm files from github
 # and place them in the proper location for the integration tests.
 
-LAUNCHPAD_VERSION="v0.22.9"
+LAUNCHPAD_VERSION="v2.3.0"
 
 contracts=(
     "base_factory"
