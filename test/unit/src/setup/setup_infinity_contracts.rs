@@ -25,12 +25,10 @@ pub fn setup_infinity_index(
     router: &mut StargazeApp,
     creator: &Addr,
     marketplace: &Addr,
-    infinity_factory: &Addr,
 ) -> Result<Addr, anyhow::Error> {
     let infinity_index_code_id = router.store_code(contract_infinity_index());
     let msg = infinity_index::msg::InstantiateMsg {
         global_gov: marketplace.to_string(),
-        infinity_factory: infinity_factory.to_string(),
     };
     router.instantiate_contract(
         infinity_index_code_id,

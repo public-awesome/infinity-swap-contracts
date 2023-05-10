@@ -6,7 +6,6 @@ use cw_storage_plus::{IndexedMap, Item, Map, MultiIndex};
 #[cw_serde]
 pub struct Config {
     pub global_gov: Addr,
-    pub infinity_factory: Addr,
 }
 
 pub const CONFIG: Item<Config> = Item::new("cfg");

@@ -17,7 +17,7 @@ infinity-shared = { path = "./packages/infinity-shared" }
 # infinity-macros = { path = "./packages/infinity-macros" }
 # infinity-swap = { path = "./contracts/infinity-swap" }
 # infinity-marketplace-adapter = { path = "./contracts/infinity-marketplace-adapter" }
-cosmwasm-std    = { version = "1.2", features = ["staking", "stargate", "ibc3", "cosmwasm_1_1", "cosmwasm_1_2"] }
+cosmwasm-std    = { version = "1.2", features = ["staking", "stargate", "ibc3", "cosmwasm_1_1"] }
 cosmwasm-schema  = "1.2"
 cosmwasm-storage = "1.2"
 cw-storage-plus = "0.16.0"
@@ -26,15 +26,15 @@ cw-utils = "0.16.0"
 cw2 = "0.16.0"
 cw721-base = { version = "0.16.0", features = ["library"] }
 cw721 = "0.16.0"
-sg1 = { version = "2.1" }
-sg2 = { version = "2.1" }
-sg721-base = { version = "2.1", features = ["library"] }
-sg721 = { version = "2.1", features = ["library"] }
-sg-std = { version = "2.1" }
-# sg-marketplace = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes", features = ["library"] }
-# sg-marketplace-common = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes" }
-sg-marketplace = { path = "../marketplace/contracts/marketplace", features = ["library"] }
-sg-marketplace-common = { path = "../marketplace/packages/sg-marketplace-common" }
+sg1 = { version = "2.3.0" }
+sg2 = { version = "2.3.0" }
+sg721-base = { version = "2.3.0", features = ["library"] }
+sg721 = { version = "2.3.0", features = ["library"] }
+sg-std = { version = "2.3.0" }
+sg-marketplace = { git = "https://github.com/public-awesome/marketplace", branch = "update-sg-marketplace-common", features = ["library"] }
+sg-marketplace-common = { git = "https://github.com/public-awesome/marketplace", branch = "update-sg-marketplace-common" }
+# sg-marketplace = { path = "../marketplace/contracts/marketplace", features = ["library"] }
+# sg-marketplace-common = { path = "../marketplace/packages/sg-marketplace-common" }
 sha2            = "0.10"
 thiserror = { version = "1.0.31" }
 anyhow = "1.0.51"
@@ -46,12 +46,12 @@ syn = { version = "1.0", features = ["derive"] }
 itertools       = "0.10.5"
 cw-multi-test   = "0.16.0"
 # sg-multi-test   = "2.3"
-sg-multi-test   = { version = "2.1" }
-test-suite      = { version = "2.1" }
-base-minter     = { version = "2.1" }
-base-factory    = { version = "2.1" }
-vending-minter  = { version = "2.1" }
-vending-factory = { version = "2.1" }
+sg-multi-test   = { version = "2.3.0" }
+test-suite      = { version = "2.3.0" }
+base-minter     = { version = "2.3.0" }
+base-factory    = { version = "2.3.0" }
+vending-minter  = { version = "2.3.0" }
+vending-factory = { version = "2.3.0" }
 mockall         = "0.11.4"
 cosm-orc        = { version = "3.0.1" }
 cosm-tome       = { version = "0.1.1" }

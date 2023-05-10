@@ -39,8 +39,7 @@ pub fn setup_swap_test(num_tokens: u32) -> Result<SwapTestSetup, Error> {
 
     let infinity_factory = Addr::unchecked("infinity_factory");
 
-    let infinity_index =
-        setup_infinity_index(&mut vt.router, &vt.accts.creator, &marketplace, &infinity_factory)?;
+    let infinity_index = setup_infinity_index(&mut vt.router, &vt.accts.creator, &marketplace)?;
     let infinity_router =
         setup_infinity_router(&mut vt.router, &vt.accts.creator, &marketplace, &infinity_index)?;
 

@@ -7,8 +7,6 @@ use cosmwasm_std::Uint128;
 pub struct InstantiateMsg {
     /// The address of the global gov contract
     pub global_gov: String,
-    /// The address of the infinity factory contract
-    pub infinity_factory: String,
 }
 
 #[cw_serde]
