@@ -13,20 +13,12 @@ impl Pool for TokenPool {
         TokenPool(pool_config, total_tokens)
     }
 
-    fn config(&self) -> &PoolConfig {
-        &self.0
+    fn inner(&self) -> (&PoolConfig, &Uint128) {
+        (&self.0, &self.1)
     }
 
-    fn config_mut(&mut self) -> &mut PoolConfig {
-        &mut self.0
-    }
-
-    fn total_tokens(&self) -> &Uint128 {
-        &self.1
-    }
-
-    fn set_total_tokens(&mut self, total_tokens: Uint128) {
-        self.1 = total_tokens;
+    fn inner_mut(&mut self) -> (&mut PoolConfig, &mut Uint128) {
+        (&mut self.0, &mut self.1)
     }
 }
 
@@ -39,20 +31,12 @@ impl Pool for NftPool {
         NftPool(pool_config, total_tokens)
     }
 
-    fn config(&self) -> &PoolConfig {
-        &self.0
+    fn inner(&self) -> (&PoolConfig, &Uint128) {
+        (&self.0, &self.1)
     }
 
-    fn config_mut(&mut self) -> &mut PoolConfig {
-        &mut self.0
-    }
-
-    fn total_tokens(&self) -> &Uint128 {
-        &self.1
-    }
-
-    fn set_total_tokens(&mut self, total_tokens: Uint128) {
-        self.1 = total_tokens;
+    fn inner_mut(&mut self) -> (&mut PoolConfig, &mut Uint128) {
+        (&mut self.0, &mut self.1)
     }
 }
 
@@ -65,20 +49,12 @@ impl Pool for TradePool {
         TradePool(pool_config, total_tokens)
     }
 
-    fn config(&self) -> &PoolConfig {
-        &self.0
+    fn inner(&self) -> (&PoolConfig, &Uint128) {
+        (&self.0, &self.1)
     }
 
-    fn config_mut(&mut self) -> &mut PoolConfig {
-        &mut self.0
-    }
-
-    fn total_tokens(&self) -> &Uint128 {
-        &self.1
-    }
-
-    fn set_total_tokens(&mut self, total_tokens: Uint128) {
-        self.1 = total_tokens;
+    fn inner_mut(&mut self) -> (&mut PoolConfig, &mut Uint128) {
+        (&mut self.0, &mut self.1)
     }
 }
 
@@ -88,35 +64,37 @@ impl EscrowToken for TradePool {}
 
 pub trait EscrowToken: Pool {}
 
-pub trait EscrowNft: Pool {
-    fn set_total_nfts(&mut self, num_deposited: u64) {
-        self.config_mut().total_nfts += num_deposited;
-    }
-}
+pub trait EscrowNft: Pool {}
 
 pub trait Pool {
+    /// ---------------------------------------
+    /// Implement
+    /// ---------------------------------------
+
     fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self
     where
         Self: Sized;
 
-    fn config(&self) -> &PoolConfig;
+    fn inner(&self) -> (&PoolConfig, &Uint128);
 
-    fn config_mut(&mut self) -> &mut PoolConfig;
+    fn inner_mut(&mut self) -> (&mut PoolConfig, &mut Uint128);
 
-    fn total_tokens(&self) -> &Uint128;
+    /// ---------------------------------------
+    /// Getters
+    /// ---------------------------------------
 
-    fn set_total_tokens(&mut self, amount: Uint128);
-
-    fn save(&mut self, storage: &mut dyn Storage) -> Result<(), ContractError> {
-        self.force_property_values();
-        self.validate()?;
-        POOL_CONFIG.save(storage, &self.config())?;
-        Ok(())
+    fn config(&self) -> &PoolConfig {
+        self.inner().0
     }
 
-    /// ----------------------------
-    /// Getters
-    /// ----------------------------
+    fn config_mut(&mut self) -> &mut PoolConfig {
+        self.inner_mut().0
+    }
+
+    fn total_tokens(&self) -> &Uint128 {
+        self.inner().1
+    }
+
     fn owner(&self) -> &Addr {
         &self.config().owner
     }
@@ -130,7 +108,7 @@ pub trait Pool {
     }
 
     /// Get the recipient of assets for trades performed on this pool
-    fn recipient(&self) -> &Addr {
+    fn pool_recipient(&self) -> &Addr {
         let config = self.config();
         match &config.asset_recipient {
             Some(addr) => addr,
@@ -153,7 +131,6 @@ pub trait Pool {
     fn reinvest_nfts(&self) -> bool {
         self.config().reinvest_nfts
     }
-    /// ----------------------------
 
     /// Returns whether or not the pool can hold NFTs
     fn can_hold_nfts(&self) -> bool {
@@ -165,6 +142,17 @@ pub trait Pool {
     fn can_hold_tokens(&self) -> bool {
         let config = &self.config();
         config.pool_type == PoolType::Trade || config.pool_type == PoolType::Token
+    }
+
+    /// ---------------------------------------
+    /// Setters
+    /// ---------------------------------------
+
+    fn save(&mut self, storage: &mut dyn Storage) -> Result<(), ContractError> {
+        self.force_property_values();
+        self.validate()?;
+        POOL_CONFIG.save(storage, &self.config())?;
+        Ok(())
     }
 
     // Forces spot_price and delta to be correct for the constant product bonding curve
@@ -181,6 +169,16 @@ pub trait Pool {
             }
         };
     }
+
+    fn set_total_tokens(&mut self, amount: Uint128) {
+        *self.inner_mut().1 = amount;
+    }
+
+    fn set_total_nfts(&mut self, total_nfts: u64) {
+        self.inner_mut().0.total_nfts = total_nfts;
+    }
+
+    /// ---------------------------------------
 
     /// Verify that the pool is valid by checking invariants before save
     fn validate(&self) -> Result<(), ContractError> {

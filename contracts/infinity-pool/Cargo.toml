@@ -40,5 +40,5 @@ thiserror = { workspace = true }
 sg-std = { workspace = true }
 # sg-marketplace = { workspace = true }
 sg-marketplace-common = { workspace = true }
-# cw721-base = { workspace = true }
-# cw721 = { workspace = true }
+cw721-base = { workspace = true }
+cw721 = { workspace = true }
