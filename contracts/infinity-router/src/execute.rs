@@ -87,16 +87,16 @@ pub fn execute_swap_nfts_for_tokens(
         &env.contract.address,
     ));
 
-    response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-        contract_addr: sell_quote.pool.to_string(),
-        msg: to_binary(&InfinityPoolExecuteMsg::SwapNftsForTokens {
-            token_id: nft_order.token_id,
-            min_output: nft_order.amount,
-            asset_recipient: sender.to_string(),
-            finder: None,
-        })?,
-        funds: vec![],
-    }));
+    // response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
+    //     contract_addr: sell_quote.pool.to_string(),
+    //     msg: to_binary(&InfinityPoolExecuteMsg::SwapNftsForTokens {
+    //         token_id: nft_order.token_id,
+    //         min_output: nft_order.amount,
+    //         asset_recipient: sender.to_string(),
+    //         finder: None,
+    //     })?,
+    //     funds: vec![],
+    // }));
 
     if nft_orders.len() > 0 {
         response = response.add_submessage(SubMsg::new(WasmMsg::Execute {

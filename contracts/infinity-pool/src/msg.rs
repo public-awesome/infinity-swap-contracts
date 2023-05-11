@@ -50,17 +50,15 @@ pub enum ExecuteMsg {
         collection: String,
         token_ids: Vec<String>,
     },
-    // /// Withdraw tokens from a pool
-    // WithdrawTokens {
-    //     pool_id: u64,
-    //     amount: Uint128,
-    //     asset_recipient: Option<String>,
-    // },
-    // /// Withdraw all tokens from a pool
-    // WithdrawAllTokens {
-    //     pool_id: u64,
-    //     asset_recipient: Option<String>,
-    // },
+    /// Withdraw tokens from a pool
+    WithdrawTokens {
+        amount: Uint128,
+        asset_recipient: Option<String>,
+    },
+    /// Withdraw all tokens from a pool
+    WithdrawAllTokens {
+        asset_recipient: Option<String>,
+    },
     // /// Withdraw NFTs from a pool
     // WithdrawNfts {
     //     pool_id: u64,

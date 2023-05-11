@@ -1,5 +1,5 @@
 use anyhow::Error;
-use cosmwasm_std::{Addr, Coin};
+use cosmwasm_std::{Addr, Coin, Uint128};
 use cw_multi_test::AppResponse;
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
@@ -21,4 +21,8 @@ pub fn get_native_balances(router: &StargazeApp, addresses: &Vec<Addr>) -> HashM
         balances.insert(address.clone(), native_balance);
     }
     balances
+}
+
+pub fn get_native_balance(router: &StargazeApp, address: Addr) -> Uint128 {
+    get_native_balances(router, &vec![address.clone()]).get(&address).unwrap().amount
 }
