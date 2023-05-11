@@ -1,6 +1,6 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use cw_storage_plus::Item;
+use cw_storage_plus::{Item, Map};
 use std::fmt;
 
 /// PoolType refers to the assets held by the pool
@@ -75,7 +75,10 @@ pub struct PoolConfig {
 pub const POOL_CONFIG: Item<PoolConfig> = Item::new("pc");
 
 // The address of the global gov contract
-pub const GLOBAL_GOV: Item<Addr> = Item::new("gg");
+pub const MARKETPLACE: Item<Addr> = Item::new("mp");
 
 // The address of the infinity index contract
 pub const INFINITY_INDEX: Item<Addr> = Item::new("ii");
+
+// A map of all NFT token ids held by the pool
+pub const NFT_DEPOSITS: Map<String, bool> = Map::new("nd");

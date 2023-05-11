@@ -76,15 +76,15 @@ pub fn create_active_pool(
     })
     .unwrap();
 
-    pool_execute_message(
-        chain,
-        InfinityIndexExecuteMsg::SetIsActive {
-            is_active: true,
-        },
-        "infinity-pool-set-is-active",
-        vec![],
-        &user.key,
-    );
+    // pool_execute_message(
+    //     chain,
+    //     InfinityIndexExecuteMsg::SetIsActive {
+    //         is_active: true,
+    //     },
+    //     "infinity-pool-set-is-active",
+    //     vec![],
+    //     &user.key,
+    // );
 
     pool_addr
 }

@@ -1,4 +1,3 @@
-use cosmwasm_schema::schemars::_serde_json::error;
 use cosmwasm_std::StdError;
 use cw_utils::PaymentError;
 use infinity_shared::InfinityError;
@@ -18,9 +17,9 @@ pub enum ContractError {
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
 
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
     #[error("Invalid pool: {0}")]
     InvalidPool(String),
-
-    #[error("Invalid pool quote: {0}")]
-    InvalidPoolQuote(String),
 }

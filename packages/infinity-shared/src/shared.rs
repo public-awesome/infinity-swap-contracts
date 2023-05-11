@@ -36,7 +36,7 @@ pub fn only_nft_owner(
         .owner_of(&querier, token_id, false)?;
 
     let owner = api.addr_validate(&response.owner)?;
-    ensure!(&owner == sender, InfinityError::NotNftOwner(owner.to_string()));
+    ensure!(&owner == sender, InfinityError::NotNftOwner(sender.to_string()));
 
     Ok(owner)
 }
