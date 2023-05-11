@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
-use crate::pool::Pool;
-use crate::state::{PoolConfig, GLOBAL_GOV, INFINITY_INDEX, POOL_CONFIG};
+use crate::pool::{NftPool, Pool, TokenPool, TradePool};
+use crate::state::{PoolConfig, PoolType, INFINITY_INDEX, MARKETPLACE};
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
 use cw_utils::maybe_addr;
@@ -22,8 +22,8 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let global_gov = deps.api.addr_validate(&msg.global_gov)?;
-    GLOBAL_GOV.save(deps.storage, &global_gov)?;
+    let marketplace = deps.api.addr_validate(&msg.marketplace)?;
+    MARKETPLACE.save(deps.storage, &marketplace)?;
 
     let infinity_index = deps.api.addr_validate(&msg.infinity_index)?;
     INFINITY_INDEX.save(deps.storage, &infinity_index)?;
@@ -32,7 +32,7 @@ pub fn instantiate(
         collection: deps.api.addr_validate(&msg.pool_info.collection)?,
         owner: deps.api.addr_validate(&msg.pool_info.owner)?,
         asset_recipient: maybe_addr(deps.api, msg.pool_info.asset_recipient)?,
-        pool_type: msg.pool_info.pool_type,
+        pool_type: msg.pool_info.pool_type.clone(),
         bonding_curve: msg.pool_info.bonding_curve,
         spot_price: msg.pool_info.spot_price,
         delta: msg.pool_info.delta,
@@ -43,19 +43,33 @@ pub fn instantiate(
         reinvest_tokens: msg.pool_info.reinvest_tokens,
         reinvest_nfts: msg.pool_info.reinvest_nfts,
     };
-    POOL_CONFIG.save(deps.storage, &pool_config)?;
 
-    let pool = Pool::new(pool_config);
-    pool.validate()?;
+    let mut response = Response::new();
 
-    let mut response = Response::new()
+    match &msg.pool_info.pool_type {
+        PoolType::Token => {
+            let token_pool = TokenPool::new(pool_config);
+            token_pool.save(deps.storage)?;
+            response = response.add_event(token_pool.create_event_all_props("create-pool")?);
+        },
+        PoolType::Nft => {
+            let nft_pool = NftPool::new(pool_config);
+            nft_pool.save(deps.storage)?;
+            response = response.add_event(nft_pool.create_event_all_props("create-pool")?);
+        },
+        PoolType::Trade => {
+            let trade_pool = TradePool::new(pool_config);
+            trade_pool.save(deps.storage)?;
+            response = response.add_event(trade_pool.create_event_all_props("create-pool")?);
+        },
+    };
+
+    response = response
         .add_attribute("action", "instantiate")
         .add_attribute("contract_name", CONTRACT_NAME)
         .add_attribute("contract_version", CONTRACT_VERSION)
-        .add_attribute("global_gov", msg.global_gov.to_string())
+        .add_attribute("marketplace", msg.marketplace.to_string())
         .add_attribute("infinity_controller", msg.infinity_index.to_string());
-
-    response = response.add_event(pool.create_event_all_props("create-pool")?);
 
     Ok(response)
 }

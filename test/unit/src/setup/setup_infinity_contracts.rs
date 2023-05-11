@@ -1,7 +1,14 @@
+use crate::setup::setup_marketplace::setup_marketplace;
+use anyhow::Error;
 use cosmwasm_std::Addr;
 use cw_multi_test::{Contract, ContractWrapper, Executor};
 use sg_multi_test::StargazeApp;
-use sg_std::StargazeMsgWrapper;
+use sg_std::{StargazeMsgWrapper, GENESIS_MINT_START_TIME};
+use test_suite::common_setup::{
+    msg::MinterTemplateResponse, setup_accounts_and_block::setup_block_time,
+};
+
+use super::{msg::MarketAccounts, templates::standard_minter_template};
 
 pub fn contract_infinity_pool() -> Box<dyn Contract<StargazeMsgWrapper>> {
     let contract = ContractWrapper::new(
@@ -67,4 +74,35 @@ pub fn setup_infinity_router(
         "InfinityRouter",
         None,
     )
+}
+
+pub struct InfinityTestSetup {
+    pub vending_template: MinterTemplateResponse<MarketAccounts>,
+    pub marketplace: Addr,
+    pub infinity_index: Addr,
+    pub infinity_router: Addr,
+    pub infinity_pool_code_id: u64,
+}
+
+pub fn setup_infinity_test(num_tokens: u32) -> Result<InfinityTestSetup, Error> {
+    let mut vt = standard_minter_template(num_tokens);
+
+    let marketplace = setup_marketplace(&mut vt.router, vt.accts.creator.clone()).unwrap();
+    setup_block_time(&mut vt.router, GENESIS_MINT_START_TIME, None);
+
+    let infinity_pool_code_id = vt.router.store_code(contract_infinity_pool());
+
+    let infinity_factory = Addr::unchecked("infinity_factory");
+
+    let infinity_index = setup_infinity_index(&mut vt.router, &vt.accts.creator, &marketplace)?;
+    let infinity_router =
+        setup_infinity_router(&mut vt.router, &vt.accts.creator, &marketplace, &infinity_index)?;
+
+    Ok(InfinityTestSetup {
+        vending_template: vt,
+        marketplace,
+        infinity_pool_code_id,
+        infinity_index,
+        infinity_router,
+    })
 }

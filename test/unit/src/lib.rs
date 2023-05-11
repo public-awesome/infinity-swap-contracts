@@ -16,4 +16,7 @@ mod setup;
 // mod infinity_swap_tests;
 
 #[cfg(test)]
-mod tracer_tests;
+mod infinity_pool_tests;
+
+// #[cfg(test)]
+// mod tracer_tests;

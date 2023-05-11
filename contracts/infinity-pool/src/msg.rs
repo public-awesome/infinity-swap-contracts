@@ -1,4 +1,4 @@
-use crate::state::{BondingCurve, PoolType};
+use crate::state::{BondingCurve, PoolConfig, PoolType};
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
@@ -35,8 +35,8 @@ pub struct PoolInfo {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    // The address of the global gov contract
-    pub global_gov: String,
+    // The address of the marketplace contract
+    pub marketplace: String,
     // The address of the infinity index contract
     pub infinity_index: String,
     /// The configuration object for the pool
@@ -45,18 +45,83 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    SetIsActive {
-        is_active: bool,
+    /// Deposit NFTs into the pool
+    DepositNfts {
+        collection: String,
+        token_ids: Vec<String>,
     },
-    /// Swap NFTs for tokens
-    SwapNftsForTokens {
-        token_id: String,
-        min_output: Uint128,
-        asset_recipient: String,
-        finder: Option<String>,
-    },
+    // /// Withdraw tokens from a pool
+    // WithdrawTokens {
+    //     pool_id: u64,
+    //     amount: Uint128,
+    //     asset_recipient: Option<String>,
+    // },
+    // /// Withdraw all tokens from a pool
+    // WithdrawAllTokens {
+    //     pool_id: u64,
+    //     asset_recipient: Option<String>,
+    // },
+    // /// Withdraw NFTs from a pool
+    // WithdrawNfts {
+    //     pool_id: u64,
+    //     nft_token_ids: Vec<String>,
+    //     asset_recipient: Option<String>,
+    // },
+    // /// Update the parameters of a pool
+    // UpdatePoolConfig {
+    //     asset_recipient: Option<String>,
+    //     delta: Option<Uint128>,
+    //     spot_price: Option<Uint128>,
+    //     finders_fee_bps: Option<u64>,
+    //     swap_fee_bps: Option<u64>,
+    //     reinvest_tokens: Option<bool>,
+    //     reinvest_nfts: Option<bool>,
+    // },
+    // // Activate a pool so that it may begin accepting trades
+    // SetIsActive {
+    //     is_active: bool,
+    // },
+    // /// Remove a pool from contract storage and indexing
+    // RemovePool {
+    //     pool_id: u64,
+    //     asset_recipient: Option<String>,
+    // },
+    // SwapNftsForTokens {
+    //     token_id: String,
+    //     min_output: Uint128,
+    //     asset_recipient: String,
+    //     finder: Option<String>,
+    // },
 }
 
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    #[returns(PoolConfigResponse)]
+    PoolConfig {},
+    #[returns(NftDepositsResponse)]
+    NftDeposits {
+        query_options: Option<QueryOptions<String>>,
+    },
+}
+
+/// QueryOptions are used to paginate contract queries
+#[cw_serde]
+pub struct QueryOptions<T> {
+    /// Whether to sort items in ascending or descending order
+    pub descending: Option<bool>,
+    /// The key to start the query after
+    pub start_after: Option<T>,
+    // The number of items that will be returned
+    pub limit: Option<u32>,
+}
+
+#[cw_serde]
+pub struct PoolConfigResponse {
+    pub config: PoolConfig,
+}
+
+#[cw_serde]
+pub struct NftDepositsResponse {
+    pub nft_deposits: Vec<String>,
+}

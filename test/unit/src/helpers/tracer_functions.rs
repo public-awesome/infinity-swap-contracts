@@ -21,81 +21,50 @@ use std::collections::{HashMap, HashSet};
 use test_suite::common_setup::msg::MinterTemplateResponse;
 use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 
-pub struct SwapTestSetup {
-    pub vending_template: MinterTemplateResponse<MarketAccounts>,
-    pub marketplace: Addr,
-    pub infinity_index: Addr,
-    pub infinity_router: Addr,
-    pub infinity_pool_code_id: u64,
-}
+// pub fn create_pool(
+//     router: &mut StargazeApp,
+//     infinity_pool_code_id: u64,
+//     owner: &Addr,
+//     marketplace: String,
+//     infinity_index: String,
+//     pool_info: PoolInfo,
+//     deposit_tokens: Uint128,
+// ) -> Result<Addr, Error> {
+//     let infinity_pool = router.instantiate_contract(
+//         infinity_pool_code_id,
+//         owner.clone(),
+//         &infinity_pool::msg::InstantiateMsg {
+//             global_gov: marketplace,
+//             infinity_index,
+//             pool_info,
+//         },
+//         &[],
+//         "InfinityPool",
+//         None,
+//     )?;
 
-pub fn setup_swap_test(num_tokens: u32) -> Result<SwapTestSetup, Error> {
-    let mut vt = standard_minter_template(num_tokens);
+//     router.execute(
+//         owner.clone(),
+//         cosmwasm_std::CosmosMsg::Bank(BankMsg::Send {
+//             to_address: infinity_pool.to_string(),
+//             amount: vec![Coin {
+//                 denom: NATIVE_DENOM.to_string(),
+//                 amount: deposit_tokens,
+//             }],
+//         }),
+//     )?;
 
-    let marketplace = setup_marketplace(&mut vt.router, vt.accts.creator.clone()).unwrap();
-    setup_block_time(&mut vt.router, GENESIS_MINT_START_TIME, None);
+//     router.execute_contract(
+//         owner.clone(),
+//         infinity_pool.clone(),
+//         &infinity_pool::msg::ExecuteMsg::SetIsActive {
+//             is_active: true,
+//         },
+//         &[],
+//     )?;
 
-    let infinity_pool_code_id = vt.router.store_code(contract_infinity_pool());
-
-    let infinity_factory = Addr::unchecked("infinity_factory");
-
-    let infinity_index = setup_infinity_index(&mut vt.router, &vt.accts.creator, &marketplace)?;
-    let infinity_router =
-        setup_infinity_router(&mut vt.router, &vt.accts.creator, &marketplace, &infinity_index)?;
-
-    Ok(SwapTestSetup {
-        marketplace,
-        vending_template: vt,
-        infinity_pool_code_id,
-        infinity_index,
-        infinity_router,
-    })
-}
-
-pub fn create_pool(
-    router: &mut StargazeApp,
-    infinity_pool_code_id: u64,
-    owner: &Addr,
-    marketplace: String,
-    infinity_index: String,
-    pool_info: PoolInfo,
-    deposit_tokens: Uint128,
-) -> Result<Addr, Error> {
-    let infinity_pool = router.instantiate_contract(
-        infinity_pool_code_id,
-        owner.clone(),
-        &infinity_pool::msg::InstantiateMsg {
-            global_gov: marketplace,
-            infinity_index,
-            pool_info,
-        },
-        &[],
-        "InfinityPool",
-        None,
-    )?;
-
-    router.execute(
-        owner.clone(),
-        cosmwasm_std::CosmosMsg::Bank(BankMsg::Send {
-            to_address: infinity_pool.to_string(),
-            amount: vec![Coin {
-                denom: NATIVE_DENOM.to_string(),
-                amount: deposit_tokens,
-            }],
-        }),
-    )?;
-
-    router.execute_contract(
-        owner.clone(),
-        infinity_pool.clone(),
-        &infinity_pool::msg::ExecuteMsg::SetIsActive {
-            is_active: true,
-        },
-        &[],
-    )?;
-
-    Ok(infinity_pool)
-}
+//     Ok(infinity_pool)
+// }
 
 // fn validate_address_paid(
 //     pre_swap_balances: &HashMap<Addr, Coin>,

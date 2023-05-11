@@ -52,7 +52,7 @@ fn large_single_pool_nft_for_token_swap(chain: &mut Chain) {
         &creator,
         10_000_000u128,
         InfinityPoolInstantiateMsg {
-            global_gov: marketplace,
+            marketplace,
             infinity_index: infinity_index.clone(),
             pool_info: PoolInfo {
                 collection: collection.clone(),
