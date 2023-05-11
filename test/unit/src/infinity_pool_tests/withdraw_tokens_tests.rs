@@ -1,5 +1,5 @@
 use crate::helpers::pool_functions::create_pool;
-use crate::helpers::utils::{assert_error, get_native_balance};
+use crate::helpers::utils::{assert_error, assert_event, get_native_balance};
 use crate::setup::setup_infinity_contracts::{setup_infinity_test, InfinityTestSetup};
 
 use cosmwasm_std::{Addr, Uint128};
@@ -92,6 +92,7 @@ fn try_withdraw_tokens_token_pool() {
         &[],
     );
     assert!(response.is_ok());
+    assert_event(response, "wasm-withdraw-tokens");
     let balance_after = get_native_balance(&router, accts.owner.clone());
 
     // Check that the owner's account was credited
@@ -112,6 +113,7 @@ fn try_withdraw_tokens_token_pool() {
         &[],
     );
     assert!(response.is_ok());
+    assert_event(response, "wasm-withdraw-tokens");
 
     // Check that asset_recipient address received the tokens
     let balance_after = get_native_balance(&router, recipient_address.clone());
@@ -205,6 +207,7 @@ fn try_withdraw_tokens_nft_pool() {
         &[],
     );
     assert!(response.is_ok());
+    assert_event(response, "wasm-withdraw-tokens");
     let balance_after = get_native_balance(&router, accts.owner.clone());
 
     // Check that the owner's account was credited
@@ -225,6 +228,7 @@ fn try_withdraw_tokens_nft_pool() {
         &[],
     );
     assert!(response.is_ok());
+    assert_event(response, "wasm-withdraw-tokens");
 
     // Check that asset_recipient address received the tokens
     let balance_after = get_native_balance(&router, recipient_address.clone());
@@ -318,6 +322,7 @@ fn try_withdraw_tokens_trade_pool() {
         &[],
     );
     assert!(response.is_ok());
+    assert_event(response, "wasm-withdraw-tokens");
     let balance_after = get_native_balance(&router, accts.owner.clone());
 
     // Check that the owner's account was credited
@@ -338,6 +343,7 @@ fn try_withdraw_tokens_trade_pool() {
         &[],
     );
     assert!(response.is_ok());
+    assert_event(response, "wasm-withdraw-tokens");
 
     // Check that asset_recipient address received the tokens
     let balance_after = get_native_balance(&router, recipient_address.clone());

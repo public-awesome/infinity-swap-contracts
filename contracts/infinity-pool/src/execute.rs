@@ -1,9 +1,13 @@
+use std::marker::PhantomData;
+
+use crate::error::ContractError;
 use crate::helpers::{load_escrow_nft_pool, load_pool};
 use crate::msg::ExecuteMsg;
+use crate::query::MAX_QUERY_LIMIT;
 use crate::state::NFT_DEPOSITS;
-use crate::{error::ContractError, helpers::load_escrow_token_pool};
 
-use cosmwasm_std::{attr, coin, ensure, Addr, DepsMut, Env, Event, MessageInfo, Uint128};
+use cosmwasm_std::{coin, ensure, Addr, DepsMut, Empty, Env, MessageInfo, Uint128};
+use cw721_base::helpers::Cw721Contract;
 use cw_utils::{maybe_addr, nonpayable};
 use infinity_shared::shared::only_nft_owner;
 use sg_marketplace_common::{bank_send, transfer_nft};
@@ -26,6 +30,13 @@ pub fn execute(
             collection,
             token_ids,
         } => execute_deposit_nfts(deps, info, env, api.addr_validate(&collection)?, token_ids),
+        ExecuteMsg::WithdrawNfts {
+            token_ids,
+            asset_recipient,
+        } => execute_withdraw_nfts(deps, info, env, token_ids, maybe_addr(api, asset_recipient)?),
+        ExecuteMsg::WithdrawAllNfts {
+            asset_recipient,
+        } => execute_withdraw_all_nfts(deps, info, env, maybe_addr(api, asset_recipient)?),
         ExecuteMsg::WithdrawTokens {
             amount,
             asset_recipient,
@@ -104,6 +115,73 @@ pub fn execute_deposit_nfts(
         response.add_event(escrow_nft_pool.create_event("deposit-nfts", vec!["total_nfts"])?);
 
     Ok(response)
+}
+
+/// Execute a Withdraw Nfts message
+pub fn execute_withdraw_nfts(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    token_ids: Vec<String>,
+    asset_recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
+    let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
+
+    ensure!(
+        pool.owner() == &info.sender,
+        ContractError::Unauthorized("sender is not the owner of the pool".to_string())
+    );
+    ensure!(
+        !token_ids.is_empty(),
+        ContractError::InvalidInput("token_ids should not be empty".to_string())
+    );
+
+    let mut response = Response::new();
+    let recipient = asset_recipient.unwrap_or(info.sender.clone());
+
+    let mut total_nfts = pool.total_nfts();
+    for token_id in &token_ids {
+        only_nft_owner(
+            &deps.querier,
+            deps.api,
+            &env.contract.address,
+            pool.collection(),
+            &token_id,
+        )?;
+
+        response = response.add_submessage(transfer_nft(pool.collection(), &token_id, &recipient));
+
+        if NFT_DEPOSITS.has(deps.storage, token_id.to_string()) {
+            total_nfts -= 1;
+            NFT_DEPOSITS.remove(deps.storage, token_id.to_string());
+        }
+    }
+
+    pool.set_total_nfts(total_nfts);
+    pool.save(deps.storage)?;
+
+    response = response.add_event(pool.create_event("withdraw-nfts", vec!["total_nfts"])?);
+
+    Ok(response)
+}
+
+/// Execute a WithdrawAllNfts message
+pub fn execute_withdraw_all_nfts(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    asset_recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    let collection =
+        load_pool(&env.contract.address, deps.storage, &deps.querier)?.collection().clone();
+
+    let token_ids = Cw721Contract::<Empty, Empty>(collection, PhantomData, PhantomData)
+        .tokens(&deps.querier, &env.contract.address, None, Some(MAX_QUERY_LIMIT))?
+        .tokens;
+
+    execute_withdraw_nfts(deps, info, env, token_ids, asset_recipient)
 }
 
 /// Execute a WithdrawTokens message

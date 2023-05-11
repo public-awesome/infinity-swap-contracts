@@ -7,8 +7,8 @@ use cosmwasm_std::{to_binary, Binary, Deps, Env, Order, StdResult};
 use cw_storage_plus::{Bound, PrimaryKey};
 
 // Query limits
-const DEFAULT_QUERY_LIMIT: u32 = 10;
-const MAX_QUERY_LIMIT: u32 = 100;
+pub const DEFAULT_QUERY_LIMIT: u32 = 10;
+pub const MAX_QUERY_LIMIT: u32 = 100;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
