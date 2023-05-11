@@ -1,9 +1,9 @@
 use infinity_pool::msg::{InstantiateMsg as InfinityPoolInstantiateMsg, PoolInfo};
 
-use anyhow::Error;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, BankMsg, Coin, Uint128};
 use cw_multi_test::Executor;
 use sg_multi_test::StargazeApp;
+use sg_std::NATIVE_DENOM;
 
 pub fn create_pool(
     router: &mut StargazeApp,
@@ -29,16 +29,17 @@ pub fn create_pool(
     assert!(response.is_ok());
     let infinity_pool = response.unwrap();
 
-    // router.execute(
-    //     owner.clone(),
-    //     cosmwasm_std::CosmosMsg::Bank(BankMsg::Send {
-    //         to_address: infinity_pool.to_string(),
-    //         amount: vec![Coin {
-    //             denom: NATIVE_DENOM.to_string(),
-    //             amount: deposit_tokens,
-    //         }],
-    //     }),
-    // )?;
+    let response = router.execute(
+        owner.clone(),
+        cosmwasm_std::CosmosMsg::Bank(BankMsg::Send {
+            to_address: infinity_pool.to_string(),
+            amount: vec![Coin {
+                denom: NATIVE_DENOM.to_string(),
+                amount: deposit_tokens,
+            }],
+        }),
+    );
+    assert!(response.is_ok());
 
     // router.execute_contract(
     //     owner.clone(),

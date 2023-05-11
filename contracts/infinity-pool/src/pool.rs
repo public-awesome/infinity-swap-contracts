@@ -6,11 +6,11 @@ use cosmwasm_std::{attr, ensure, Addr, Attribute, Decimal, Event, Storage, Uint1
 /// 100% represented as basis points
 const MAX_BASIS_POINTS: u128 = 10000u128;
 
-pub struct TokenPool(PoolConfig);
+pub struct TokenPool(PoolConfig, Uint128);
 
 impl Pool for TokenPool {
-    fn new(pool_config: PoolConfig) -> Self {
-        TokenPool(pool_config)
+    fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self {
+        TokenPool(pool_config, total_tokens)
     }
 
     fn config(&self) -> &PoolConfig {
@@ -19,16 +19,24 @@ impl Pool for TokenPool {
 
     fn config_mut(&mut self) -> &mut PoolConfig {
         &mut self.0
+    }
+
+    fn total_tokens(&self) -> &Uint128 {
+        &self.1
+    }
+
+    fn set_total_tokens(&mut self, total_tokens: Uint128) {
+        self.1 = total_tokens;
     }
 }
 
 impl EscrowToken for TokenPool {}
 
-pub struct NftPool(PoolConfig);
+pub struct NftPool(PoolConfig, Uint128);
 
 impl Pool for NftPool {
-    fn new(pool_config: PoolConfig) -> Self {
-        NftPool(pool_config)
+    fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self {
+        NftPool(pool_config, total_tokens)
     }
 
     fn config(&self) -> &PoolConfig {
@@ -37,16 +45,24 @@ impl Pool for NftPool {
 
     fn config_mut(&mut self) -> &mut PoolConfig {
         &mut self.0
+    }
+
+    fn total_tokens(&self) -> &Uint128 {
+        &self.1
+    }
+
+    fn set_total_tokens(&mut self, total_tokens: Uint128) {
+        self.1 = total_tokens;
     }
 }
 
 impl EscrowNft for NftPool {}
 
-pub struct TradePool(PoolConfig);
+pub struct TradePool(PoolConfig, Uint128);
 
 impl Pool for TradePool {
-    fn new(pool_config: PoolConfig) -> Self {
-        TradePool(pool_config)
+    fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self {
+        TradePool(pool_config, total_tokens)
     }
 
     fn config(&self) -> &PoolConfig {
@@ -55,6 +71,14 @@ impl Pool for TradePool {
 
     fn config_mut(&mut self) -> &mut PoolConfig {
         &mut self.0
+    }
+
+    fn total_tokens(&self) -> &Uint128 {
+        &self.1
+    }
+
+    fn set_total_tokens(&mut self, total_tokens: Uint128) {
+        self.1 = total_tokens;
     }
 }
 
@@ -71,7 +95,7 @@ pub trait EscrowNft: Pool {
 }
 
 pub trait Pool {
-    fn new(pool_config: PoolConfig) -> Self
+    fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self
     where
         Self: Sized;
 
@@ -79,7 +103,12 @@ pub trait Pool {
 
     fn config_mut(&mut self) -> &mut PoolConfig;
 
-    fn save(&self, storage: &mut dyn Storage) -> Result<(), ContractError> {
+    fn total_tokens(&self) -> &Uint128;
+
+    fn set_total_tokens(&mut self, amount: Uint128);
+
+    fn save(&mut self, storage: &mut dyn Storage) -> Result<(), ContractError> {
+        self.force_property_values();
         self.validate()?;
         POOL_CONFIG.save(storage, &self.config())?;
         Ok(())
@@ -124,7 +153,6 @@ pub trait Pool {
     fn reinvest_nfts(&self) -> bool {
         self.config().reinvest_nfts
     }
-
     /// ----------------------------
 
     /// Returns whether or not the pool can hold NFTs
@@ -137,6 +165,21 @@ pub trait Pool {
     fn can_hold_tokens(&self) -> bool {
         let config = &self.config();
         config.pool_type == PoolType::Trade || config.pool_type == PoolType::Token
+    }
+
+    // Forces spot_price and delta to be correct for the constant product bonding curve
+    fn force_property_values(&mut self) {
+        let total_tokens = self.total_tokens().clone();
+        let config = self.config_mut();
+        if config.bonding_curve == BondingCurve::ConstantProduct {
+            config.delta = Uint128::zero();
+            if config.total_nfts == 0u64 {
+                config.spot_price = Uint128::zero();
+            } else {
+                config.spot_price =
+                    total_tokens.checked_div(Uint128::from(config.total_nfts)).unwrap();
+            }
+        };
     }
 
     /// Verify that the pool is valid by checking invariants before save
@@ -273,6 +316,7 @@ pub trait Pool {
                 "bonding_curve" => attr("bonding_curve", config.bonding_curve.to_string()),
                 "spot_price" => attr("spot_price", config.spot_price.to_string()),
                 "delta" => attr("delta", config.delta.to_string()),
+                "total_tokens" => attr("total_tokens", self.total_tokens().to_string()),
                 "total_nfts" => attr("total_nfts", config.total_nfts.to_string()),
                 "is_active" => attr("is_active", config.is_active.to_string()),
                 "swap_fee_percent" => attr("swap_fee_percent", config.swap_fee_percent.to_string()),

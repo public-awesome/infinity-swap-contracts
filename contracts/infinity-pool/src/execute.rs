@@ -1,13 +1,13 @@
-use crate::error::ContractError;
-use crate::helpers::load_escrow_nft_pool;
+use crate::helpers::{load_escrow_nft_pool, load_pool};
 use crate::msg::ExecuteMsg;
 use crate::state::NFT_DEPOSITS;
+use crate::{error::ContractError, helpers::load_escrow_token_pool};
 
-use cosmwasm_std::{attr, ensure, Addr, DepsMut, Env, Event, MessageInfo};
-use cw_utils::nonpayable;
+use cosmwasm_std::{attr, coin, ensure, Addr, DepsMut, Env, Event, MessageInfo, Uint128};
+use cw_utils::{maybe_addr, nonpayable};
 use infinity_shared::shared::only_nft_owner;
-use sg_marketplace_common::transfer_nft;
-use sg_std::Response;
+use sg_marketplace_common::{bank_send, transfer_nft};
+use sg_std::{Response, NATIVE_DENOM};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -26,6 +26,13 @@ pub fn execute(
             collection,
             token_ids,
         } => execute_deposit_nfts(deps, info, env, api.addr_validate(&collection)?, token_ids),
+        ExecuteMsg::WithdrawTokens {
+            amount,
+            asset_recipient,
+        } => execute_withdraw_tokens(deps, info, env, amount, maybe_addr(api, asset_recipient)?),
+        ExecuteMsg::WithdrawAllTokens {
+            asset_recipient,
+        } => execute_withdraw_all_tokens(deps, info, env, maybe_addr(api, asset_recipient)?),
         // ExecuteMsg::SetIsActive {
         //     is_active,
         // } => execute_set_is_active(deps, info, env, is_active),
@@ -56,7 +63,8 @@ pub fn execute_deposit_nfts(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let mut escrow_nft_pool = load_escrow_nft_pool(deps.storage)?;
+    let mut escrow_nft_pool =
+        load_escrow_nft_pool(&env.contract.address, deps.storage, &deps.querier)?;
 
     ensure!(
         escrow_nft_pool.owner() == &info.sender,
@@ -92,12 +100,56 @@ pub fn execute_deposit_nfts(
     escrow_nft_pool.set_total_nfts(token_ids.len() as u64);
     escrow_nft_pool.save(deps.storage)?;
 
-    response = response.add_event(Event::new("deposit-nfts").add_attributes(vec![
-        attr("total_nfts", escrow_nft_pool.total_nfts().to_string()),
-        attr("token_ids", token_ids.join(",")),
-    ]));
+    response =
+        response.add_event(escrow_nft_pool.create_event("deposit-nfts", vec!["total_nfts"])?);
 
     Ok(response)
+}
+
+/// Execute a WithdrawTokens message
+pub fn execute_withdraw_tokens(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    amount: Uint128,
+    asset_recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
+    let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
+
+    ensure!(
+        pool.owner() == &info.sender,
+        ContractError::Unauthorized("sender is not the owner of the pool".to_string())
+    );
+    ensure!(
+        &amount <= pool.total_tokens(),
+        ContractError::InvalidInput("amount exceeds total tokens".to_string())
+    );
+
+    let total_tokens = pool.total_tokens() - amount;
+    pool.set_total_tokens(total_tokens);
+    pool.save(deps.storage)?;
+
+    let mut response = Response::new();
+    let recipient = asset_recipient.unwrap_or(info.sender.clone());
+    response = response
+        .add_submessage(bank_send(coin(amount.u128(), NATIVE_DENOM.to_string()), &recipient));
+
+    response = response.add_event(pool.create_event("withdraw-tokens", vec!["total_tokens"])?);
+
+    Ok(response)
+}
+
+/// Execute a WithdrawAllTokens message
+pub fn execute_withdraw_all_tokens(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    asset_recipient: Option<Addr>,
+) -> Result<Response, ContractError> {
+    let total_tokens = deps.querier.query_balance(&env.contract.address, NATIVE_DENOM)?.amount;
+    execute_withdraw_tokens(deps, info, env, total_tokens, asset_recipient)
 }
 
 // /// Execute a SwapNftsForTokens message
