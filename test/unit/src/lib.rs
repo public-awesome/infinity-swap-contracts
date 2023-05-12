@@ -16,6 +16,9 @@ mod setup;
 // mod infinity_swap_tests;
 
 #[cfg(test)]
+mod infinity_global_tests;
+
+#[cfg(test)]
 mod infinity_pool_tests;
 
 // #[cfg(test)]
