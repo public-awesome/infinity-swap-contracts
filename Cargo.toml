@@ -10,6 +10,7 @@ authors = ["Tasio tasiovictoria@ujulabs.com"]
 license = "BUSL-1.1"
 
 [workspace.dependencies]
+infinity-global = { path = "./contracts/infinity-global" }
 infinity-router = { path = "./contracts/infinity-router" }
 infinity-index = { path = "./contracts/infinity-index" }
 infinity-pool = { path = "./contracts/infinity-pool" }

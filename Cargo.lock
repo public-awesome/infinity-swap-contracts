@@ -1401,6 +1401,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "infinity-global"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "sg-std",
+ "thiserror",
+]
+
+[[package]]
 name = "infinity-index"
 version = "0.1.0"
 dependencies = [
@@ -3266,6 +3279,7 @@ dependencies = [
  "cw2 0.16.0",
  "cw721",
  "cw721-base",
+ "infinity-global",
  "infinity-index",
  "infinity-pool",
  "infinity-router",

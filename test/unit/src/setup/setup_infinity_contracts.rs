@@ -10,6 +10,16 @@ use test_suite::common_setup::{
 
 use super::{msg::MarketAccounts, templates::standard_minter_template};
 
+pub fn contract_infinity_global() -> Box<dyn Contract<StargazeMsgWrapper>> {
+    let contract = ContractWrapper::new(
+        infinity_global::execute::execute,
+        infinity_global::instantiate::instantiate,
+        infinity_global::query::query,
+    )
+    .with_sudo(infinity_global::sudo::sudo);
+    Box::new(contract)
+}
+
 pub fn contract_infinity_pool() -> Box<dyn Contract<StargazeMsgWrapper>> {
     let contract = ContractWrapper::new(
         infinity_pool::execute::execute,
