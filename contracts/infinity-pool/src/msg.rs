@@ -68,16 +68,16 @@ pub enum ExecuteMsg {
     WithdrawAllTokens {
         asset_recipient: Option<String>,
     },
-    // /// Update the parameters of a pool
-    // UpdatePoolConfig {
-    //     asset_recipient: Option<String>,
-    //     delta: Option<Uint128>,
-    //     spot_price: Option<Uint128>,
-    //     finders_fee_bps: Option<u64>,
-    //     swap_fee_bps: Option<u64>,
-    //     reinvest_tokens: Option<bool>,
-    //     reinvest_nfts: Option<bool>,
-    // },
+    /// Update the parameters of a pool
+    UpdatePoolConfig {
+        asset_recipient: Option<String>,
+        delta: Option<Uint128>,
+        spot_price: Option<Uint128>,
+        finders_fee_bps: Option<u64>,
+        swap_fee_bps: Option<u64>,
+        reinvest_tokens: Option<bool>,
+        reinvest_nfts: Option<bool>,
+    },
     // // Activate a pool so that it may begin accepting trades
     // SetIsActive {
     //     is_active: bool,

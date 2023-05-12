@@ -6,6 +6,7 @@ use crate::msg::ExecuteMsg;
 use crate::query::MAX_QUERY_LIMIT;
 use crate::state::NFT_DEPOSITS;
 
+use cosmwasm_schema::schemars::_serde_json::de;
 use cosmwasm_std::{coin, ensure, Addr, DepsMut, Empty, Env, MessageInfo, Uint128};
 use cw721_base::helpers::Cw721Contract;
 use cw_utils::{maybe_addr, nonpayable};
@@ -44,6 +45,26 @@ pub fn execute(
         ExecuteMsg::WithdrawAllTokens {
             asset_recipient,
         } => execute_withdraw_all_tokens(deps, info, env, maybe_addr(api, asset_recipient)?),
+        ExecuteMsg::UpdatePoolConfig {
+            asset_recipient,
+            delta,
+            spot_price,
+            finders_fee_bps,
+            swap_fee_bps,
+            reinvest_tokens,
+            reinvest_nfts,
+        } => execute_update_pool_config(
+            deps,
+            info,
+            env,
+            maybe_addr(api, asset_recipient)?,
+            delta,
+            spot_price,
+            finders_fee_bps,
+            swap_fee_bps,
+            reinvest_tokens,
+            reinvest_nfts,
+        ),
         // ExecuteMsg::SetIsActive {
         //     is_active,
         // } => execute_set_is_active(deps, info, env, is_active),
@@ -228,6 +249,68 @@ pub fn execute_withdraw_all_tokens(
 ) -> Result<Response, ContractError> {
     let total_tokens = deps.querier.query_balance(&env.contract.address, NATIVE_DENOM)?.amount;
     execute_withdraw_tokens(deps, info, env, total_tokens, asset_recipient)
+}
+
+/// Execute an UpdatePoolConfig message
+/// Option paramaters that are not specified will not be updated
+pub fn execute_update_pool_config(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    asset_recipient: Option<Addr>,
+    delta: Option<Uint128>,
+    spot_price: Option<Uint128>,
+    finders_fee_bps: Option<u64>,
+    swap_fee_bps: Option<u64>,
+    reinvest_tokens: Option<bool>,
+    reinvest_nfts: Option<bool>,
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
+    let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
+
+    ensure!(
+        pool.owner() == &info.sender,
+        ContractError::Unauthorized("sender is not the owner of the pool".to_string())
+    );
+
+    let mut attr_keys: Vec<&str> = vec![];
+    if let Some(asset_recipient) = asset_recipient {
+        pool.set_asset_recipient(asset_recipient);
+        attr_keys.push("asset_recipient");
+    }
+    if let Some(spot_price) = spot_price {
+        pool.set_spot_price(spot_price);
+        attr_keys.push("spot_price");
+    }
+    if let Some(delta) = delta {
+        pool.set_delta(delta);
+        attr_keys.push("delta");
+    }
+    if let Some(swap_fee_bps) = swap_fee_bps {
+        pool.set_swap_fee_percent(swap_fee_bps);
+        attr_keys.push("swap_fee_percent");
+    }
+    if let Some(finders_fee_bps) = finders_fee_bps {
+        pool.set_finders_fee_percent(finders_fee_bps);
+        attr_keys.push("finders_fee_percent");
+    }
+    if let Some(reinvest_tokens) = reinvest_tokens {
+        pool.set_reinvest_tokens(reinvest_tokens);
+        attr_keys.push("reinvest_tokens");
+    }
+    if let Some(reinvest_nfts) = reinvest_nfts {
+        pool.set_reinvest_nfts(reinvest_nfts);
+        attr_keys.push("reinvest_nfts");
+    }
+
+    pool.save(deps.storage)?;
+
+    let mut response = Response::new();
+    let event = pool.create_event("update-pool-config", attr_keys)?;
+    response = response.add_event(event);
+
+    Ok(response)
 }
 
 // /// Execute a SwapNftsForTokens message

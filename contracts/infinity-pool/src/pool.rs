@@ -170,6 +170,34 @@ pub trait Pool {
         };
     }
 
+    fn set_asset_recipient(&mut self, asset_recipient: Addr) {
+        self.inner_mut().0.asset_recipient = Some(asset_recipient);
+    }
+
+    fn set_spot_price(&mut self, spot_price: Uint128) {
+        self.inner_mut().0.spot_price = spot_price;
+    }
+
+    fn set_delta(&mut self, delta: Uint128) {
+        self.inner_mut().0.delta = delta;
+    }
+
+    fn set_swap_fee_percent(&mut self, swap_fee_bps: u64) {
+        self.inner_mut().0.swap_fee_percent = Decimal::percent(swap_fee_bps);
+    }
+
+    fn set_finders_fee_percent(&mut self, finders_fee_bps: u64) {
+        self.inner_mut().0.finders_fee_percent = Decimal::percent(finders_fee_bps);
+    }
+
+    fn set_reinvest_tokens(&mut self, reinvest_tokens: bool) {
+        self.inner_mut().0.reinvest_tokens = reinvest_tokens;
+    }
+
+    fn set_reinvest_nfts(&mut self, reinvest_nfts: bool) {
+        self.inner_mut().0.reinvest_nfts = reinvest_nfts;
+    }
+
     fn set_total_tokens(&mut self, amount: Uint128) {
         *self.inner_mut().1 = amount;
     }
