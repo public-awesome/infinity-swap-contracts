@@ -190,6 +190,10 @@ pub trait Pool {
         self.inner_mut().0.finders_fee_percent = Decimal::percent(finders_fee_bps);
     }
 
+    fn set_is_active(&mut self, is_active: bool) {
+        self.inner_mut().0.is_active = is_active;
+    }
+
     fn set_reinvest_tokens(&mut self, reinvest_tokens: bool) {
         self.inner_mut().0.reinvest_tokens = reinvest_tokens;
     }
