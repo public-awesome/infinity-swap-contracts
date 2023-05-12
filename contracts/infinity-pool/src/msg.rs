@@ -78,10 +78,10 @@ pub enum ExecuteMsg {
         reinvest_tokens: Option<bool>,
         reinvest_nfts: Option<bool>,
     },
-    // // Activate a pool so that it may begin accepting trades
-    // SetIsActive {
-    //     is_active: bool,
-    // },
+    // Activate a pool so that it may begin accepting trades
+    SetIsActive {
+        is_active: bool,
+    },
     // /// Remove a pool from contract storage and indexing
     // RemovePool {
     //     pool_id: u64,

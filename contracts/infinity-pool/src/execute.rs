@@ -65,9 +65,9 @@ pub fn execute(
             reinvest_tokens,
             reinvest_nfts,
         ),
-        // ExecuteMsg::SetIsActive {
-        //     is_active,
-        // } => execute_set_is_active(deps, info, env, is_active),
+        ExecuteMsg::SetIsActive {
+            is_active,
+        } => execute_set_is_active(deps, info, env, is_active),
         // ExecuteMsg::SwapNftsForTokens {
         //     token_id,
         //     min_output,
@@ -313,6 +313,31 @@ pub fn execute_update_pool_config(
     Ok(response)
 }
 
+/// Execute a SetIsActive message
+pub fn execute_set_is_active(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    is_active: bool,
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
+
+    let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
+
+    ensure!(
+        &info.sender == pool.owner(),
+        ContractError::Unauthorized("sender is not the owner of the pool".to_string())
+    );
+
+    pool.set_is_active(is_active);
+    pool.save(deps.storage)?;
+
+    let mut response = Response::new();
+    response = response.add_event(pool.create_event("set-is-active", vec!["is_active"])?);
+
+    Ok(response)
+}
+
 // /// Execute a SwapNftsForTokens message
 // pub fn execute_swap_nfts_for_tokens(
 //     deps: DepsMut,
@@ -384,44 +409,6 @@ pub fn execute_update_pool_config(
 //     response = payout_nft_sale_fees(response, tx_fees, None)?;
 
 //     pool.save(deps.storage)?;
-
-//     Ok(response)
-// }
-
-// pub fn execute_set_is_active(
-//     deps: DepsMut,
-//     info: MessageInfo,
-//     env: Env,
-//     is_active: bool,
-// ) -> Result<Response, ContractError> {
-//     let mut pool = Pool::new(POOL_CONFIG.load(deps.storage)?);
-
-//     ensure!(
-//         &info.sender == pool.owner(),
-//         ContractError::Unauthorized("sender is not owner".to_string())
-//     );
-
-//     pool.set_is_active(is_active);
-//     pool.save(deps.storage)?;
-
-//     let mut response = Response::new();
-
-//     let marketplace = GLOBAL_GOV.load(deps.storage)?;
-//     let marketplace_params = load_marketplace_params(&deps.querier, &marketplace)?;
-//     let total_tokens = deps.querier.query_balance(&env.contract.address, NATIVE_DENOM)?.amount;
-//     let next_sell_to_pool_quote =
-//         pool.get_sell_to_pool_quote(total_tokens, marketplace_params.min_price).ok();
-
-//     let infinity_index = INFINITY_INDEX.load(deps.storage)?;
-
-//     response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-//         contract_addr: infinity_index.to_string(),
-//         msg: to_binary(&InfinityIndexExecuteMsg::UpdateSellToPoolQuote {
-//             collection: pool.collection().to_string(),
-//             quote_price: next_sell_to_pool_quote,
-//         })?,
-//         funds: vec![],
-//     }));
 
 //     Ok(response)
 // }
