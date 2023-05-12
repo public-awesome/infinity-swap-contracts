@@ -6,258 +6,112 @@ use cosmwasm_std::{attr, ensure, Addr, Attribute, Decimal, Event, Storage, Uint1
 /// 100% represented as basis points
 const MAX_BASIS_POINTS: u128 = 10000u128;
 
-pub struct TokenPool(PoolConfig, Uint128);
-
-impl Pool for TokenPool {
-    fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self {
-        TokenPool(pool_config, total_tokens)
-    }
-
-    fn inner(&self) -> (&PoolConfig, &Uint128) {
-        (&self.0, &self.1)
-    }
-
-    fn inner_mut(&mut self) -> (&mut PoolConfig, &mut Uint128) {
-        (&mut self.0, &mut self.1)
-    }
+pub struct Pool {
+    pub config: PoolConfig,
+    pub total_tokens: Uint128,
 }
 
-impl EscrowToken for TokenPool {}
-
-pub struct NftPool(PoolConfig, Uint128);
-
-impl Pool for NftPool {
-    fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self {
-        NftPool(pool_config, total_tokens)
-    }
-
-    fn inner(&self) -> (&PoolConfig, &Uint128) {
-        (&self.0, &self.1)
-    }
-
-    fn inner_mut(&mut self) -> (&mut PoolConfig, &mut Uint128) {
-        (&mut self.0, &mut self.1)
-    }
-}
-
-impl EscrowNft for NftPool {}
-
-pub struct TradePool(PoolConfig, Uint128);
-
-impl Pool for TradePool {
-    fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self {
-        TradePool(pool_config, total_tokens)
-    }
-
-    fn inner(&self) -> (&PoolConfig, &Uint128) {
-        (&self.0, &self.1)
-    }
-
-    fn inner_mut(&mut self) -> (&mut PoolConfig, &mut Uint128) {
-        (&mut self.0, &mut self.1)
-    }
-}
-
-impl EscrowNft for TradePool {}
-
-impl EscrowToken for TradePool {}
-
-pub trait EscrowToken: Pool {}
-
-pub trait EscrowNft: Pool {}
-
-pub trait Pool {
-    /// ---------------------------------------
-    /// Implement
-    /// ---------------------------------------
-
-    fn new(pool_config: PoolConfig, total_tokens: Uint128) -> Self
-    where
-        Self: Sized;
-
-    fn inner(&self) -> (&PoolConfig, &Uint128);
-
-    fn inner_mut(&mut self) -> (&mut PoolConfig, &mut Uint128);
-
-    /// ---------------------------------------
-    /// Getters
-    /// ---------------------------------------
-
-    fn config(&self) -> &PoolConfig {
-        self.inner().0
-    }
-
-    fn config_mut(&mut self) -> &mut PoolConfig {
-        self.inner_mut().0
-    }
-
-    fn total_tokens(&self) -> &Uint128 {
-        self.inner().1
-    }
-
-    fn owner(&self) -> &Addr {
-        &self.config().owner
-    }
-
-    fn collection(&self) -> &Addr {
-        &self.config().collection
-    }
-
-    fn is_active(&self) -> bool {
-        self.config().is_active
-    }
-
-    /// Get the recipient of assets for trades performed on this pool
-    fn pool_recipient(&self) -> &Addr {
-        let config = self.config();
-        match &config.asset_recipient {
-            Some(addr) => addr,
-            None => &config.owner,
+impl Pool {
+    pub fn new(config: PoolConfig, total_tokens: Uint128) -> Self {
+        Self {
+            config,
+            total_tokens,
         }
     }
 
-    fn total_nfts(&self) -> u64 {
-        self.config().total_nfts
+    /// Get the recipient of assets for trades performed on this pool
+    pub fn pool_recipient(&self) -> &Addr {
+        match &self.config.asset_recipient {
+            Some(addr) => addr,
+            None => &self.config.owner,
+        }
     }
 
-    fn finders_fee_percent(&self) -> Decimal {
-        self.config().finders_fee_percent
+    /// Returns whether or not the pool can escrow NFTs
+    pub fn can_escrow_nfts(&self) -> bool {
+        self.config.pool_type == PoolType::Trade || self.config.pool_type == PoolType::Nft
     }
 
-    fn reinvest_tokens(&self) -> bool {
-        self.config().reinvest_tokens
+    /// Returns whether or not the pool can escrow tokens
+    pub fn can_escrow_tokens(&self) -> bool {
+        self.config.pool_type == PoolType::Trade || self.config.pool_type == PoolType::Token
     }
 
-    fn reinvest_nfts(&self) -> bool {
-        self.config().reinvest_nfts
-    }
+    /// ----------------------------
+    /// Save and Validate
+    /// ----------------------------
 
-    /// Returns whether or not the pool can hold NFTs
-    fn can_hold_nfts(&self) -> bool {
-        let config = &self.config();
-        config.pool_type == PoolType::Trade || config.pool_type == PoolType::Nft
-    }
-
-    /// Returns whether or not the pool can hold tokens
-    fn can_hold_tokens(&self) -> bool {
-        let config = &self.config();
-        config.pool_type == PoolType::Trade || config.pool_type == PoolType::Token
-    }
-
-    /// ---------------------------------------
-    /// Setters
-    /// ---------------------------------------
-
-    fn save(&mut self, storage: &mut dyn Storage) -> Result<(), ContractError> {
+    pub fn save(&mut self, storage: &mut dyn Storage) -> Result<(), ContractError> {
         self.force_property_values();
         self.validate()?;
-        POOL_CONFIG.save(storage, &self.config())?;
+        POOL_CONFIG.save(storage, &self.config)?;
         Ok(())
     }
 
     // Forces spot_price and delta to be correct for the constant product bonding curve
     fn force_property_values(&mut self) {
-        let total_tokens = self.total_tokens().clone();
-        let config = self.config_mut();
-        if config.bonding_curve == BondingCurve::ConstantProduct {
-            config.delta = Uint128::zero();
-            if config.total_nfts == 0u64 {
-                config.spot_price = Uint128::zero();
+        if self.config.bonding_curve == BondingCurve::ConstantProduct {
+            if self.config.total_nfts == 0u64 {
+                self.config.spot_price = Uint128::zero();
             } else {
-                config.spot_price =
-                    total_tokens.checked_div(Uint128::from(config.total_nfts)).unwrap();
+                self.config.spot_price =
+                    self.total_tokens.checked_div(Uint128::from(self.config.total_nfts)).unwrap();
             }
         };
     }
 
-    fn set_asset_recipient(&mut self, asset_recipient: Addr) {
-        self.inner_mut().0.asset_recipient = Some(asset_recipient);
-    }
-
-    fn set_spot_price(&mut self, spot_price: Uint128) {
-        self.inner_mut().0.spot_price = spot_price;
-    }
-
-    fn set_delta(&mut self, delta: Uint128) {
-        self.inner_mut().0.delta = delta;
-    }
-
-    fn set_swap_fee_percent(&mut self, swap_fee_bps: u64) {
-        self.inner_mut().0.swap_fee_percent = Decimal::percent(swap_fee_bps);
-    }
-
-    fn set_finders_fee_percent(&mut self, finders_fee_bps: u64) {
-        self.inner_mut().0.finders_fee_percent = Decimal::percent(finders_fee_bps);
-    }
-
-    fn set_is_active(&mut self, is_active: bool) {
-        self.inner_mut().0.is_active = is_active;
-    }
-
-    fn set_reinvest_tokens(&mut self, reinvest_tokens: bool) {
-        self.inner_mut().0.reinvest_tokens = reinvest_tokens;
-    }
-
-    fn set_reinvest_nfts(&mut self, reinvest_nfts: bool) {
-        self.inner_mut().0.reinvest_nfts = reinvest_nfts;
-    }
-
-    fn set_total_tokens(&mut self, amount: Uint128) {
-        *self.inner_mut().1 = amount;
-    }
-
-    fn set_total_nfts(&mut self, total_nfts: u64) {
-        self.inner_mut().0.total_nfts = total_nfts;
-    }
-
-    /// ---------------------------------------
-
     /// Verify that the pool is valid by checking invariants before save
     fn validate(&self) -> Result<(), ContractError> {
-        let config = &self.config();
         ensure!(
-            !(config.bonding_curve == BondingCurve::Exponential
-                && config.delta.u128() >= MAX_BASIS_POINTS),
+            !(self.config.bonding_curve == BondingCurve::Exponential
+                && self.config.delta.u128() >= MAX_BASIS_POINTS),
             ContractError::InvalidPool(
                 "delta cannot exceed max basis points on exponential curves".to_string(),
             )
         );
+        ensure!(
+            !(self.config.bonding_curve == BondingCurve::ConstantProduct
+                && self.config.delta > Uint128::zero()),
+            ContractError::InvalidPool(
+                "delta cannot be greater than zero for Constant Product pools".to_string(),
+            )
+        );
 
-        match config.pool_type {
+        match self.config.pool_type {
             PoolType::Token => {
                 ensure!(
-                    config.total_nfts == 0,
+                    self.config.total_nfts == 0,
                     ContractError::InvalidPool(
                         "total_nfts must be zero for token pool".to_string(),
                     )
                 );
                 ensure!(
-                    config.spot_price != Uint128::zero(),
+                    self.config.spot_price != Uint128::zero(),
                     ContractError::InvalidPool(
                         "spot_price must be non-zero for token pool".to_string(),
                     )
                 );
                 ensure!(
-                    config.swap_fee_percent == Decimal::zero(),
+                    self.config.swap_fee_percent == Decimal::zero(),
                     ContractError::InvalidPool(
                         "swap_fee_percent must be 0 for token pool".to_string(),
                     )
                 );
                 ensure!(
-                    config.bonding_curve != BondingCurve::ConstantProduct,
+                    self.config.bonding_curve != BondingCurve::ConstantProduct,
                     ContractError::InvalidPool(
                         "constant product bonding curve cannot be used with token pools"
                             .to_string(),
                     )
                 );
                 ensure!(
-                    !config.reinvest_tokens,
+                    !self.config.reinvest_tokens,
                     ContractError::InvalidPool(
                         "cannot reinvest tokens on one sided pools".to_string(),
                     )
                 );
                 ensure!(
-                    !config.reinvest_nfts,
+                    !self.config.reinvest_nfts,
                     ContractError::InvalidPool(
                         "cannot reinvest nfts on one sided pools".to_string(),
                     )
@@ -265,31 +119,31 @@ pub trait Pool {
             },
             PoolType::Nft => {
                 ensure!(
-                    config.spot_price != Uint128::zero(),
+                    self.config.spot_price != Uint128::zero(),
                     ContractError::InvalidPool(
                         "spot_price must be non-zero for nft pool".to_string(),
                     )
                 );
                 ensure!(
-                    config.swap_fee_percent == Decimal::zero(),
+                    self.config.swap_fee_percent == Decimal::zero(),
                     ContractError::InvalidPool(
                         "swap_fee_percent must be 0 for nft pool".to_string(),
                     )
                 );
                 ensure!(
-                    config.bonding_curve != BondingCurve::ConstantProduct,
+                    self.config.bonding_curve != BondingCurve::ConstantProduct,
                     ContractError::InvalidPool(
                         "constant product bonding curve cannot be used with nft pools".to_string(),
                     )
                 );
                 ensure!(
-                    !config.reinvest_tokens,
+                    !self.config.reinvest_tokens,
                     ContractError::InvalidPool(
                         "cannot reinvest tokens on one sided pools".to_string(),
                     )
                 );
                 ensure!(
-                    !config.reinvest_nfts,
+                    !self.config.reinvest_nfts,
                     ContractError::InvalidPool(
                         "cannot reinvest nfts on one sided pools".to_string(),
                     )
@@ -306,7 +160,7 @@ pub trait Pool {
     /// ----------------------------
 
     /// Create an event with all the Pool properties
-    fn create_event_all_props(&self, event_type: &str) -> Result<Event, ContractError> {
+    pub fn create_event_all_props(&self, event_type: &str) -> Result<Event, ContractError> {
         self.create_event(
             event_type,
             vec![
@@ -328,33 +182,40 @@ pub trait Pool {
     }
 
     /// Create an event with certain Pool properties
-    fn create_event(&self, event_type: &str, attr_keys: Vec<&str>) -> Result<Event, ContractError> {
-        let config = &self.config();
+    pub fn create_event(
+        &self,
+        event_type: &str,
+        attr_keys: Vec<&str>,
+    ) -> Result<Event, ContractError> {
         let mut attributes: Vec<Attribute> = vec![];
         for attr_keys in attr_keys {
             let attribute = match attr_keys {
-                "collection" => attr("collection", config.collection.to_string()),
-                "owner" => attr("owner", config.owner.to_string()),
+                "collection" => attr("collection", self.config.collection.to_string()),
+                "owner" => attr("owner", self.config.owner.to_string()),
                 "asset_recipient" => attr(
                     "asset_recipient",
-                    config
+                    self.config
                         .asset_recipient
                         .as_ref()
                         .map_or("None".to_string(), |addr| addr.to_string()),
                 ),
-                "pool_type" => attr("pool_type", config.pool_type.to_string()),
-                "bonding_curve" => attr("bonding_curve", config.bonding_curve.to_string()),
-                "spot_price" => attr("spot_price", config.spot_price.to_string()),
-                "delta" => attr("delta", config.delta.to_string()),
-                "total_tokens" => attr("total_tokens", self.total_tokens().to_string()),
-                "total_nfts" => attr("total_nfts", config.total_nfts.to_string()),
-                "is_active" => attr("is_active", config.is_active.to_string()),
-                "swap_fee_percent" => attr("swap_fee_percent", config.swap_fee_percent.to_string()),
-                "finders_fee_percent" => {
-                    attr("finders_fee_percent", config.finders_fee_percent.to_string())
+                "pool_type" => attr("pool_type", self.config.pool_type.to_string()),
+                "bonding_curve" => attr("bonding_curve", self.config.bonding_curve.to_string()),
+                "spot_price" => attr("spot_price", self.config.spot_price.to_string()),
+                "delta" => attr("delta", self.config.delta.to_string()),
+                "total_tokens" => attr("total_tokens", self.total_tokens.to_string()),
+                "total_nfts" => attr("total_nfts", self.config.total_nfts.to_string()),
+                "is_active" => attr("is_active", self.config.is_active.to_string()),
+                "swap_fee_percent" => {
+                    attr("swap_fee_percent", self.config.swap_fee_percent.to_string())
                 },
-                "reinvest_tokens" => attr("reinvest_tokens", config.reinvest_tokens.to_string()),
-                "reinvest_nfts" => attr("reinvest_nfts", config.reinvest_nfts.to_string()),
+                "finders_fee_percent" => {
+                    attr("finders_fee_percent", self.config.finders_fee_percent.to_string())
+                },
+                "reinvest_tokens" => {
+                    attr("reinvest_tokens", self.config.reinvest_tokens.to_string())
+                },
+                "reinvest_nfts" => attr("reinvest_nfts", self.config.reinvest_nfts.to_string()),
                 _key => {
                     unreachable!("{} is not a valid attribute key", _key)
                 },

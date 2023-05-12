@@ -1,13 +1,12 @@
 use std::marker::PhantomData;
 
 use crate::error::ContractError;
-use crate::helpers::{load_escrow_nft_pool, load_pool};
+use crate::helpers::load_pool;
 use crate::msg::ExecuteMsg;
 use crate::query::MAX_QUERY_LIMIT;
 use crate::state::NFT_DEPOSITS;
 
-use cosmwasm_schema::schemars::_serde_json::de;
-use cosmwasm_std::{coin, ensure, Addr, DepsMut, Empty, Env, MessageInfo, Uint128};
+use cosmwasm_std::{coin, ensure, Addr, Decimal, DepsMut, Empty, Env, MessageInfo, Uint128};
 use cw721_base::helpers::Cw721Contract;
 use cw_utils::{maybe_addr, nonpayable};
 use infinity_shared::shared::only_nft_owner;
@@ -95,16 +94,19 @@ pub fn execute_deposit_nfts(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let mut escrow_nft_pool =
-        load_escrow_nft_pool(&env.contract.address, deps.storage, &deps.querier)?;
+    let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
 
     ensure!(
-        escrow_nft_pool.owner() == &info.sender,
+        &pool.config.owner == &info.sender,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string())
     );
     ensure!(
-        escrow_nft_pool.collection() == &collection,
+        &pool.config.collection == &collection,
         ContractError::InvalidInput("invalid collection".to_string())
+    );
+    ensure!(
+        pool.can_escrow_nfts(),
+        ContractError::InvalidPool("pool cannot escrow NFTs".to_string())
     );
     ensure!(
         !token_ids.is_empty(),
@@ -114,26 +116,19 @@ pub fn execute_deposit_nfts(
     let mut response = Response::new();
 
     for token_id in &token_ids {
-        only_nft_owner(
-            &deps.querier,
-            deps.api,
-            &info.sender,
-            escrow_nft_pool.collection(),
-            token_id,
-        )?;
+        only_nft_owner(&deps.querier, deps.api, &info.sender, &pool.config.collection, token_id)?;
         response = response.add_submessage(transfer_nft(
-            escrow_nft_pool.collection(),
+            &pool.config.collection,
             &token_id,
             &env.contract.address,
         ));
         NFT_DEPOSITS.save(deps.storage, token_id.to_string(), &true)?;
     }
 
-    escrow_nft_pool.set_total_nfts(token_ids.len() as u64);
-    escrow_nft_pool.save(deps.storage)?;
+    pool.config.total_nfts += token_ids.len() as u64;
+    pool.save(deps.storage)?;
 
-    response =
-        response.add_event(escrow_nft_pool.create_event("deposit-nfts", vec!["total_nfts"])?);
+    response = response.add_event(pool.create_event("deposit-nfts", vec!["total_nfts"])?);
 
     Ok(response)
 }
@@ -151,7 +146,7 @@ pub fn execute_withdraw_nfts(
     let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
 
     ensure!(
-        pool.owner() == &info.sender,
+        &pool.config.owner == &info.sender,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string())
     );
     ensure!(
@@ -162,25 +157,24 @@ pub fn execute_withdraw_nfts(
     let mut response = Response::new();
     let recipient = asset_recipient.unwrap_or(info.sender.clone());
 
-    let mut total_nfts = pool.total_nfts();
     for token_id in &token_ids {
         only_nft_owner(
             &deps.querier,
             deps.api,
             &env.contract.address,
-            pool.collection(),
+            &pool.config.collection,
             &token_id,
         )?;
 
-        response = response.add_submessage(transfer_nft(pool.collection(), &token_id, &recipient));
+        response =
+            response.add_submessage(transfer_nft(&pool.config.collection, &token_id, &recipient));
 
         if NFT_DEPOSITS.has(deps.storage, token_id.to_string()) {
-            total_nfts -= 1;
+            pool.config.total_nfts -= 1;
             NFT_DEPOSITS.remove(deps.storage, token_id.to_string());
         }
     }
 
-    pool.set_total_nfts(total_nfts);
     pool.save(deps.storage)?;
 
     response = response.add_event(pool.create_event("withdraw-nfts", vec!["total_nfts"])?);
@@ -196,7 +190,7 @@ pub fn execute_withdraw_all_nfts(
     asset_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
     let collection =
-        load_pool(&env.contract.address, deps.storage, &deps.querier)?.collection().clone();
+        load_pool(&env.contract.address, deps.storage, &deps.querier)?.config.collection;
 
     let token_ids = Cw721Contract::<Empty, Empty>(collection, PhantomData, PhantomData)
         .tokens(&deps.querier, &env.contract.address, None, Some(MAX_QUERY_LIMIT))?
@@ -218,16 +212,15 @@ pub fn execute_withdraw_tokens(
     let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
 
     ensure!(
-        pool.owner() == &info.sender,
+        &pool.config.owner == &info.sender,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string())
     );
     ensure!(
-        &amount <= pool.total_tokens(),
+        &amount <= &pool.total_tokens,
         ContractError::InvalidInput("amount exceeds total tokens".to_string())
     );
 
-    let total_tokens = pool.total_tokens() - amount;
-    pool.set_total_tokens(total_tokens);
+    pool.total_tokens -= amount;
     pool.save(deps.storage)?;
 
     let mut response = Response::new();
@@ -270,37 +263,37 @@ pub fn execute_update_pool_config(
     let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
 
     ensure!(
-        pool.owner() == &info.sender,
+        &pool.config.owner == &info.sender,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string())
     );
 
     let mut attr_keys: Vec<&str> = vec![];
     if let Some(asset_recipient) = asset_recipient {
-        pool.set_asset_recipient(asset_recipient);
+        pool.config.asset_recipient = Some(asset_recipient);
         attr_keys.push("asset_recipient");
     }
     if let Some(spot_price) = spot_price {
-        pool.set_spot_price(spot_price);
+        pool.config.spot_price = spot_price;
         attr_keys.push("spot_price");
     }
     if let Some(delta) = delta {
-        pool.set_delta(delta);
+        pool.config.delta = delta;
         attr_keys.push("delta");
     }
     if let Some(swap_fee_bps) = swap_fee_bps {
-        pool.set_swap_fee_percent(swap_fee_bps);
+        pool.config.swap_fee_percent = Decimal::percent(swap_fee_bps);
         attr_keys.push("swap_fee_percent");
     }
     if let Some(finders_fee_bps) = finders_fee_bps {
-        pool.set_finders_fee_percent(finders_fee_bps);
+        pool.config.finders_fee_percent = Decimal::percent(finders_fee_bps);
         attr_keys.push("finders_fee_percent");
     }
     if let Some(reinvest_tokens) = reinvest_tokens {
-        pool.set_reinvest_tokens(reinvest_tokens);
+        pool.config.reinvest_tokens = reinvest_tokens;
         attr_keys.push("reinvest_tokens");
     }
     if let Some(reinvest_nfts) = reinvest_nfts {
-        pool.set_reinvest_nfts(reinvest_nfts);
+        pool.config.reinvest_nfts = reinvest_nfts;
         attr_keys.push("reinvest_nfts");
     }
 
@@ -325,11 +318,11 @@ pub fn execute_set_is_active(
     let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
 
     ensure!(
-        &info.sender == pool.owner(),
+        &pool.config.owner == &info.sender,
         ContractError::Unauthorized("sender is not the owner of the pool".to_string())
     );
 
-    pool.set_is_active(is_active);
+    pool.config.is_active = is_active;
     pool.save(deps.storage)?;
 
     let mut response = Response::new();
