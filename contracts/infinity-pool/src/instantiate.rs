@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
-use crate::pool::{NftPool, Pool, TokenPool, TradePool};
-use crate::state::{PoolConfig, PoolType, INFINITY_INDEX, MARKETPLACE};
+use crate::pool::Pool;
+use crate::state::{PoolConfig, INFINITY_INDEX, MARKETPLACE};
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, Uint128};
 use cw2::set_contract_version;
 use cw_utils::maybe_addr;
@@ -44,25 +44,9 @@ pub fn instantiate(
         reinvest_nfts: msg.pool_info.reinvest_nfts,
     };
 
-    let mut response = Response::new();
-
-    match &msg.pool_info.pool_type {
-        PoolType::Token => {
-            let mut token_pool = TokenPool::new(pool_config, Uint128::zero());
-            token_pool.save(deps.storage)?;
-            response = response.add_event(token_pool.create_event_all_props("create-pool")?);
-        },
-        PoolType::Nft => {
-            let mut nft_pool = NftPool::new(pool_config, Uint128::zero());
-            nft_pool.save(deps.storage)?;
-            response = response.add_event(nft_pool.create_event_all_props("create-pool")?);
-        },
-        PoolType::Trade => {
-            let mut trade_pool = TradePool::new(pool_config, Uint128::zero());
-            trade_pool.save(deps.storage)?;
-            response = response.add_event(trade_pool.create_event_all_props("create-pool")?);
-        },
-    };
+    let mut pool = Pool::new(pool_config, Uint128::zero());
+    pool.save(deps.storage)?;
+    let mut response = Response::new().add_event(pool.create_event_all_props("create-pool")?);
 
     response = response
         .add_attribute("action", "instantiate")
