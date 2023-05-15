@@ -22,4 +22,7 @@ pub enum ContractError {
 
     #[error("Invalid pool: {0}")]
     InvalidPool(String),
+
+    #[error("Invalid pool quote: {0}")]
+    InvalidPoolQuote(String),
 }

@@ -1,15 +1,16 @@
 use std::marker::PhantomData;
 
-use crate::error::ContractError;
 use crate::helpers::load_pool;
 use crate::msg::ExecuteMsg;
 use crate::query::MAX_QUERY_LIMIT;
-use crate::state::NFT_DEPOSITS;
+use crate::state::{PoolType, NFT_DEPOSITS};
+use crate::{error::ContractError, state::INFINITY_GLOBAL};
 
 use cosmwasm_std::{coin, ensure, Addr, Decimal, DepsMut, Empty, Env, MessageInfo, Uint128};
 use cw721_base::helpers::Cw721Contract;
 use cw_utils::{maybe_addr, nonpayable};
-use infinity_shared::shared::only_nft_owner;
+use infinity_global::state::GLOBAL_CONFIG;
+use infinity_shared::{global::load_global_config, shared::only_nft_owner};
 use sg_marketplace_common::{bank_send, transfer_nft};
 use sg_std::{Response, NATIVE_DENOM};
 
@@ -67,20 +68,20 @@ pub fn execute(
         ExecuteMsg::SetIsActive {
             is_active,
         } => execute_set_is_active(deps, info, env, is_active),
-        // ExecuteMsg::SwapNftsForTokens {
-        //     token_id,
-        //     min_output,
-        //     asset_recipient,
-        //     finder,
-        // } => execute_swap_nfts_for_tokens(
-        //     deps,
-        //     info,
-        //     env,
-        //     token_id,
-        //     min_output,
-        //     api.addr_validate(&asset_recipient)?,
-        //     maybe_addr(api, finder)?,
-        // ),
+        ExecuteMsg::SwapNftForTokens {
+            token_id,
+            min_output,
+            asset_recipient,
+            finder,
+        } => execute_swap_nft_for_tokens(
+            deps,
+            info,
+            env,
+            token_id,
+            min_output,
+            maybe_addr(api, asset_recipient)?,
+            maybe_addr(api, finder)?,
+        ),
     }
 }
 
@@ -331,77 +332,81 @@ pub fn execute_set_is_active(
     Ok(response)
 }
 
-// /// Execute a SwapNftsForTokens message
-// pub fn execute_swap_nfts_for_tokens(
-//     deps: DepsMut,
-//     info: MessageInfo,
-//     env: Env,
-//     token_id: String,
-//     min_output: Uint128,
-//     seller_recipient: Addr,
-//     finder: Option<Addr>,
-// ) -> Result<Response, ContractError> {
-//     nonpayable(&info)?;
+/// Execute a SwapNftForTokens message
+pub fn execute_swap_nft_for_tokens(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    token_id: String,
+    min_output: Uint128,
+    asset_recipient: Option<Addr>,
+    finder: Option<Addr>,
+) -> Result<Response, ContractError> {
+    nonpayable(&info)?;
 
-//     let mut pool = Pool::new(POOL_CONFIG.load(deps.storage)?);
+    let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
 
-//     only_nft_owner(&deps.querier, deps.api, &info.sender, pool.collection(), &token_id)?;
+    ensure!(
+        pool.can_escrow_tokens(),
+        ContractError::InvalidPool("pool cannot escrow tokens".to_string())
+    );
 
-//     ensure!(pool.can_buy_nfts(), ContractError::InvalidPool("pool cannot buy nfts".to_string()));
-//     ensure!(pool.is_active(), ContractError::InvalidPool("pool is not active".to_string()));
+    only_nft_owner(&deps.querier, deps.api, &info.sender, &pool.config.collection, &token_id)?;
 
-//     let mut response = Response::new();
+    let global_config = load_global_config(&deps.querier, &INFINITY_GLOBAL.load(deps.storage)?)?;
 
-//     let marketplace = GLOBAL_GOV.load(deps.storage)?;
-//     let marketplace_params = load_marketplace_params(&deps.querier, &marketplace)?;
-//     let mut total_tokens = deps.querier.query_balance(&env.contract.address, NATIVE_DENOM)?.amount;
+    let mut response = Response::new();
 
-//     let sale_price = pool.get_sell_to_pool_quote(total_tokens, marketplace_params.min_price)?;
+    let sale_price = pool.get_sell_to_pool_quote(global_config.min_price)?;
 
-//     ensure!(
-//         sale_price >= min_output,
-//         ContractError::InvalidPoolQuote("sale price is below min output".to_string())
-//     );
+    ensure!(
+        sale_price >= min_output,
+        ContractError::InvalidPoolQuote("sale price is below min output".to_string())
+    );
 
-//     total_tokens -= sale_price;
+    pool.total_tokens -= sale_price;
 
-//     let update_result = pool.update_spot_price_after_buy(total_tokens);
-//     let next_sell_to_pool_quote = match update_result.is_ok() {
-//         true => pool.get_sell_to_pool_quote(total_tokens, marketplace_params.min_price).ok(),
-//         false => None,
-//     };
+    // Transfer NFT to pool recipient or reinvest into pool
+    let nft_recipient = if pool.should_reinvest_nfts() {
+        pool.config.total_nfts += 1;
+        &env.contract.address
+    } else {
+        pool.recipient()
+    };
+    response =
+        response.add_submessage(transfer_nft(&pool.config.collection, &token_id, nft_recipient));
 
-//     let infinity_index = INFINITY_INDEX.load(deps.storage)?;
+    let update_spot_price_result = pool.update_spot_price_after_sell_to_pool();
 
-//     response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-//         contract_addr: infinity_index.to_string(),
-//         msg: to_binary(&InfinityIndexExecuteMsg::UpdateSellToPoolQuote {
-//             collection: pool.collection().to_string(),
-//             quote_price: next_sell_to_pool_quote,
-//         })?,
-//         funds: vec![],
-//     }));
+    let next_sell_to_pool_quote = match update_spot_price_result.is_ok() {
+        true => pool.get_sell_to_pool_quote(total_tokens, marketplace_params.min_price).ok(),
+        false => None,
+    };
 
-//     // Transfer NFT to pool recipient or reinvest into pool
-//     let nft_recipient = match pool.reinvest_nfts() {
-//         true => &env.contract.address,
-//         false => pool.recipient(),
-//     };
-//     response = response.add_submessage(transfer_nft(pool.collection(), &token_id, nft_recipient));
+    let infinity_index = INFINITY_INDEX.load(deps.storage)?;
 
-//     let royalty_info = load_collection_royalties(&deps.querier, deps.api, pool.collection())?;
-//     let tx_fees = calculate_nft_sale_fees(
-//         sale_price,
-//         marketplace_params.trading_fee_percent,
-//         seller_recipient,
-//         finder,
-//         None,
-//         royalty_info,
-//     )?;
-//     println!("tx_fees: {:?}", tx_fees);
-//     response = payout_nft_sale_fees(response, tx_fees, None)?;
+    response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
+        contract_addr: infinity_index.to_string(),
+        msg: to_binary(&InfinityIndexExecuteMsg::UpdateSellToPoolQuote {
+            collection: pool.collection().to_string(),
+            quote_price: next_sell_to_pool_quote,
+        })?,
+        funds: vec![],
+    }));
 
-//     pool.save(deps.storage)?;
+    let royalty_info = load_collection_royalties(&deps.querier, deps.api, pool.collection())?;
+    let tx_fees = calculate_nft_sale_fees(
+        sale_price,
+        marketplace_params.trading_fee_percent,
+        seller_recipient,
+        finder,
+        None,
+        royalty_info,
+    )?;
+    println!("tx_fees: {:?}", tx_fees);
+    response = payout_nft_sale_fees(response, tx_fees, None)?;
 
-//     Ok(response)
-// }
+    pool.save(deps.storage)?;
+
+    Ok(response)
+}

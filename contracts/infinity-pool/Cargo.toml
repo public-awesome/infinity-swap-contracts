@@ -1,9 +1,9 @@
 [package]
 name = "infinity-pool"
-version    = { workspace = true }
-edition    = { workspace = true }
+version = { workspace = true }
+edition = { workspace = true }
 repository = { workspace = true }
-license    = { workspace = true }
+license = { workspace = true }
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -21,6 +21,7 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
+infinity-global = { workspace = true }
 # infinity-macros = { workspace = true }
 infinity-shared = { workspace = true }
 infinity-index = { workspace = true }
