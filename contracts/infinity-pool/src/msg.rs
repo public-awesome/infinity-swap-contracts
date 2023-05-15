@@ -35,10 +35,8 @@ pub struct PoolInfo {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    // The address of the marketplace contract
-    pub marketplace: String,
-    // The address of the infinity index contract
-    pub infinity_index: String,
+    // The address of the infinity global contract
+    pub infinity_global: String,
     /// The configuration object for the pool
     pub pool_info: PoolInfo,
 }
@@ -82,16 +80,17 @@ pub enum ExecuteMsg {
     SetIsActive {
         is_active: bool,
     },
+    // Swap NFTs for Tokens at the pool price
+    SwapNftForTokens {
+        token_id: String,
+        min_output: Uint128,
+        asset_recipient: Option<String>,
+        finder: Option<String>,
+    },
     // /// Remove a pool from contract storage and indexing
     // RemovePool {
     //     pool_id: u64,
     //     asset_recipient: Option<String>,
-    // },
-    // SwapNftsForTokens {
-    //     token_id: String,
-    //     min_output: Uint128,
-    //     asset_recipient: String,
-    //     finder: Option<String>,
     // },
 }
 

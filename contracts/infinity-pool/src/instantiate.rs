@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
 use crate::pool::Pool;
-use crate::state::{PoolConfig, INFINITY_INDEX, MARKETPLACE};
+use crate::state::{PoolConfig, INFINITY_GLOBAL};
 use cosmwasm_std::{Decimal, DepsMut, Env, MessageInfo, Uint128};
 use cw2::set_contract_version;
 use cw_utils::maybe_addr;
@@ -22,11 +22,8 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let marketplace = deps.api.addr_validate(&msg.marketplace)?;
-    MARKETPLACE.save(deps.storage, &marketplace)?;
-
-    let infinity_index = deps.api.addr_validate(&msg.infinity_index)?;
-    INFINITY_INDEX.save(deps.storage, &infinity_index)?;
+    let infinity_global = deps.api.addr_validate(&msg.infinity_global)?;
+    INFINITY_GLOBAL.save(deps.storage, &infinity_global)?;
 
     let pool_config = PoolConfig {
         collection: deps.api.addr_validate(&msg.pool_info.collection)?,
@@ -52,8 +49,7 @@ pub fn instantiate(
         .add_attribute("action", "instantiate")
         .add_attribute("contract_name", CONTRACT_NAME)
         .add_attribute("contract_version", CONTRACT_VERSION)
-        .add_attribute("marketplace", msg.marketplace.to_string())
-        .add_attribute("infinity_controller", msg.infinity_index.to_string());
+        .add_attribute("infinity_global", msg.infinity_global.to_string());
 
     Ok(response)
 }

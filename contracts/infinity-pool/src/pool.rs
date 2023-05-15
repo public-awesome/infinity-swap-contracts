@@ -1,7 +1,7 @@
 use crate::error::ContractError;
 use crate::state::{BondingCurve, PoolConfig, PoolType, POOL_CONFIG};
 
-use cosmwasm_std::{attr, ensure, Addr, Attribute, Decimal, Event, Storage, Uint128};
+use cosmwasm_std::{attr, ensure, Addr, Attribute, Decimal, Event, StdError, Storage, Uint128};
 
 /// 100% represented as basis points
 const MAX_BASIS_POINTS: u128 = 10000u128;
@@ -20,7 +20,7 @@ impl Pool {
     }
 
     /// Get the recipient of assets for trades performed on this pool
-    pub fn pool_recipient(&self) -> &Addr {
+    pub fn recipient(&self) -> &Addr {
         match &self.config.asset_recipient {
             Some(addr) => addr,
             None => &self.config.owner,
@@ -35,6 +35,71 @@ impl Pool {
     /// Returns whether or not the pool can escrow tokens
     pub fn can_escrow_tokens(&self) -> bool {
         self.config.pool_type == PoolType::Trade || self.config.pool_type == PoolType::Token
+    }
+
+    pub fn should_reinvest_nfts(&self) -> bool {
+        self.config.pool_type == PoolType::Trade && self.config.reinvest_nfts
+    }
+
+    pub fn should_reinvest_tokens(&self) -> bool {
+        self.config.pool_type == PoolType::Trade && self.config.reinvest_tokens
+    }
+
+    /// ----------------------------
+    /// Swap Methods
+    /// ----------------------------
+
+    /// Returns the price at which this pool will buy NFTs
+    pub fn get_sell_to_pool_quote(&self, min_price: Uint128) -> Result<Uint128, ContractError> {
+        let sell_quote = match self.config.bonding_curve {
+            BondingCurve::Linear | BondingCurve::Exponential => self.config.spot_price,
+            BondingCurve::ConstantProduct => {
+                // TODO: verify total_nfts = 0 case
+                self.total_tokens.checked_div(Uint128::from(self.config.total_nfts + 1)).unwrap()
+            },
+        };
+        ensure!(
+            sell_quote >= min_price,
+            ContractError::InvalidPoolQuote("sale price is below min price".to_string(),)
+        );
+        ensure!(
+            sell_quote <= self.total_tokens,
+            ContractError::InvalidPoolQuote("pool has insufficient tokens".to_string(),)
+        );
+        Ok(sell_quote)
+    }
+
+    /// Updates the spot price of the pool depending on the transaction type
+    pub fn update_spot_price_after_sell_to_pool(&mut self) -> Result<(), ContractError> {
+        self.config.is_active = false;
+
+        let new_spot_price = match self.config.bonding_curve {
+            BondingCurve::Linear => self
+                .config
+                .spot_price
+                .checked_sub(self.config.delta)
+                .map_err(|r| Into::<StdError>::into(r))?,
+            BondingCurve::Exponential => {
+                let denominator = Uint128::from(MAX_BASIS_POINTS)
+                    .checked_add(self.config.delta)
+                    .map_err(|r| Into::<StdError>::into(r))?;
+                self.config
+                    .spot_price
+                    .checked_mul(Uint128::from(MAX_BASIS_POINTS))
+                    .map_err(|r| Into::<StdError>::into(r))?
+                    .checked_div(denominator)
+                    .map_err(|r| Into::<StdError>::into(r))?
+            },
+            BondingCurve::ConstantProduct => self
+                .total_tokens
+                .checked_div(Uint128::from(self.config.total_nfts))
+                .map_err(|r| Into::<StdError>::into(r))?,
+        };
+
+        self.config.is_active = true;
+        self.config.spot_price = new_spot_price;
+
+        Ok(())
     }
 
     /// ----------------------------

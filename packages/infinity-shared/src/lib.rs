@@ -1,3 +1,4 @@
+pub mod global;
 pub mod interface;
 pub mod shared;
 

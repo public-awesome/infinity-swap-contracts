@@ -74,11 +74,8 @@ pub struct PoolConfig {
 
 pub const POOL_CONFIG: Item<PoolConfig> = Item::new("pc");
 
-// The address of the global gov contract
-pub const MARKETPLACE: Item<Addr> = Item::new("mp");
-
-// The address of the infinity index contract
-pub const INFINITY_INDEX: Item<Addr> = Item::new("ii");
-
 // A map of all NFT token ids held by the pool
 pub const NFT_DEPOSITS: Map<String, bool> = Map::new("nd");
+
+// The address of the infinity global contract
+pub const INFINITY_GLOBAL: Item<Addr> = Item::new("ig");
