@@ -2,6 +2,7 @@ use crate::state::{BondingCurve, PoolConfig, PoolType};
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
+use infinity_shared::query::QueryOptions;
 
 #[cw_serde]
 pub struct PoolInfo {
@@ -110,17 +111,10 @@ pub enum QueryMsg {
     NftDeposits {
         query_options: Option<QueryOptions<String>>,
     },
-}
-
-/// QueryOptions are used to paginate contract queries
-#[cw_serde]
-pub struct QueryOptions<T> {
-    /// Whether to sort items in ascending or descending order
-    pub descending: Option<bool>,
-    /// The key to start the query after
-    pub start_after: Option<T>,
-    // The number of items that will be returned
-    pub limit: Option<u32>,
+    #[returns(PoolQuoteResponse)]
+    BuyFromPoolQuote {},
+    #[returns(PoolQuoteResponse)]
+    SellToPoolQuote {},
 }
 
 #[cw_serde]
@@ -131,4 +125,9 @@ pub struct PoolConfigResponse {
 #[cw_serde]
 pub struct NftDepositsResponse {
     pub nft_deposits: Vec<String>,
+}
+
+#[cw_serde]
+pub struct PoolQuoteResponse {
+    pub quote_price: Option<Uint128>,
 }
