@@ -6,6 +6,7 @@ use cw_storage_plus::Item;
 pub struct GlobalConfig {
     pub infinity_index: Addr,
     pub infinity_factory: Addr,
+    pub infinity_pool_code_id: u64,
     pub marketplace: Addr,
     pub min_price: Uint128,
     pub pool_creation_fee: Uint128,

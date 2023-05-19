@@ -11,6 +11,8 @@ pub struct InstantiateMsg {
     pub infinity_factory: String,
     // The address of the marketplace contract
     pub marketplace: String,
+    // The code ID of the infinity pool contract
+    pub infinity_pool_code_id: u64,
     // The minimum price for an NFT
     pub min_price: Uint128,
     // The fee paid when creating a new pool
