@@ -1,4 +1,4 @@
-use crate::msg::{PoolQuoteResponse, QueryMsg};
+use crate::msg::{PoolQuotesResponse, QueryMsg};
 use crate::state::{sell_to_pool_quotes, PoolQuote};
 
 use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdResult};
@@ -34,7 +34,7 @@ pub fn query_buy_from_pool_quotes(
     deps: Deps,
     collection: Addr,
     query_options: Option<QueryOptions<(u128, String)>>,
-) -> StdResult<PoolQuoteResponse> {
+) -> StdResult<PoolQuotesResponse> {
     let (limit, order, min, max) = unpack_query_options(query_options, |sa| {
         Bound::exclusive((sa.0, deps.api.addr_validate(&sa.1).unwrap()))
     });
@@ -48,7 +48,7 @@ pub fn query_buy_from_pool_quotes(
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<_>>()?;
 
-    Ok(PoolQuoteResponse {
+    Ok(PoolQuotesResponse {
         pool_quotes,
     })
 }
@@ -57,7 +57,7 @@ pub fn query_sell_to_pool_quotes(
     deps: Deps,
     collection: Addr,
     query_options: Option<QueryOptions<(u128, String)>>,
-) -> StdResult<PoolQuoteResponse> {
+) -> StdResult<PoolQuotesResponse> {
     let (limit, order, min, max) = unpack_query_options(query_options, |sa| {
         Bound::exclusive((sa.0, deps.api.addr_validate(&sa.1).unwrap()))
     });
@@ -71,7 +71,7 @@ pub fn query_sell_to_pool_quotes(
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<_>>()?;
 
-    Ok(PoolQuoteResponse {
+    Ok(PoolQuotesResponse {
         pool_quotes,
     })
 }

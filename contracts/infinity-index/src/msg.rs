@@ -25,12 +25,12 @@ pub enum ExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(PoolQuoteResponse)]
+    #[returns(PoolQuotesResponse)]
     BuyFromPoolQuotes {
         collection: String,
         query_options: Option<QueryOptions<(u128, String)>>,
     },
-    #[returns(PoolQuoteResponse)]
+    #[returns(PoolQuotesResponse)]
     SellToPoolQuotes {
         collection: String,
         query_options: Option<QueryOptions<(u128, String)>>,
@@ -38,6 +38,6 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub struct PoolQuoteResponse {
+pub struct PoolQuotesResponse {
     pub pool_quotes: Vec<PoolQuote>,
 }
