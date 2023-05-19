@@ -27,6 +27,7 @@ pub fn instantiate(
             infinity_index: deps.api.addr_validate(&msg.infinity_index)?,
             infinity_factory: deps.api.addr_validate(&msg.infinity_factory)?,
             marketplace: deps.api.addr_validate(&msg.marketplace)?,
+            infinity_pool_code_id: msg.infinity_pool_code_id,
             min_price: msg.min_price,
             pool_creation_fee: msg.pool_creation_fee,
             trading_fee_percent: Decimal::percent(msg.trading_fee_bps),
@@ -40,6 +41,7 @@ pub fn instantiate(
         .add_attribute("infinity_index", msg.infinity_index)
         .add_attribute("infinity_factory", msg.infinity_factory)
         .add_attribute("marketplace", msg.marketplace)
+        .add_attribute("infinity_pool_code_id", msg.infinity_pool_code_id.to_string())
         .add_attribute("min_price", msg.min_price)
         .add_attribute("pool_creation_fee", msg.pool_creation_fee)
         .add_attribute("trading_fee_percent", msg.trading_fee_bps.to_string()))
