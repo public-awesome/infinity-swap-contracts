@@ -17,8 +17,7 @@ fn try_withdraw_tokens() {
                 mut router,
                 accts,
             },
-        marketplace,
-        infinity_index,
+        infinity_global,
         infinity_pool_code_id,
         ..
     } = setup_infinity_test(1000).unwrap();
@@ -33,8 +32,7 @@ fn try_withdraw_tokens() {
         infinity_pool_code_id,
         &accts.owner.to_string(),
         &collection.to_string(),
-        &marketplace.to_string(),
-        &infinity_index.to_string(),
+        &infinity_global.to_string(),
         &None,
         0u64,
         0u64,

@@ -20,8 +20,7 @@ fn try_update_pool_config() {
                 mut router,
                 accts,
             },
-        marketplace,
-        infinity_index,
+        infinity_global,
         infinity_pool_code_id,
         ..
     } = setup_infinity_test(100).unwrap();
@@ -36,8 +35,7 @@ fn try_update_pool_config() {
         infinity_pool_code_id,
         &accts.owner.to_string(),
         &collection.to_string(),
-        &marketplace.to_string(),
-        &infinity_index.to_string(),
+        &infinity_global.to_string(),
         &None,
         0u64,
         0u64,

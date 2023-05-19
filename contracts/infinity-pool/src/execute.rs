@@ -1,18 +1,20 @@
-use std::marker::PhantomData;
-
-use crate::helpers::load_pool;
+use crate::helpers::{
+    calculate_nft_sale_fees, load_pool, pay_out_nft_sale_fees, save_pool_and_update_indices,
+};
 use crate::msg::ExecuteMsg;
 use crate::query::MAX_QUERY_LIMIT;
-use crate::state::{PoolType, NFT_DEPOSITS};
+use crate::state::NFT_DEPOSITS;
 use crate::{error::ContractError, state::INFINITY_GLOBAL};
 
-use cosmwasm_std::{coin, ensure, Addr, Decimal, DepsMut, Empty, Env, MessageInfo, Uint128};
+use cosmwasm_std::{
+    coin, ensure, has_coins, Addr, Decimal, DepsMut, Empty, Env, MessageInfo, Uint128,
+};
 use cw721_base::helpers::Cw721Contract;
-use cw_utils::{maybe_addr, nonpayable};
-use infinity_global::state::GLOBAL_CONFIG;
+use cw_utils::{maybe_addr, must_pay, nonpayable};
 use infinity_shared::{global::load_global_config, shared::only_nft_owner};
-use sg_marketplace_common::{bank_send, transfer_nft};
+use sg_marketplace_common::{load_collection_royalties, transfer_coin, transfer_nft};
 use sg_std::{Response, NATIVE_DENOM};
+use std::marker::PhantomData;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -82,6 +84,20 @@ pub fn execute(
             maybe_addr(api, asset_recipient)?,
             maybe_addr(api, finder)?,
         ),
+        ExecuteMsg::SwapTokensForNft {
+            token_id,
+            max_input,
+            asset_recipient,
+            finder,
+        } => execute_swap_nft_for_tokens(
+            deps,
+            info,
+            env,
+            token_id,
+            max_input,
+            maybe_addr(api, asset_recipient)?,
+            maybe_addr(api, finder)?,
+        ),
     }
 }
 
@@ -127,7 +143,15 @@ pub fn execute_deposit_nfts(
     }
 
     pool.config.total_nfts += token_ids.len() as u64;
-    pool.save(deps.storage)?;
+
+    let global_config = load_global_config(&deps.querier, &INFINITY_GLOBAL.load(deps.storage)?)?;
+    response = save_pool_and_update_indices(
+        deps.storage,
+        &mut pool,
+        &global_config.infinity_index,
+        global_config.min_price,
+        response,
+    )?;
 
     response = response.add_event(pool.create_event("deposit-nfts", vec!["total_nfts"])?);
 
@@ -176,7 +200,14 @@ pub fn execute_withdraw_nfts(
         }
     }
 
-    pool.save(deps.storage)?;
+    let global_config = load_global_config(&deps.querier, &INFINITY_GLOBAL.load(deps.storage)?)?;
+    response = save_pool_and_update_indices(
+        deps.storage,
+        &mut pool,
+        &global_config.infinity_index,
+        global_config.min_price,
+        response,
+    )?;
 
     response = response.add_event(pool.create_event("withdraw-nfts", vec!["total_nfts"])?);
 
@@ -222,12 +253,21 @@ pub fn execute_withdraw_tokens(
     );
 
     pool.total_tokens -= amount;
-    pool.save(deps.storage)?;
 
     let mut response = Response::new();
+
+    let global_config = load_global_config(&deps.querier, &INFINITY_GLOBAL.load(deps.storage)?)?;
+    response = save_pool_and_update_indices(
+        deps.storage,
+        &mut pool,
+        &global_config.infinity_index,
+        global_config.min_price,
+        response,
+    )?;
+
     let recipient = asset_recipient.unwrap_or(info.sender.clone());
     response = response
-        .add_submessage(bank_send(coin(amount.u128(), NATIVE_DENOM.to_string()), &recipient));
+        .add_submessage(transfer_coin(coin(amount.u128(), NATIVE_DENOM.to_string()), &recipient));
 
     response = response.add_event(pool.create_event("withdraw-tokens", vec!["total_tokens"])?);
 
@@ -298,9 +338,17 @@ pub fn execute_update_pool_config(
         attr_keys.push("reinvest_nfts");
     }
 
-    pool.save(deps.storage)?;
-
     let mut response = Response::new();
+
+    let global_config = load_global_config(&deps.querier, &INFINITY_GLOBAL.load(deps.storage)?)?;
+    response = save_pool_and_update_indices(
+        deps.storage,
+        &mut pool,
+        &global_config.infinity_index,
+        global_config.min_price,
+        response,
+    )?;
+
     let event = pool.create_event("update-pool-config", attr_keys)?;
     response = response.add_event(event);
 
@@ -324,9 +372,18 @@ pub fn execute_set_is_active(
     );
 
     pool.config.is_active = is_active;
-    pool.save(deps.storage)?;
 
     let mut response = Response::new();
+
+    let global_config = load_global_config(&deps.querier, &INFINITY_GLOBAL.load(deps.storage)?)?;
+    response = save_pool_and_update_indices(
+        deps.storage,
+        &mut pool,
+        &global_config.infinity_index,
+        global_config.min_price,
+        response,
+    )?;
+
     response = response.add_event(pool.create_event("set-is-active", vec!["is_active"])?);
 
     Ok(response)
@@ -342,6 +399,11 @@ pub fn execute_swap_nft_for_tokens(
     asset_recipient: Option<Addr>,
     finder: Option<Addr>,
 ) -> Result<Response, ContractError> {
+    let mut response = Response::new();
+
+    // ----------------------------
+    // Validate inputs
+    // ----------------------------
     nonpayable(&info)?;
 
     let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
@@ -354,9 +416,6 @@ pub fn execute_swap_nft_for_tokens(
     only_nft_owner(&deps.querier, deps.api, &info.sender, &pool.config.collection, &token_id)?;
 
     let global_config = load_global_config(&deps.querier, &INFINITY_GLOBAL.load(deps.storage)?)?;
-
-    let mut response = Response::new();
-
     let sale_price = pool.get_sell_to_pool_quote(global_config.min_price)?;
 
     ensure!(
@@ -364,11 +423,34 @@ pub fn execute_swap_nft_for_tokens(
         ContractError::InvalidPoolQuote("sale price is below min output".to_string())
     );
 
-    pool.total_tokens -= sale_price;
+    // ----------------------------
+    // Write Response Messages
+    // ----------------------------
+    let royalty_info = load_collection_royalties(&deps.querier, deps.api, &pool.config.collection)?;
+    let seller_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    let tx_fees = calculate_nft_sale_fees(
+        sale_price,
+        global_config.trading_fee_percent,
+        seller_recipient,
+        finder,
+        pool.config.finders_fee_percent,
+        royalty_info,
+        pool.swap_fee_percent(),
+        Some(pool.recipient().clone()),
+    )?;
 
-    // Transfer NFT to pool recipient or reinvest into pool
+    // Pay the seller
+    ensure!(tx_fees.seller_payment.amount > Uint128::zero(), ContractError::ZeroSellerPayment);
+    response = response.add_submessage(transfer_coin(
+        coin(tx_fees.seller_payment.amount.u128(), NATIVE_DENOM),
+        &tx_fees.seller_payment.recipient,
+    ));
+
+    // Pay out fees
+    response = pay_out_nft_sale_fees(response, tx_fees, None)?;
+
+    // Transfer NFT to pool or pool recipient address
     let nft_recipient = if pool.should_reinvest_nfts() {
-        pool.config.total_nfts += 1;
         &env.contract.address
     } else {
         pool.recipient()
@@ -376,37 +458,155 @@ pub fn execute_swap_nft_for_tokens(
     response =
         response.add_submessage(transfer_nft(&pool.config.collection, &token_id, nft_recipient));
 
-    let update_spot_price_result = pool.update_spot_price_after_sell_to_pool();
+    // ----------------------------
+    // Update Pool State
+    // ----------------------------
+    pool.total_tokens -= sale_price;
 
-    let next_sell_to_pool_quote = match update_spot_price_result.is_ok() {
-        true => pool.get_sell_to_pool_quote(total_tokens, marketplace_params.min_price).ok(),
-        false => None,
+    if pool.should_reinvest_nfts() {
+        pool.config.total_nfts += 1;
+    }
+
+    // Try and update spot price
+    let update_spot_price_result = pool.next_spot_price_after_sell_to_pool();
+    match update_spot_price_result {
+        Ok(spot_price) => {
+            pool.config.is_active = true;
+            pool.config.spot_price = spot_price;
+        },
+        Err(_) => {
+            pool.config.is_active = false;
+        },
     };
 
-    let infinity_index = INFINITY_INDEX.load(deps.storage)?;
+    // ----------------------------
+    // Save Pool
+    // ----------------------------
+    response = save_pool_and_update_indices(
+        deps.storage,
+        &mut pool,
+        &global_config.infinity_index,
+        global_config.min_price,
+        response,
+    )?;
 
-    response = response.add_submessage(SubMsg::new(WasmMsg::Execute {
-        contract_addr: infinity_index.to_string(),
-        msg: to_binary(&InfinityIndexExecuteMsg::UpdateSellToPoolQuote {
-            collection: pool.collection().to_string(),
-            quote_price: next_sell_to_pool_quote,
-        })?,
-        funds: vec![],
-    }));
+    Ok(response)
+}
 
-    let royalty_info = load_collection_royalties(&deps.querier, deps.api, pool.collection())?;
+/// Execute a SwapTokensForNft message
+pub fn execute_swap_tokens_for_nft(
+    deps: DepsMut,
+    info: MessageInfo,
+    env: Env,
+    token_id: String,
+    max_input: Uint128,
+    asset_recipient: Option<Addr>,
+    finder: Option<Addr>,
+) -> Result<Response, ContractError> {
+    let mut response = Response::new();
+
+    // ----------------------------
+    // Validate inputs
+    // ----------------------------
+    let received_amount = must_pay(&info, NATIVE_DENOM)?;
+    ensure!(
+        has_coins(&info.funds, &coin(max_input.u128(), NATIVE_DENOM)),
+        ContractError::InsufficientFunds {}
+    );
+
+    let mut pool = load_pool(&env.contract.address, deps.storage, &deps.querier)?;
+
+    ensure!(
+        pool.can_escrow_nfts(),
+        ContractError::InvalidPool("pool cannot escrow NFTs".to_string())
+    );
+
+    ensure!(
+        NFT_DEPOSITS.has(deps.storage, token_id.to_string()),
+        ContractError::InvalidInput("pool does not own specified token_id".to_string())
+    );
+
+    let global_config = load_global_config(&deps.querier, &INFINITY_GLOBAL.load(deps.storage)?)?;
+    let sale_price = pool.get_buy_from_pool_quote(global_config.min_price)?;
+
+    ensure!(
+        sale_price <= max_input,
+        ContractError::InvalidPoolQuote("sale price is above max input".to_string())
+    );
+
+    // ----------------------------
+    // Write Response Messages
+    // ----------------------------
+    let royalty_info = load_collection_royalties(&deps.querier, deps.api, &pool.config.collection)?;
     let tx_fees = calculate_nft_sale_fees(
         sale_price,
-        marketplace_params.trading_fee_percent,
-        seller_recipient,
+        global_config.trading_fee_percent,
+        pool.recipient().clone(),
         finder,
-        None,
+        pool.config.finders_fee_percent,
         royalty_info,
+        pool.swap_fee_percent(),
+        Some(pool.recipient().clone()),
     )?;
-    println!("tx_fees: {:?}", tx_fees);
-    response = payout_nft_sale_fees(response, tx_fees, None)?;
 
-    pool.save(deps.storage)?;
+    // If reinvest_tokens is true, do nothing as pool already owns the tokens
+    // If reinvest_tokens is false, transfer tokens to pool recipient
+    let seller_amount = tx_fees.seller_payment.amount;
+    ensure!(seller_amount > Uint128::zero(), ContractError::ZeroSellerPayment);
+    if !pool.should_reinvest_tokens() {
+        response = response.add_submessage(transfer_coin(
+            coin(seller_amount.u128(), NATIVE_DENOM),
+            &tx_fees.seller_payment.recipient,
+        ));
+    }
+
+    // Pay out fees
+    response = pay_out_nft_sale_fees(response, tx_fees, None)?;
+
+    // Refund any excess tokens to the sender
+    let excess_tokens = received_amount - sale_price;
+    if excess_tokens > Uint128::zero() {
+        response = response
+            .add_submessage(transfer_coin(coin(excess_tokens.u128(), NATIVE_DENOM), &info.sender));
+    }
+
+    // Transfer NFT to the buyer
+    let nft_recipient = asset_recipient.unwrap_or(info.sender.clone());
+    response =
+        response.add_submessage(transfer_nft(&pool.config.collection, &token_id, &nft_recipient));
+    NFT_DEPOSITS.remove(deps.storage, token_id.to_string());
+
+    // ----------------------------
+    // Update Pool State
+    // ----------------------------
+    pool.config.total_nfts -= 1;
+
+    if pool.should_reinvest_tokens() {
+        pool.total_tokens += seller_amount;
+    }
+
+    // Try and update spot price
+    let update_spot_price_result = pool.next_spot_price_after_buy_from_pool();
+    match update_spot_price_result {
+        Ok(spot_price) => {
+            pool.config.is_active = true;
+            pool.config.spot_price = spot_price;
+        },
+        Err(_) => {
+            pool.config.is_active = false;
+        },
+    };
+
+    // ----------------------------
+    // Save Pool
+    // ----------------------------
+    response = save_pool_and_update_indices(
+        deps.storage,
+        &mut pool,
+        &global_config.infinity_index,
+        global_config.min_price,
+        response,
+    )?;
 
     Ok(response)
 }
