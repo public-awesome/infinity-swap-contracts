@@ -24,7 +24,7 @@ fn try_deposit_nfts_token_pool() {
                 accts,
             },
         marketplace,
-        infinity_index,
+        infinity_global,
         infinity_pool_code_id,
         ..
     } = setup_infinity_test(1000).unwrap();
@@ -40,8 +40,7 @@ fn try_deposit_nfts_token_pool() {
         infinity_pool_code_id,
         &accts.owner.to_string(),
         &collection.to_string(),
-        &marketplace.to_string(),
-        &infinity_index.to_string(),
+        &infinity_global.to_string(),
         &None,
         0u64,
         0u64,
@@ -91,8 +90,7 @@ fn try_deposit_nfts_nft_or_trade_pool() {
                 mut router,
                 accts,
             },
-        marketplace,
-        infinity_index,
+        infinity_global,
         infinity_pool_code_id,
         ..
     } = setup_infinity_test(1000).unwrap();
@@ -108,8 +106,7 @@ fn try_deposit_nfts_nft_or_trade_pool() {
         infinity_pool_code_id,
         &accts.owner.to_string(),
         &collection.to_string(),
-        &marketplace.to_string(),
-        &infinity_index.to_string(),
+        &infinity_global.to_string(),
         &None,
         0u64,
         0u64,

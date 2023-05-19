@@ -25,4 +25,10 @@ pub enum ContractError {
 
     #[error("Invalid pool quote: {0}")]
     InvalidPoolQuote(String),
+
+    #[error("Seller payment should not be zero")]
+    ZeroSellerPayment,
+
+    #[error("Insufficient funds: funding amount should max max_input")]
+    InsufficientFunds,
 }

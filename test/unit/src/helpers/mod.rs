@@ -1,3 +1,4 @@
+pub mod constants;
 pub mod fixtures;
 pub mod marketplace_functions;
 pub mod nft_functions;

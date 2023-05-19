@@ -87,6 +87,13 @@ pub enum ExecuteMsg {
         asset_recipient: Option<String>,
         finder: Option<String>,
     },
+    // Swap Tokens For NFT at the pool price
+    SwapTokensForNft {
+        token_id: String,
+        max_input: Uint128,
+        asset_recipient: Option<String>,
+        finder: Option<String>,
+    },
     // /// Remove a pool from contract storage and indexing
     // RemovePool {
     //     pool_id: u64,

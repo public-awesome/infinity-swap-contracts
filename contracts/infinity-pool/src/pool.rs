@@ -27,6 +27,15 @@ impl Pool {
         }
     }
 
+    // Get the swap fee percent for this pool
+    pub fn swap_fee_percent(&self) -> Decimal {
+        if self.config.pool_type == PoolType::Trade {
+            self.config.swap_fee_percent
+        } else {
+            Decimal::zero()
+        }
+    }
+
     /// Returns whether or not the pool can escrow NFTs
     pub fn can_escrow_nfts(&self) -> bool {
         self.config.pool_type == PoolType::Trade || self.config.pool_type == PoolType::Nft
@@ -54,7 +63,10 @@ impl Pool {
         let sell_quote = match self.config.bonding_curve {
             BondingCurve::Linear | BondingCurve::Exponential => self.config.spot_price,
             BondingCurve::ConstantProduct => {
-                // TODO: verify total_nfts = 0 case
+                ensure!(
+                    self.config.total_nfts > 0,
+                    ContractError::InvalidPool("pool must have at least 1 NFT".to_string(),)
+                );
                 self.total_tokens.checked_div(Uint128::from(self.config.total_nfts + 1)).unwrap()
             },
         };
@@ -69,43 +81,116 @@ impl Pool {
         Ok(sell_quote)
     }
 
-    /// Updates the spot price of the pool depending on the transaction type
-    pub fn update_spot_price_after_sell_to_pool(&mut self) -> Result<(), ContractError> {
-        self.config.is_active = false;
+    pub fn get_buy_from_pool_quote(&self, min_price: Uint128) -> Result<Uint128, ContractError> {
+        ensure!(
+            self.config.total_nfts > 0,
+            ContractError::InvalidPool("pool must have at least 1 NFT".to_string(),)
+        );
+        let buy_quote = match self.config.pool_type {
+            PoolType::Token => unreachable!("Token pool cannot produce buy from pool quote"),
+            PoolType::Nft => self.config.spot_price,
+            PoolType::Trade => match self.config.bonding_curve {
+                BondingCurve::Linear => self
+                    .config
+                    .spot_price
+                    .checked_add(self.config.delta)
+                    .map_err(Into::<StdError>::into)?,
+                BondingCurve::Exponential => {
+                    let net_delta = Uint128::from(MAX_BASIS_POINTS)
+                        .checked_add(self.config.delta)
+                        .map_err(Into::<StdError>::into)?;
+                    self.config
+                        .spot_price
+                        .checked_mul(net_delta)
+                        .map_err(Into::<StdError>::into)?
+                        .checked_div(Uint128::from(MAX_BASIS_POINTS))
+                        .map_err(Into::<StdError>::into)?
+                        .checked_add(Uint128::one())
+                        .map_err(Into::<StdError>::into)?
+                },
+                BondingCurve::ConstantProduct => {
+                    ensure!(
+                        self.config.total_nfts > 1,
+                        ContractError::InvalidPool(
+                            "constant product pool must have at least 2 NFT".to_string(),
+                        )
+                    );
+                    self.total_tokens
+                        .checked_div(Uint128::from(self.config.total_nfts - 1))
+                        .map_err(Into::<StdError>::into)?
+                        .checked_add(Uint128::one())
+                        .map_err(Into::<StdError>::into)?
+                },
+            },
+        };
+        ensure!(
+            buy_quote >= min_price,
+            ContractError::InvalidPoolQuote("sale price is below min price".to_string(),)
+        );
+        Ok(buy_quote)
+    }
 
-        let new_spot_price = match self.config.bonding_curve {
+    /// Updates the spot price of the pool after a sell to pool trade
+    pub fn next_spot_price_after_sell_to_pool(&mut self) -> Result<Uint128, ContractError> {
+        let next_spot_price = match self.config.bonding_curve {
             BondingCurve::Linear => self
                 .config
                 .spot_price
                 .checked_sub(self.config.delta)
-                .map_err(|r| Into::<StdError>::into(r))?,
+                .map_err(Into::<StdError>::into)?,
             BondingCurve::Exponential => {
                 let denominator = Uint128::from(MAX_BASIS_POINTS)
                     .checked_add(self.config.delta)
-                    .map_err(|r| Into::<StdError>::into(r))?;
+                    .map_err(Into::<StdError>::into)?;
                 self.config
                     .spot_price
                     .checked_mul(Uint128::from(MAX_BASIS_POINTS))
-                    .map_err(|r| Into::<StdError>::into(r))?
+                    .map_err(Into::<StdError>::into)?
                     .checked_div(denominator)
-                    .map_err(|r| Into::<StdError>::into(r))?
+                    .map_err(Into::<StdError>::into)?
             },
             BondingCurve::ConstantProduct => self
                 .total_tokens
                 .checked_div(Uint128::from(self.config.total_nfts))
-                .map_err(|r| Into::<StdError>::into(r))?,
+                .map_err(Into::<StdError>::into)?,
         };
+        Ok(next_spot_price)
+    }
 
-        self.config.is_active = true;
-        self.config.spot_price = new_spot_price;
-
-        Ok(())
+    /// Updates the spot price of the pool after a buy from pool trade
+    pub fn next_spot_price_after_buy_from_pool(&mut self) -> Result<Uint128, ContractError> {
+        let next_spot_price = match self.config.bonding_curve {
+            BondingCurve::Linear => self
+                .config
+                .spot_price
+                .checked_add(self.config.delta)
+                .map_err(Into::<StdError>::into)?,
+            BondingCurve::Exponential => {
+                let net_delta = Uint128::from(MAX_BASIS_POINTS)
+                    .checked_add(self.config.delta)
+                    .map_err(Into::<StdError>::into)?;
+                self.config
+                    .spot_price
+                    .checked_mul(net_delta)
+                    .map_err(Into::<StdError>::into)?
+                    .checked_div(Uint128::from(MAX_BASIS_POINTS))
+                    .map_err(StdError::divide_by_zero)?
+                    .checked_add(Uint128::one())
+                    .map_err(Into::<StdError>::into)?
+            },
+            BondingCurve::ConstantProduct => self
+                .total_tokens
+                .checked_div(Uint128::from(self.config.total_nfts))
+                .map_err(Into::<StdError>::into)?
+                .checked_add(Uint128::one())
+                .map_err(Into::<StdError>::into)?,
+        };
+        Ok(next_spot_price)
     }
 
     /// ----------------------------
     /// Save and Validate
     /// ----------------------------
-
     pub fn save(&mut self, storage: &mut dyn Storage) -> Result<(), ContractError> {
         self.force_property_values();
         self.validate()?;
