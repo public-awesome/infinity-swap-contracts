@@ -1,14 +1,9 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Uint128};
 use cw_storage_macro::index_list;
-use cw_storage_plus::{IndexedMap, Item, Map, MultiIndex};
+use cw_storage_plus::{IndexedMap, Item, MultiIndex};
 
-#[cw_serde]
-pub struct Config {
-    pub global_gov: Addr,
-}
-
-pub const CONFIG: Item<Config> = Item::new("cfg");
+pub const INFINITY_GLOBAL: Item<Addr> = Item::new("ig");
 
 #[cw_serde]
 pub struct PoolQuote {

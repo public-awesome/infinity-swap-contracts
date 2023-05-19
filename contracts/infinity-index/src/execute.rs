@@ -1,3 +1,4 @@
+use crate::helpers::validate_infinity_pool;
 use crate::msg::ExecuteMsg;
 use crate::state::PoolQuote;
 use crate::{
@@ -5,7 +6,7 @@ use crate::{
     state::{buy_from_pool_quotes, sell_to_pool_quotes},
 };
 
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Uint128};
+use cosmwasm_std::{Addr, DepsMut, Env, Event, MessageInfo, Uint128};
 use sg_std::Response;
 
 #[cfg(not(feature = "library"))]
@@ -46,48 +47,72 @@ pub fn execute(
 
 pub fn execute_update_buy_from_pool_quote(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     collection: Addr,
     quote_price: Option<Uint128>,
 ) -> Result<Response, ContractError> {
-    if let Some(_quote_price) = quote_price {
-        buy_from_pool_quotes().save(
-            deps.storage,
-            info.sender.clone(),
-            &PoolQuote {
-                pool: info.sender,
-                collection,
-                quote_price: _quote_price,
-            },
-        )?;
-    } else {
-        buy_from_pool_quotes().remove(deps.storage, info.sender)?;
-    }
+    validate_infinity_pool(deps.as_ref(), &info.sender)?;
 
-    Ok(Response::default())
+    let event = match quote_price {
+        Some(quote_price) => {
+            buy_from_pool_quotes().save(
+                deps.storage,
+                info.sender.clone(),
+                &PoolQuote {
+                    pool: info.sender.clone(),
+                    collection: collection.clone(),
+                    quote_price,
+                },
+            )?;
+            Event::new("update-buy-from-pool-quote")
+                .add_attribute("pool", info.sender.to_string())
+                .add_attribute("collection", collection.to_string())
+                .add_attribute("quote_price", quote_price.to_string())
+        },
+        None => {
+            buy_from_pool_quotes().remove(deps.storage, info.sender.clone())?;
+            Event::new("remove-buy-from-pool-quote")
+                .add_attribute("pool", info.sender.to_string())
+                .add_attribute("collection", collection.to_string())
+        },
+    };
+
+    Ok(Response::new().add_event(event))
 }
 
 pub fn execute_update_sell_to_pool_quote(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     collection: Addr,
     quote_price: Option<Uint128>,
 ) -> Result<Response, ContractError> {
-    if let Some(_quote_price) = quote_price {
-        sell_to_pool_quotes().save(
-            deps.storage,
-            info.sender.clone(),
-            &PoolQuote {
-                pool: info.sender,
-                collection,
-                quote_price: _quote_price,
-            },
-        )?;
-    } else {
-        sell_to_pool_quotes().remove(deps.storage, info.sender)?;
-    }
+    validate_infinity_pool(deps.as_ref(), &info.sender)?;
 
-    Ok(Response::default())
+    let event = match quote_price {
+        Some(quote_price) => {
+            sell_to_pool_quotes().save(
+                deps.storage,
+                info.sender.clone(),
+                &PoolQuote {
+                    pool: info.sender.clone(),
+                    collection: collection.clone(),
+                    quote_price,
+                },
+            )?;
+            Event::new("update-sell-to-pool-quote")
+                .add_attribute("pool", info.sender.to_string())
+                .add_attribute("collection", collection.to_string())
+                .add_attribute("quote_price", quote_price.to_string())
+        },
+        None => {
+            sell_to_pool_quotes().remove(deps.storage, info.sender.clone())?;
+            Event::new("remove-sell-to-pool-quote")
+                .add_attribute("pool", info.sender.to_string())
+                .add_attribute("collection", collection.to_string())
+        },
+    };
+
+    Ok(Response::new().add_event(event))
 }
