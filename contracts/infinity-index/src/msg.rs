@@ -1,8 +1,8 @@
-use crate::state::PoolQuote;
+use crate::state::PairQuote;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint128;
-use infinity_shared::query::QueryOptions;
+use sg_index_query::QueryOptions;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -12,32 +12,33 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
-    UpdateBuyFromPoolQuote {
+    UpdatePairIndices {
         collection: String,
-        quote_price: Option<Uint128>,
+        denom: String,
+        sell_to_pair_quote: Option<Uint128>,
+        buy_from_pair_quote: Option<Uint128>,
     },
-    UpdateSellToPoolQuote {
-        collection: String,
-        quote_price: Option<Uint128>,
-    },
+}
+
+#[cw_serde]
+pub struct PairQuoteOffset {
+    pub pair: String,
+    pub amount: u128,
 }
 
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
-    #[returns(PoolQuotesResponse)]
-    BuyFromPoolQuotes {
+    #[returns(Vec<PairQuote>)]
+    SellToPairQuotes {
         collection: String,
-        query_options: Option<QueryOptions<(u128, String)>>,
+        denom: String,
+        query_options: Option<QueryOptions<PairQuoteOffset>>,
     },
-    #[returns(PoolQuotesResponse)]
-    SellToPoolQuotes {
+    #[returns(Vec<PairQuote>)]
+    BuyFromPairQuotes {
         collection: String,
-        query_options: Option<QueryOptions<(u128, String)>>,
+        denom: String,
+        query_options: Option<QueryOptions<PairQuoteOffset>>,
     },
-}
-
-#[cw_serde]
-pub struct PoolQuotesResponse {
-    pub pool_quotes: Vec<PoolQuote>,
 }

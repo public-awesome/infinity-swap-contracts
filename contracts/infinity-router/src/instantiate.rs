@@ -6,7 +6,7 @@ use cosmwasm_std::{DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
 use sg_std::Response;
 
-pub const CONTRACT_NAME: &str = "crates.io:infinity-router";
+pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg(not(feature = "library"))]

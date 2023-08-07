@@ -1,9 +1,8 @@
-use crate::msg::{PoolQuotesResponse, QueryMsg};
-use crate::state::{sell_to_pool_quotes, PoolQuote};
+use crate::msg::{PairQuoteOffset, QueryMsg};
+use crate::state::{buy_from_pair_quotes, sell_to_pair_quotes, PairQuote};
 
 use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdResult};
-use cw_storage_plus::Bound;
-use infinity_shared::query::{unpack_query_options, QueryOptions};
+use sg_index_query::{QueryOptions, QueryOptionsInternal};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -11,67 +10,83 @@ use cosmwasm_std::entry_point;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::BuyFromPoolQuotes {
+        QueryMsg::SellToPairQuotes {
             collection,
+            denom,
             query_options,
-        } => to_binary(&query_buy_from_pool_quotes(
+        } => to_binary(&query_sell_to_pair_quotes(
             deps,
             deps.api.addr_validate(&collection)?,
-            query_options,
+            denom,
+            query_options.unwrap_or(QueryOptions::default()),
         )?),
-        QueryMsg::SellToPoolQuotes {
+        QueryMsg::BuyFromPairQuotes {
             collection,
+            denom,
             query_options,
-        } => to_binary(&query_sell_to_pool_quotes(
+        } => to_binary(&query_buy_from_pair_quotes(
             deps,
             deps.api.addr_validate(&collection)?,
-            query_options,
+            denom,
+            query_options.unwrap_or(QueryOptions::default()),
         )?),
     }
 }
 
-pub fn query_buy_from_pool_quotes(
+pub fn query_sell_to_pair_quotes(
     deps: Deps,
     collection: Addr,
-    query_options: Option<QueryOptions<(u128, String)>>,
-) -> StdResult<PoolQuotesResponse> {
-    let (limit, order, min, max) = unpack_query_options(query_options, |sa| {
-        Bound::exclusive((sa.0, deps.api.addr_validate(&sa.1).unwrap()))
-    });
+    denom: String,
+    query_options: QueryOptions<PairQuoteOffset>,
+) -> StdResult<Vec<PairQuote>> {
+    let QueryOptionsInternal {
+        limit,
+        order,
+        min,
+        max,
+    } = query_options.unpack(
+        &(|offset| (offset.amount, Addr::unchecked(offset.pair.clone()))),
+        None,
+        None,
+    );
 
-    let pool_quotes: Vec<PoolQuote> = sell_to_pool_quotes()
+    let results = sell_to_pair_quotes()
         .idx
-        .collection_quote_price
-        .sub_prefix(collection)
-        .range(deps.storage, min, max, order)
-        .take(limit as usize)
-        .map(|item| item.map(|(_, v)| v))
-        .collect::<StdResult<_>>()?;
+        .collection_quote
+        .sub_prefix((collection, denom))
+        .range_raw(deps.storage, min, max, order)
+        .take(limit)
+        .map(|res| res.map(|(_, pq)| pq))
+        .collect::<StdResult<Vec<_>>>()?;
 
-    Ok(PoolQuotesResponse {
-        pool_quotes,
-    })
+    Ok(results)
 }
 
-pub fn query_sell_to_pool_quotes(
+pub fn query_buy_from_pair_quotes(
     deps: Deps,
     collection: Addr,
-    query_options: Option<QueryOptions<(u128, String)>>,
-) -> StdResult<PoolQuotesResponse> {
-    let (limit, order, min, max) = unpack_query_options(query_options, |sa| {
-        Bound::exclusive((sa.0, deps.api.addr_validate(&sa.1).unwrap()))
-    });
+    denom: String,
+    query_options: QueryOptions<PairQuoteOffset>,
+) -> StdResult<Vec<PairQuote>> {
+    let QueryOptionsInternal {
+        limit,
+        order,
+        min,
+        max,
+    } = query_options.unpack(
+        &(|offset| (offset.amount, Addr::unchecked(offset.pair.clone()))),
+        None,
+        None,
+    );
 
-    let pool_quotes: Vec<PoolQuote> = sell_to_pool_quotes()
+    let results = buy_from_pair_quotes()
         .idx
-        .collection_quote_price
-        .sub_prefix(collection)
-        .range(deps.storage, min, max, order)
-        .take(limit as usize)
-        .map(|item| item.map(|(_, v)| v))
-        .collect::<StdResult<_>>()?;
+        .collection_quote
+        .sub_prefix((collection, denom))
+        .range_raw(deps.storage, min, max, order)
+        .take(limit)
+        .map(|res| res.map(|(_, pq)| pq))
+        .collect::<StdResult<Vec<_>>>()?;
 
-    Ok(PoolQuotesResponse {
-        pool_quotes,
-    })
+    Ok(results)
 }

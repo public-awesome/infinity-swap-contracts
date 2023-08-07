@@ -1,5 +1,10 @@
+use crate::{
+    nfts_for_tokens_iterators::{NftForTokensQuote, NftForTokensSource},
+    tokens_for_nfts_iterators::{TokensForNftQuote, TokensForNftSource},
+};
+
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Timestamp, Uint128};
+use cosmwasm_std::Uint128;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -7,48 +12,63 @@ pub struct InstantiateMsg {
     pub infinity_global: String,
 }
 
-#[cw_serde]
-pub struct NftOrder {
-    pub token_id: String,
-    pub amount: Uint128,
-}
-
 /// SwapParams contains the parameters for a swap
 #[cw_serde]
 pub struct SwapParams {
-    /// The deadline after which the swap will be rejected
-    pub deadline: Timestamp,
     /// Whether or not to revert the entire trade if one of the swaps fails
-    pub robust: bool,
+    pub robust: Option<bool>,
     /// The address to receive the assets from the swap, if not specified is set to sender
     pub asset_recipient: Option<String>,
-    /// The address of the finder, will receive a portion of the fees equal to percentage set by maker
-    pub finder: Option<String>,
+}
+
+impl Default for SwapParams {
+    fn default() -> Self {
+        SwapParams {
+            robust: None,
+            asset_recipient: None,
+        }
+    }
+}
+
+#[cw_serde]
+pub struct NftOrder {
+    pub input_token_id: String,
+    pub min_output: Uint128,
 }
 
 #[cw_serde]
 pub enum ExecuteMsg {
     SwapNftsForTokens {
         collection: String,
+        denom: String,
         nft_orders: Vec<NftOrder>,
-        swap_params: SwapParams,
+        swap_params: Option<SwapParams>,
+        filter_sources: Option<Vec<NftForTokensSource>>,
     },
-    SwapNftsForTokensInternal {},
-    SwapTokensForSpecificNfts {
+    SwapTokensForNfts {
         collection: String,
-        nft_orders: Vec<NftOrder>,
-        swap_params: SwapParams,
+        denom: String,
+        max_inputs: Vec<Uint128>,
+        swap_params: Option<SwapParams>,
+        filter_sources: Option<Vec<TokensForNftSource>>,
     },
-    SwapTokensForSpecificNftsInternal {},
-    SwapTokensForAnyNfts {
-        collection: String,
-        orders: Vec<Uint128>,
-        swap_params: SwapParams,
-    },
-    SwapTokensForAnyNftsInternal {},
-    CleanupSwapContext {},
 }
 
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {}
+pub enum QueryMsg {
+    #[returns(Vec<NftForTokensQuote>)]
+    NftsForTokens {
+        collection: String,
+        denom: String,
+        limit: u32,
+        filter_sources: Option<Vec<NftForTokensSource>>,
+    },
+    #[returns(Vec<TokensForNftQuote>)]
+    TokensForNfts {
+        collection: String,
+        denom: String,
+        limit: u32,
+        filter_sources: Option<Vec<TokensForNftSource>>,
+    },
+}
