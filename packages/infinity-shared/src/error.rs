@@ -1,24 +1,19 @@
-use cosmwasm_std::StdError;
-use cw_utils::PaymentError;
+use cosmwasm_std::Coin;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum InfinityError {
-    #[error("{0}")]
-    Std(#[from] StdError),
+    #[error("Unauthorized: {0}")]
+    Unauthorized(String),
 
-    #[error("{0}")]
-    PaymentError(#[from] PaymentError),
-
-    #[error("Not NFT owner: {0} is not the owner of the NFT")]
-    NotNftOwner(String),
-
-    #[error("Invalid input: {0}")]
+    #[error("InvalidInput: {0}")]
     InvalidInput(String),
 
-    #[error("Insufficient funds: received {received}, expected {expected}")]
-    InsufficientFunds { received: String, expected: String },
+    #[error("InsufficientFunds: expected {expected}")]
+    InsufficientFunds {
+        expected: Coin,
+    },
 
-    #[error("Deadline passed")]
-    DeadlinePassed,
+    #[error("InternalError: {0}")]
+    InternalError(String),
 }
