@@ -1,9 +1,9 @@
 [package]
-name = "infinity-index"
-version = { workspace = true }
-edition = { workspace = true }
+name       = "infinity-index"
+version    = { workspace = true }
+edition    = { workspace = true }
 repository = { workspace = true }
-license = { workspace = true }
+license    = { workspace = true }
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -25,14 +25,14 @@ library = []
 infinity-shared = { workspace = true }
 infinity-global = { workspace = true }
 # infinity-swap = { workspace = true }
-# infinity-pool = { workspace = true }
-cosmwasm-std = { workspace = true }
-cosmwasm-schema = { workspace = true }
-cw-storage-plus = { workspace = true }
+cosmwasm-std     = { workspace = true }
+cosmwasm-schema  = { workspace = true }
+cw-storage-plus  = { workspace = true }
 cw-storage-macro = { workspace = true }
+sg-index-query   = { version = "0.1.1" }
 # cosmwasm-storage = { workspace = true }
 # cw-utils = { workspace = true }
-cw2 = { workspace = true }
+cw2       = { workspace = true }
 thiserror = { workspace = true }
 # anyhow = { workspace = true }
 # sg1 = { workspace = true }

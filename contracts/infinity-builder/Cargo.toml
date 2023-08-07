@@ -1,9 +1,9 @@
 [package]
-name = "infinity-builder"
-version = { workspace = true }
-edition = { workspace = true }
+name       = "infinity-builder"
+version    = { workspace = true }
+edition    = { workspace = true }
 repository = { workspace = true }
-license = { workspace = true }
+license    = { workspace = true }
 
 exclude = [
   # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
@@ -22,19 +22,19 @@ library = []
 
 [dependencies]
 # infinity-macros = { workspace = true }
-infinity-shared = { workspace = true }
-infinity-global = { workspace = true }
+infinity-shared  = { workspace = true }
+infinity-global  = { workspace = true }
 infinity-factory = { workspace = true }
-infinity-index = { workspace = true }
-infinity-router = { workspace = true }
-infinity-pool = { workspace = true }
-cosmwasm-std = { workspace = true }
-cosmwasm-schema = { workspace = true }
-cw-storage-plus = { workspace = true }
+infinity-index   = { workspace = true }
+infinity-router  = { workspace = true }
+infinity-pair    = { workspace = true }
+cosmwasm-std     = { workspace = true }
+cosmwasm-schema  = { workspace = true }
+cw-storage-plus  = { workspace = true }
 cw-storage-macro = { workspace = true }
 # cosmwasm-storage = { workspace = true }
-cw-utils = { workspace = true }
-cw2 = { workspace = true }
+cw-utils  = { workspace = true }
+cw2       = { workspace = true }
 thiserror = { workspace = true }
 # anyhow = { workspace = true }
 # sg1 = { workspace = true }
