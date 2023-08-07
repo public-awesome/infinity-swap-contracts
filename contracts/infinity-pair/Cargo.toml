@@ -21,27 +21,19 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
+infinity-global           = { workspace = true }
+infinity-index            = { workspace = true }
+infinity-shared           = { workspace = true }
 stargaze-fair-burn        = { workspace = true }
 stargaze-royalty-registry = { workspace = true }
-infinity-global           = { workspace = true }
-# infinity-macros = { workspace = true }
-infinity-shared = { workspace = true }
-infinity-index  = { workspace = true }
-# infinity-swap = { workspace = true }
-cosmwasm-std    = { workspace = true }
-cosmwasm-schema = { workspace = true }
-cw-storage-plus = { workspace = true }
-# cosmwasm-storage = { workspace = true }
-cw-utils  = { workspace = true }
-cw2       = { workspace = true }
-thiserror = { workspace = true }
-# anyhow = { workspace = true }
-sg1 = { workspace = true }
-# sg2 = { workspace = true }
-# sg721-base = { workspace = true }
-sg721  = { workspace = true }
-sg-std = { workspace = true }
-# sg-marketplace = { workspace = true }
-sg-marketplace-common = { workspace = true }
-cw721-base            = { workspace = true }
-cw721                 = { workspace = true }
+sg-marketplace-common     = { workspace = true }
+cosmwasm-std              = { workspace = true }
+cosmwasm-schema           = { workspace = true }
+cw-storage-plus           = { workspace = true }
+cw-utils                  = { workspace = true }
+cw2                       = { workspace = true }
+thiserror                 = { workspace = true }
+sg721                     = { workspace = true }
+sg-std                    = { workspace = true }
+cw721-base                = { workspace = true }
+cw721                     = { workspace = true }

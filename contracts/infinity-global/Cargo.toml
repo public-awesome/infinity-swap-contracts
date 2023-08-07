@@ -24,7 +24,6 @@ library = []
 cosmwasm-std    = { workspace = true }
 cosmwasm-schema = { workspace = true }
 cw-storage-plus = { workspace = true }
-cw-utils        = { workspace = true }
 cw-address-like = { workspace = true }
 cw2             = { workspace = true }
 sg-std          = { workspace = true }

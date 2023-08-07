@@ -1,16 +1,16 @@
-use crate::error::ContractError;
-use crate::msg::InstantiateMsg;
-
+use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{
-    instantiate2_address, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, WasmMsg,
+    instantiate2_address, to_binary, Addr, Binary, Coin, Decimal, Deps, DepsMut, Empty, Env,
+    Instantiate2AddressError, MessageInfo, StdError, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
-use infinity_factory::msg::InstantiateMsg as InfinityFactoryInstantiateMsg;
-use infinity_global::msg::InstantiateMsg as InfinityGlobalInstantiateMsg;
+use infinity_factory::InstantiateMsg as InfinityFactoryInstantiateMsg;
+use infinity_global::{GlobalConfig, InstantiateMsg as InfinityGlobalInstantiateMsg};
 use infinity_index::msg::InstantiateMsg as InfinityIndexInstantiateMsg;
 use infinity_router::msg::InstantiateMsg as InfinityRouterInstantiateMsg;
 use sg_std::Response;
 use sha2::{Digest, Sha256};
+use thiserror::Error;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -18,18 +18,34 @@ use cosmwasm_std::entry_point;
 pub const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 pub const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Error, Debug, PartialEq)]
+pub enum ContractError {
+    #[error("{0}")]
+    Std(#[from] StdError),
+
+    #[error("{0}")]
+    Instantiate2AddressError(#[from] Instantiate2AddressError),
+}
+
 #[cw_serde]
 pub struct CodeIds {
-    pub infinity_global_code_id: u64,
-    pub infinity_factory_code_id: u64,
-    pub infinity_index_code_id: u64,
-    pub infinity_router_code_id: u64,
-    pub infinity_pair_code_id: u64,
+    pub infinity_global: u64,
+    pub infinity_factory: u64,
+    pub infinity_index: u64,
+    pub infinity_pair: u64,
+    pub infinity_router: u64,
 }
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    code_ids: CodeIds,
+    pub fair_burn: String,
+    pub royalty_registry: String,
+    pub marketplace: String,
+    pub pair_creation_fee: Coin,
+    pub fair_burn_fee_percent: Decimal,
+    pub max_royalty_fee_percent: Decimal,
+    pub max_swap_fee_percent: Decimal,
+    pub code_ids: CodeIds,
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -41,51 +57,54 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let marketplace = deps.api.addr_validate(&msg.marketplace)?;
-
     let (infinity_global, infinity_global_salt) = generate_instantiate_2_addr(
         deps.as_ref(),
         &env,
         "infinity_global",
-        msg.infinity_global_code_id,
+        msg.code_ids.infinity_global,
     )?;
 
     let (infinity_factory, infinity_factory_salt) = generate_instantiate_2_addr(
         deps.as_ref(),
         &env,
         "infinity_factory",
-        msg.infinity_factory_code_id,
+        msg.code_ids.infinity_factory,
     )?;
 
     let (infinity_index, infinity_index_salt) = generate_instantiate_2_addr(
         deps.as_ref(),
         &env,
         "infinity_index",
-        msg.infinity_index_code_id,
+        msg.code_ids.infinity_index,
     )?;
 
-    let (_infinity_router, infinity_router_salt) = generate_instantiate_2_addr(
+    let (infinity_router, infinity_router_salt) = generate_instantiate_2_addr(
         deps.as_ref(),
         &env,
         "infinity_router",
-        msg.infinity_router_code_id,
+        msg.code_ids.infinity_router,
     )?;
 
     let mut response = Response::new();
 
-    // Instantiate InfinityGlobal
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
-        code_id: msg.infinity_global_code_id,
+        code_id: msg.code_ids.infinity_global,
         label: "InfinityGlobal".to_string(),
         msg: to_binary(&InfinityGlobalInstantiateMsg {
-            infinity_index: infinity_index.to_string(),
-            infinity_factory: infinity_factory.to_string(),
-            marketplace: marketplace.to_string(),
-            infinity_pair_code_id: msg.infinity_pair_code_id,
-            min_price: msg.min_price,
-            pair_creation_fee: msg.pair_creation_fee,
-            trading_fee_bps: msg.trading_fee_bps,
+            global_config: GlobalConfig {
+                fair_burn: msg.fair_burn,
+                royalty_registry: msg.royalty_registry,
+                marketplace: msg.marketplace,
+                infinity_factory: infinity_factory.to_string(),
+                infinity_index: infinity_index.to_string(),
+                infinity_router: infinity_router.to_string(),
+                infinity_pair_code_id: msg.code_ids.infinity_pair,
+                pair_creation_fee: msg.pair_creation_fee,
+                fair_burn_fee_percent: msg.fair_burn_fee_percent,
+                max_royalty_fee_percent: msg.max_royalty_fee_percent,
+                max_swap_fee_percent: msg.max_swap_fee_percent,
+            },
         })?,
         funds: vec![],
         salt: infinity_global_salt,
@@ -94,7 +113,7 @@ pub fn instantiate(
     // Instantiate InfinityFactory
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
-        code_id: msg.infinity_factory_code_id,
+        code_id: msg.code_ids.infinity_factory,
         label: "InfinityFactory".to_string(),
         msg: to_binary(&InfinityFactoryInstantiateMsg {
             infinity_global: infinity_global.to_string(),
@@ -106,7 +125,7 @@ pub fn instantiate(
     // Instantiate InfinityIndex
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
-        code_id: msg.infinity_factory_code_id,
+        code_id: msg.code_ids.infinity_factory,
         label: "InfinityIndex".to_string(),
         msg: to_binary(&InfinityIndexInstantiateMsg {
             infinity_global: infinity_global.to_string(),
@@ -118,7 +137,7 @@ pub fn instantiate(
     // Instantiate InfinityRouter
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
-        code_id: msg.infinity_factory_code_id,
+        code_id: msg.code_ids.infinity_factory,
         label: "InfinityRouter".to_string(),
         msg: to_binary(&InfinityRouterInstantiateMsg {
             infinity_global: infinity_global.to_string(),
