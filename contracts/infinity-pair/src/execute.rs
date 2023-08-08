@@ -159,7 +159,7 @@ pub fn execute_receive_nft(
         InfinityError::InvalidInput("invalid collection".to_string())
     );
 
-    pair.internal.total_nfts += Uint128::one();
+    pair.internal.total_nfts += 1u64;
     NFT_DEPOSITS.save(deps.storage, token_id, &true)?;
 
     let mut response = Response::new();
@@ -191,7 +191,7 @@ pub fn execute_withdraw_nfts(
                 InfinityError::InvalidInput("token_id is not owned by pair".to_string()).into()
             );
         }
-        pair.internal.total_nfts -= Uint128::one();
+        pair.internal.total_nfts -= 1u64;
 
         response =
             transfer_nft(&pair.immutable.collection, token_id, &pair.asset_recipient(), response);
