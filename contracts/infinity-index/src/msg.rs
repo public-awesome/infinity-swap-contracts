@@ -12,6 +12,7 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    /// Update the buy and sell quotes in the index for a pair
     UpdatePairIndices {
         collection: String,
         denom: String,
@@ -22,7 +23,9 @@ pub enum ExecuteMsg {
 
 #[cw_serde]
 pub struct PairQuoteOffset {
+    /// The address of the infinity pair contract
     pub pair: String,
+    /// The amount of tokens in being quoted
     pub amount: u128,
 }
 

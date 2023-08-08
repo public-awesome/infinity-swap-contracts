@@ -20,7 +20,7 @@ pub fn calc_exponential_spot_price_user_submits_nft(
     spot_price: Uint128,
     delta: Decimal,
 ) -> Result<Uint128, ContractError> {
-    let net_delta = Decimal::one().checked_div(Decimal::one().checked_add(delta.clone())?)?;
+    let net_delta = Decimal::one().checked_div(Decimal::one().checked_add(delta)?)?;
     Ok(spot_price.mul_floor(net_delta))
 }
 
@@ -28,7 +28,7 @@ pub fn calc_exponential_spot_price_user_submits_tokens(
     spot_price: Uint128,
     delta: Decimal,
 ) -> Result<Uint128, ContractError> {
-    Ok(spot_price.mul_ceil(Decimal::one().checked_add(delta.clone())?))
+    Ok(spot_price.mul_ceil(Decimal::one().checked_add(delta)?))
 }
 
 pub fn calc_linear_trade_buy_from_pair_price(

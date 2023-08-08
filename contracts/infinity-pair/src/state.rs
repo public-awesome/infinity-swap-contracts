@@ -1,8 +1,8 @@
+use crate::constants::TopKey;
+
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use cw_storage_plus::{Item, Map};
-
-use crate::constants::TopKey;
 
 pub type Denom = String;
 pub type TokenId = String;
@@ -65,7 +65,7 @@ pub struct PairImmutable {
     pub collection: Addr,
     /// The address of the pair owner
     pub owner: Addr,
-    /// The denom of the assets held by the pair
+    /// The denom of the tokens held by the pair
     pub denom: Denom,
 }
 
@@ -86,19 +86,28 @@ pub struct PairConfig {
 
 pub const PAIR_CONFIG: Item<PairConfig> = Item::new(TopKey::PairConfig.as_str());
 
+/// QuoteSummary represents the breakdown of token payments for the next trade
 #[cw_serde]
 pub struct QuoteSummary {
+    // The amount of tokens that will be paid out to the FairBurn contract
     pub fair_burn_amount: Uint128,
+    // The amount of tokens that will be paid out in royalties
     pub royalty_amount: Option<Uint128>,
+    // The amount of tokens that will be paid out to the NFT seller
     pub seller_amount: Uint128,
 }
 
-/// PairState represents the internal state of the pair, not directly set by the user
+/// PairInternal represents the internal state of the pair, not directly set by the user
 #[cw_serde]
 pub struct PairInternal {
+    /// The total amount of NFTs held by the pair
     pub total_nfts: Uint128,
-    pub buy_from_pair_quote_summary: Option<QuoteSummary>,
+    /// A breakdown of the fees to be paid out for the next "sell to" trade.
+    /// When set to `None`, the pair is not accepting "sell to" trades.
     pub sell_to_pair_quote_summary: Option<QuoteSummary>,
+    /// A breakdown of the fees to be paid out for the next "buy from" trade
+    /// When set to `None`, the pair is not accepting "buy from" trades.
+    pub buy_from_pair_quote_summary: Option<QuoteSummary>,
 }
 
 pub const PAIR_INTERNAL: Item<PairInternal> = Item::new(TopKey::PairInternal.as_str());

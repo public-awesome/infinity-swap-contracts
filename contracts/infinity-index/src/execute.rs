@@ -73,14 +73,14 @@ pub fn execute_update_pair_indices(
                 deps.storage,
                 info.sender.clone(),
                 &PairQuote {
-                    pair: info.sender.clone(),
-                    collection: collection.clone(),
-                    quote: coin(amount.u128(), denom.clone()),
+                    pair: info.sender,
+                    collection,
+                    quote: coin(amount.u128(), &denom),
                 },
             )?;
         },
         None => {
-            buy_from_pair_quotes().remove(deps.storage, info.sender.clone())?;
+            buy_from_pair_quotes().remove(deps.storage, info.sender)?;
         },
     };
 

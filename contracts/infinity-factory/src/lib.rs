@@ -42,7 +42,9 @@ pub fn instantiate(
 #[cw_serde]
 pub enum ExecuteMsg {
     CreatePair {
+        /// The immutable parameters of the pair
         pair_immutable: PairImmutable,
+        /// The user configurable parameters of the pair
         pair_config: PairConfig,
     },
 }
@@ -65,7 +67,7 @@ pub fn execute(
             let response = Response::new().add_message(WasmMsg::Instantiate {
                 admin: Some(env.contract.address.into()),
                 code_id: global_config.infinity_pair_code_id,
-                label: "infinity-pair".to_string(),
+                label: "InfinityPair".to_string(),
                 msg: to_binary(&InfinityPairInstantiateMsg {
                     infinity_global,
                     pair_immutable,
@@ -81,5 +83,5 @@ pub fn execute(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, _msg: Empty) -> StdResult<Binary> {
-    unimplemented!("not implemented")
+    unimplemented!()
 }

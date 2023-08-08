@@ -68,6 +68,7 @@ pub fn execute(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_swap_nfts_for_tokens(
     deps: DepsMut,
     env: Env,
@@ -143,6 +144,7 @@ pub fn execute_swap_nfts_for_tokens(
     Ok(response)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_swap_tokens_for_nfts(
     deps: DepsMut,
     _env: Env,
@@ -179,7 +181,7 @@ pub fn execute_swap_tokens_for_nfts(
     let iterator = TokensForNfts::initialize(
         deps.as_ref(),
         global_config,
-        collection.clone(),
+        collection,
         denom.clone(),
         royalty_entry,
         filter_sources,
