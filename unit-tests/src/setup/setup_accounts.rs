@@ -8,6 +8,12 @@ use sg_std::NATIVE_DENOM;
 pub const INITIAL_BALANCE: u128 = 5_000_000_000;
 pub const _MINT_PRICE: u128 = 100_000_000;
 
+pub struct MarketAccounts {
+    pub owner: Addr,
+    pub bidder: Addr,
+    pub creator: Addr,
+}
+
 // initializes accounts with balances
 pub fn setup_accounts(router: &mut StargazeApp) -> StdResult<(Addr, Addr, Addr)> {
     let owner: Addr = Addr::unchecked("owner");

@@ -1,0 +1,43 @@
+[package]
+name       = "unit-tests"
+version    = "0.1.0"
+edition    = { workspace = true }
+repository = { workspace = true }
+license    = { workspace = true }
+
+[dependencies]
+infinity-factory          = { workspace = true }
+infinity-global           = { workspace = true }
+infinity-index            = { workspace = true }
+infinity-pair             = { workspace = true }
+infinity-router           = { workspace = true }
+infinity-shared           = { workspace = true }
+sg1                       = { workspace = true }
+sg2                       = { workspace = true }
+sg721-base                = { workspace = true }
+sg721                     = { workspace = true }
+sg-std                    = { workspace = true }
+sg-marketplace            = { workspace = true }
+sg-marketplace-common     = { workspace = true }
+stargaze-fair-burn        = { workspace = true }
+stargaze-royalty-registry = { workspace = true }
+cosmwasm-std              = { workspace = true }
+cosmwasm-schema           = { workspace = true }
+cosmwasm-storage          = { workspace = true }
+cw-storage-plus           = { workspace = true }
+cw-utils                  = { workspace = true }
+cw2                       = { workspace = true }
+thiserror                 = { workspace = true }
+anyhow                    = { workspace = true }
+cw721-base                = { workspace = true }
+cw721                     = { workspace = true }
+
+
+[dev-dependencies]
+itertools       = { workspace = true }
+cw-multi-test   = { workspace = true }
+sg-multi-test   = { workspace = true }
+test-suite      = { workspace = true }
+vending-minter  = { workspace = true }
+vending-factory = { workspace = true }
+mockall         = { workspace = true }
