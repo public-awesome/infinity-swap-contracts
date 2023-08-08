@@ -1,11 +1,18 @@
-use crate::setup::msg::MarketAccounts;
-use crate::setup::setup_accounts::setup_accounts;
-use cosmwasm_std::{coin, Timestamp};
+use crate::setup::setup_accounts::{setup_accounts, MarketAccounts};
+use crate::setup::setup_contracts::{setup_fair_burn, setup_marketplace, setup_royalty_registry};
+use crate::setup::setup_infinity_contracts::{
+    contract_infinity_pair, setup_infinity_factory, setup_infinity_global, setup_infinity_index,
+    setup_infinity_router,
+};
+
+use anyhow::Error;
+use cosmwasm_std::{coin, Addr, Timestamp};
 use sg2::{
     msg::CollectionParams,
     tests::{mock_collection_params_1, mock_collection_two},
 };
 use sg_std::GENESIS_MINT_START_TIME;
+use test_suite::common_setup::setup_accounts_and_block::setup_block_time;
 use test_suite::common_setup::{
     contract_boxes::custom_mock_app,
     msg::{MinterCollectionResponse, MinterInstantiateParams, MinterTemplateResponse},
@@ -81,4 +88,56 @@ pub fn minter_two_collections(num_tokens: u32) -> MinterTemplateResponse<MarketA
             creator,
         },
     }
+}
+
+pub struct InfinityTestSetup {
+    pub vending_template: MinterTemplateResponse<MarketAccounts>,
+    pub marketplace: Addr,
+    pub infinity_global: Addr,
+    pub infinity_index: Addr,
+    pub infinity_factory: Addr,
+    pub infinity_pair_code_id: u64,
+}
+
+pub fn setup_infinity_test(num_tokens: u32) -> Result<InfinityTestSetup, Error> {
+    let mut vt = standard_minter_template(num_tokens);
+
+    setup_block_time(&mut vt.router, GENESIS_MINT_START_TIME, None);
+
+    let fair_burn = setup_fair_burn(&mut vt.router, &vt.accts.creator);
+    let royalty_registry = setup_royalty_registry(&mut vt.router, &vt.accts.creator);
+    let marketplace = setup_marketplace(&mut vt.router, &vt.accts.creator.clone());
+
+    let pre_infinity_global = Addr::unchecked("contract9");
+
+    let infinity_factory =
+        setup_infinity_factory(&mut vt.router, &vt.accts.creator.clone(), &pre_infinity_global);
+    let infinity_index =
+        setup_infinity_index(&mut vt.router, &vt.accts.creator.clone(), &pre_infinity_global);
+    let infinity_router =
+        setup_infinity_router(&mut vt.router, &vt.accts.creator.clone(), &pre_infinity_global);
+
+    let infinity_pair_code_id = vt.router.store_code(contract_infinity_pair());
+
+    let infinity_global = setup_infinity_global(
+        &mut vt.router,
+        vt.accts.creator.to_string(),
+        fair_burn.to_string(),
+        royalty_registry.to_string(),
+        marketplace.to_string(),
+        infinity_factory.to_string(),
+        infinity_index.to_string(),
+        infinity_router.to_string(),
+        infinity_pair_code_id,
+    );
+    assert_eq!(infinity_global, pre_infinity_global);
+
+    Ok(InfinityTestSetup {
+        vending_template: vt,
+        marketplace,
+        infinity_global,
+        infinity_index,
+        infinity_factory,
+        infinity_pair_code_id,
+    })
 }

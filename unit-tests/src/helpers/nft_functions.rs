@@ -9,7 +9,7 @@ use sg_std::NATIVE_DENOM;
 pub const MINT_PRICE: u128 = 100_000_000;
 
 // Mints an NFT for a creator
-pub fn mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) -> u32 {
+pub fn mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) -> String {
     let minter_msg = vending_minter::msg::ExecuteMsg::Mint {};
     let res = router.execute_contract(
         creator.clone(),
@@ -18,7 +18,8 @@ pub fn mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) -> u32
         &coins(MINT_PRICE, NATIVE_DENOM),
     );
     assert!(res.is_ok());
-    res.unwrap().events[1].attributes[4].value.parse().unwrap()
+
+    res.unwrap().events[1].attributes[4].value.clone()
 }
 
 pub fn mint_to(
@@ -31,23 +32,12 @@ pub fn mint_to(
         recipient: owner.to_string(),
     };
     let res = router
-        .execute_contract(
-            creator.clone(),
-            minter_addr.clone(),
-            &mint_for_creator_msg,
-            &[],
-        )
+        .execute_contract(creator.clone(), minter_addr.clone(), &mint_for_creator_msg, &[])
         .unwrap();
 
     let event = res.events.iter().find(|&e| e.ty == "wasm").unwrap();
 
-    let token_id = event
-        .attributes
-        .iter()
-        .find(|&a| a.key == "token_id")
-        .unwrap()
-        .value
-        .clone();
+    let token_id = event.attributes.iter().find(|&a| a.key == "token_id").unwrap().value.clone();
 
     token_id
 }
@@ -118,7 +108,7 @@ pub fn mint_and_approve_many(
     token_ids
 }
 
-pub fn validate_nft_owner(router: &StargazeApp, collection: &Addr, token_id: String, owner: &Addr) {
+pub fn assert_nft_owner(router: &StargazeApp, collection: &Addr, token_id: String, owner: &Addr) {
     let owner_res: OwnerOfResponse = router
         .wrap()
         .query_wasm_smart(

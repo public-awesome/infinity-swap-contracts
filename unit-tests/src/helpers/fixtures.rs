@@ -1,6 +1,6 @@
 use cosmwasm_std::Uint128;
-use infinity_pool::msg::PoolInfo;
-use infinity_pool::state::{BondingCurve, PoolType};
+use infinity_pair::msg::PoolInfo;
+use infinity_pair::state::{BondingCurve, PoolType};
 
 pub fn get_pool_fixtures(
     owner: &str,
