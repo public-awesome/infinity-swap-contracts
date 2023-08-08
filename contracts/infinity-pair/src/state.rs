@@ -101,7 +101,7 @@ pub struct QuoteSummary {
 #[cw_serde]
 pub struct PairInternal {
     /// The total amount of NFTs held by the pair
-    pub total_nfts: Uint128,
+    pub total_nfts: u64,
     /// A breakdown of the fees to be paid out for the next "sell to" trade.
     /// When set to `None`, the pair is not accepting "sell to" trades.
     pub sell_to_pair_quote_summary: Option<QuoteSummary>,

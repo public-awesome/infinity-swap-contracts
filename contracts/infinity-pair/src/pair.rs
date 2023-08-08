@@ -86,7 +86,7 @@ pub struct Pair {
 impl Pair {
     pub fn initialize(immutable: PairImmutable, config: PairConfig) -> Self {
         let pair_internal = PairInternal {
-            total_nfts: Uint128::zero(),
+            total_nfts: 0u64,
             buy_from_pair_quote_summary: None,
             sell_to_pair_quote_summary: None,
         };
@@ -153,7 +153,7 @@ impl Pair {
         self.total_tokens -= self.internal.sell_to_pair_quote_summary.as_ref().unwrap().total();
 
         if self.reinvest_nfts() {
-            self.internal.total_nfts += Uint128::one();
+            self.internal.total_nfts += 1u64;
         };
 
         self.update_spot_price(TransactionType::UserSubmitsNfts);
@@ -166,7 +166,7 @@ impl Pair {
         fair_burn_fee_percent: Decimal,
         royalty_fee_percent: Option<Decimal>,
     ) {
-        self.internal.total_nfts -= Uint128::one();
+        self.internal.total_nfts -= 1u64;
 
         if self.reinvest_tokens() {
             self.total_tokens +=
@@ -269,7 +269,7 @@ impl Pair {
         fair_burn_fee_percent: Decimal,
         royalty_fee_percent: Option<Decimal>,
     ) {
-        if !self.config.is_active || self.internal.total_nfts.is_zero() {
+        if !self.config.is_active || self.internal.total_nfts == 0u64 {
             self.internal.buy_from_pair_quote_summary = None;
             return;
         }
