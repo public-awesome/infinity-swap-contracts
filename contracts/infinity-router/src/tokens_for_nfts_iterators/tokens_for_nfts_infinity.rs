@@ -69,7 +69,7 @@ impl<'a> TokensForNftsInfinity<'a> {
 
             infinity_quote = Some(InfinityQuote {
                 quote: pair_quote.quote.amount,
-                address: pair_quote.pair.clone(),
+                address: pair_quote.pair,
                 pair,
             });
         }

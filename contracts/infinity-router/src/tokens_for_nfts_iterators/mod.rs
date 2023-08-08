@@ -26,11 +26,6 @@ pub enum SourceIters<'a> {
 }
 
 pub struct TokensForNfts<'a> {
-    deps: Deps<'a>,
-    global_config: GlobalConfig<Addr>,
-    collection: Addr,
-    denom: String,
-    royalty_entry: Option<RoyaltyEntry>,
     sources: Vec<SourceIters<'a>>,
 }
 
@@ -54,7 +49,7 @@ impl<'a> TokensForNfts<'a> {
                 TokensForNftSource::Infinity => {
                     sources.push(SourceIters::Infinity(
                         TokensForNftsInfinity::initialize(
-                            deps.clone(),
+                            deps,
                             global_config.clone(),
                             collection.clone(),
                             denom.clone(),
@@ -68,11 +63,6 @@ impl<'a> TokensForNfts<'a> {
         }
 
         Self {
-            deps,
-            global_config,
-            collection,
-            denom,
-            royalty_entry,
             sources,
         }
     }

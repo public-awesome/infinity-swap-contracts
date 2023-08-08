@@ -49,21 +49,20 @@ impl QuoteSummary {
         mut response: Response,
     ) -> Response {
         response = append_fair_burn_msg(
-            &fair_burn,
+            fair_burn,
             vec![coin(self.fair_burn_amount.u128(), denom)],
             None,
             response,
         );
 
-        match (self.royalty_amount, royalty_recipient) {
-            (Some(royalty_amount), Some(royalty_recipient)) => {
-                response = transfer_coins(
-                    vec![coin(royalty_amount.u128(), denom)],
-                    royalty_recipient,
-                    response,
-                );
-            },
-            _ => {},
+        if let (Some(royalty_amount), Some(royalty_recipient)) =
+            (self.royalty_amount, royalty_recipient)
+        {
+            response = transfer_coins(
+                vec![coin(royalty_amount.u128(), denom)],
+                royalty_recipient,
+                response,
+            );
         }
 
         response = transfer_coins(
@@ -151,8 +150,7 @@ impl Pair {
         fair_burn_fee_percent: Decimal,
         royalty_fee_percent: Option<Decimal>,
     ) {
-        self.total_tokens -=
-            self.internal.sell_to_pair_quote_summary.as_ref().unwrap().total().clone();
+        self.total_tokens -= self.internal.sell_to_pair_quote_summary.as_ref().unwrap().total();
 
         if self.reinvest_nfts() {
             self.internal.total_nfts += Uint128::one();
@@ -175,7 +173,7 @@ impl Pair {
                 self.internal.buy_from_pair_quote_summary.as_ref().unwrap().seller_amount;
         };
 
-        self.update_spot_price(TransactionType::UserSubmitsNfts);
+        self.update_spot_price(TransactionType::UserSubmitsTokens);
         self.update_sell_to_pair_quote_summary(fair_burn_fee_percent, royalty_fee_percent);
         self.update_buy_from_pair_quote_summary(fair_burn_fee_percent, royalty_fee_percent);
     }
@@ -183,7 +181,7 @@ impl Pair {
     fn update_spot_price(&mut self, tx_type: TransactionType) {
         match self.config.bonding_curve {
             BondingCurve::Linear {
-                mut spot_price,
+                spot_price,
                 delta,
             } => {
                 let result = match tx_type {
@@ -196,7 +194,10 @@ impl Pair {
                 };
                 match result {
                     Ok(new_spot_price) => {
-                        spot_price = new_spot_price;
+                        self.config.bonding_curve = BondingCurve::Linear {
+                            spot_price: new_spot_price,
+                            delta,
+                        };
                     },
                     Err(_e) => {
                         self.config.is_active = false;
@@ -204,7 +205,7 @@ impl Pair {
                 }
             },
             BondingCurve::Exponential {
-                mut spot_price,
+                spot_price,
                 delta,
             } => {
                 let result = match tx_type {
@@ -217,7 +218,10 @@ impl Pair {
                 };
                 match result {
                     Ok(new_spot_price) => {
-                        spot_price = new_spot_price;
+                        self.config.bonding_curve = BondingCurve::Exponential {
+                            spot_price: new_spot_price,
+                            delta,
+                        };
                     },
                     Err(_e) => {
                         self.config.is_active = false;
@@ -320,18 +324,11 @@ impl Pair {
     }
 
     fn update_index(&self, infinity_index: &Addr, response: Response) -> Response {
-        let sell_to_pair_quote = if let Some(summary) = &self.internal.sell_to_pair_quote_summary {
-            Some(summary.seller_amount)
-        } else {
-            None
-        };
+        let sell_to_pair_quote =
+            self.internal.sell_to_pair_quote_summary.as_ref().map(|summary| summary.seller_amount);
 
-        let buy_from_pair_quote = if let Some(summary) = &self.internal.buy_from_pair_quote_summary
-        {
-            Some(summary.total())
-        } else {
-            None
-        };
+        let buy_from_pair_quote =
+            self.internal.sell_to_pair_quote_summary.as_ref().map(|summary| summary.total());
 
         response.add_message(WasmMsg::Execute {
             contract_addr: infinity_index.to_string(),

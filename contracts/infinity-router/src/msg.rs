@@ -14,20 +14,12 @@ pub struct InstantiateMsg {
 
 /// SwapParams contains the parameters for a swap
 #[cw_serde]
+#[derive(Default)]
 pub struct SwapParams {
     /// Whether or not to revert the entire trade if one of the swaps fails
     pub robust: Option<bool>,
     /// The address to receive the assets from the swap, if not specified is set to sender
     pub asset_recipient: Option<String>,
-}
-
-impl Default for SwapParams {
-    fn default() -> Self {
-        SwapParams {
-            robust: None,
-            asset_recipient: None,
-        }
-    }
 }
 
 #[cw_serde]

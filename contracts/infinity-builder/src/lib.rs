@@ -90,7 +90,7 @@ pub fn instantiate(
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
         code_id: msg.code_ids.infinity_global,
-        label: "InfinityGlobal".to_string(),
+        label: "Infinity Global".to_string(),
         msg: to_binary(&InfinityGlobalInstantiateMsg {
             global_config: GlobalConfig {
                 fair_burn: msg.fair_burn,
@@ -110,11 +110,10 @@ pub fn instantiate(
         salt: infinity_global_salt,
     });
 
-    // Instantiate InfinityFactory
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
         code_id: msg.code_ids.infinity_factory,
-        label: "InfinityFactory".to_string(),
+        label: "Infinity Factory".to_string(),
         msg: to_binary(&InfinityFactoryInstantiateMsg {
             infinity_global: infinity_global.to_string(),
         })?,
@@ -122,11 +121,10 @@ pub fn instantiate(
         salt: infinity_factory_salt,
     });
 
-    // Instantiate InfinityIndex
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
         code_id: msg.code_ids.infinity_factory,
-        label: "InfinityIndex".to_string(),
+        label: "Infinity Index".to_string(),
         msg: to_binary(&InfinityIndexInstantiateMsg {
             infinity_global: infinity_global.to_string(),
         })?,
@@ -134,11 +132,10 @@ pub fn instantiate(
         salt: infinity_index_salt,
     });
 
-    // Instantiate InfinityRouter
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
         code_id: msg.code_ids.infinity_factory,
-        label: "InfinityRouter".to_string(),
+        label: "Infinity Router".to_string(),
         msg: to_binary(&InfinityRouterInstantiateMsg {
             infinity_global: infinity_global.to_string(),
         })?,

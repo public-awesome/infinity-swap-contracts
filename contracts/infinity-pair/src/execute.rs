@@ -145,7 +145,6 @@ pub fn execute(
     }
 }
 
-/// Executes as CW721ReceiveMsg which is used to deposit NFTs into the pair
 pub fn execute_receive_nft(
     deps: DepsMut,
     info: MessageInfo,
@@ -161,7 +160,7 @@ pub fn execute_receive_nft(
     );
 
     pair.internal.total_nfts += Uint128::one();
-    NFT_DEPOSITS.save(deps.storage, token_id.to_string(), &true)?;
+    NFT_DEPOSITS.save(deps.storage, token_id, &true)?;
 
     let mut response = Response::new();
     response =
@@ -170,7 +169,6 @@ pub fn execute_receive_nft(
     Ok(response)
 }
 
-/// Execute a Withdraw Nfts message
 pub fn execute_withdraw_nfts(
     deps: DepsMut,
     _info: MessageInfo,
@@ -196,7 +194,7 @@ pub fn execute_withdraw_nfts(
         pair.internal.total_nfts -= Uint128::one();
 
         response =
-            transfer_nft(&pair.immutable.collection, &token_id, &pair.asset_recipient(), response);
+            transfer_nft(&pair.immutable.collection, token_id, &pair.asset_recipient(), response);
     }
 
     response =
@@ -205,7 +203,6 @@ pub fn execute_withdraw_nfts(
     Ok(response)
 }
 
-/// Execute a WithdrawAllNfts message
 pub fn execute_withdraw_any_nfts(
     deps: DepsMut,
     info: MessageInfo,
@@ -222,7 +219,6 @@ pub fn execute_withdraw_any_nfts(
     execute_withdraw_nfts(deps, info, global_config, pair, token_ids)
 }
 
-/// Execute a DepositTokens message
 pub fn execute_deposit_tokens(
     deps: DepsMut,
     info: MessageInfo,
@@ -239,7 +235,6 @@ pub fn execute_deposit_tokens(
     Ok(response)
 }
 
-/// Execute a WithdrawTokens message
 pub fn execute_withdraw_tokens(
     deps: DepsMut,
     _info: MessageInfo,
@@ -282,6 +277,7 @@ pub fn execute_withdraw_all_tokens(
     execute_withdraw_tokens(deps, info, env, global_config, pair, total_tokens)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn execute_update_pair_config(
     deps: DepsMut,
     info: MessageInfo,
@@ -318,7 +314,7 @@ pub fn execute_update_pair_config(
     Ok(response)
 }
 
-/// Execute a SwapNftForTokens message
+#[allow(clippy::too_many_arguments)]
 pub fn execute_swap_nft_for_tokens(
     deps: DepsMut,
     info: MessageInfo,
