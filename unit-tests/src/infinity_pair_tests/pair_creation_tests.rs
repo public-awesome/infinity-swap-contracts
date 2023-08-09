@@ -10,6 +10,7 @@ use infinity_pair::msg::{ExecuteMsg as InfinityPairExecuteMsg, QueryMsg as Infin
 use infinity_pair::pair::Pair;
 use infinity_pair::state::{BondingCurve, PairConfig, PairImmutable, PairInternal, PairType};
 use infinity_shared::InfinityError;
+use sg_multi_test::mock_deps;
 use sg_std::NATIVE_DENOM;
 use test_suite::common_setup::msg::MinterTemplateResponse;
 
@@ -40,8 +41,8 @@ fn try_create_pair() {
         .unwrap();
 
     let pair_immutable = PairImmutable {
-        collection: collection.clone(),
-        owner: accts.creator.clone(),
+        collection: collection.to_string(),
+        owner: accts.creator.to_string(),
         denom: NATIVE_DENOM.to_string(),
     };
 
@@ -84,8 +85,9 @@ fn try_create_pair() {
     let pair =
         router.wrap().query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {}).unwrap();
 
-    assert_eq!(pair.immutable, pair_immutable);
-    assert_eq!(pair.config, pair_config);
+    let deps = mock_deps();
+    assert_eq!(pair.immutable, pair_immutable.str_to_addr(&deps.api).unwrap());
+    assert_eq!(pair.config, pair_config.str_to_addr(&deps.api).unwrap());
     assert_eq!(
         pair.internal,
         PairInternal {

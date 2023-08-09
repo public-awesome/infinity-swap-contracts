@@ -1,8 +1,10 @@
-use crate::constants::TopKey;
+use crate::{constants::TopKey, ContractError};
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Decimal, Uint128};
+use cosmwasm_std::{Addr, Api, Decimal, Uint128};
+use cw_address_like::AddressLike;
 use cw_storage_plus::{Item, Map};
+use cw_utils::maybe_addr;
 
 pub type Denom = String;
 pub type TokenId = String;
@@ -60,20 +62,30 @@ pub enum BondingCurve {
 }
 
 #[cw_serde]
-pub struct PairImmutable {
+pub struct PairImmutable<T: AddressLike> {
     /// The address of the NFT collection contract
-    pub collection: Addr,
+    pub collection: T,
     /// The address of the pair owner
-    pub owner: Addr,
+    pub owner: T,
     /// The denom of the tokens held by the pair
     pub denom: Denom,
 }
 
-pub const PAIR_IMMUTABLE: Item<PairImmutable> = Item::new(TopKey::PairImmutable.as_str());
+impl PairImmutable<String> {
+    pub fn str_to_addr(self, api: &dyn Api) -> Result<PairImmutable<Addr>, ContractError> {
+        Ok(PairImmutable {
+            collection: api.addr_validate(&self.collection)?,
+            owner: api.addr_validate(&self.owner)?,
+            denom: self.denom,
+        })
+    }
+}
+
+pub const PAIR_IMMUTABLE: Item<PairImmutable<Addr>> = Item::new(TopKey::PairImmutable.as_str());
 
 /// PairConfig represents the configuration parameters for a pair, set by the user
 #[cw_serde]
-pub struct PairConfig {
+pub struct PairConfig<T: AddressLike> {
     /// The type of assets held by the pair
     pub pair_type: PairType,
     /// The bonding curve used to calculate the spot price
@@ -81,18 +93,37 @@ pub struct PairConfig {
     /// Whether or not the pair is accepting trades
     pub is_active: bool,
     /// The address of the recipient of assets traded into the pair
-    pub asset_recipient: Option<Addr>,
+    pub asset_recipient: Option<T>,
 }
 
-pub const PAIR_CONFIG: Item<PairConfig> = Item::new(TopKey::PairConfig.as_str());
+impl PairConfig<String> {
+    pub fn str_to_addr(self, api: &dyn Api) -> Result<PairConfig<Addr>, ContractError> {
+        Ok(PairConfig {
+            pair_type: self.pair_type,
+            bonding_curve: self.bonding_curve,
+            is_active: self.is_active,
+            asset_recipient: maybe_addr(api, self.asset_recipient)?,
+        })
+    }
+}
+
+pub const PAIR_CONFIG: Item<PairConfig<Addr>> = Item::new(TopKey::PairConfig.as_str());
+
+#[cw_serde]
+pub struct TokenPayment {
+    pub recipient: Addr,
+    pub amount: Uint128,
+}
 
 /// QuoteSummary represents the breakdown of token payments for the next trade
 #[cw_serde]
 pub struct QuoteSummary {
     // The amount of tokens that will be paid out to the FairBurn contract
-    pub fair_burn_amount: Uint128,
+    pub fair_burn: TokenPayment,
     // The amount of tokens that will be paid out in royalties
-    pub royalty_amount: Option<Uint128>,
+    pub royalty: Option<TokenPayment>,
+    // The amount of tokens that will be paid out to pool owner LPs
+    pub swap: Option<TokenPayment>,
     // The amount of tokens that will be paid out to the NFT seller
     pub seller_amount: Uint128,
 }

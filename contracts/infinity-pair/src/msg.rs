@@ -4,7 +4,7 @@ use crate::{
 };
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Coin, Uint128};
+use cosmwasm_std::{Coin, Uint128};
 use cw721::Cw721ReceiveMsg;
 
 /// Defines whether the end user is buying or selling NFTs
@@ -16,11 +16,12 @@ pub enum TransactionType {
 
 #[cw_serde]
 pub struct InstantiateMsg {
-    // The address of the infinity global contract
-    pub infinity_global: Addr,
-    pub pair_immutable: PairImmutable,
+    /// The address of the infinity global contract
+    pub infinity_global: String,
+    /// The immutable parameters of the pair
+    pub pair_immutable: PairImmutable<String>,
     /// The configuration object for the pair
-    pub pair_config: PairConfig,
+    pub pair_config: PairConfig<String>,
 }
 
 #[cw_serde]

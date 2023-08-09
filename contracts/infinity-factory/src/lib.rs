@@ -43,9 +43,9 @@ pub fn instantiate(
 pub enum ExecuteMsg {
     CreatePair {
         /// The immutable parameters of the pair
-        pair_immutable: PairImmutable,
+        pair_immutable: PairImmutable<String>,
         /// The user configurable parameters of the pair
-        pair_config: PairConfig,
+        pair_config: PairConfig<String>,
     },
 }
 
@@ -69,7 +69,7 @@ pub fn execute(
                 code_id: global_config.infinity_pair_code_id,
                 label: "InfinityPair".to_string(),
                 msg: to_binary(&InfinityPairInstantiateMsg {
-                    infinity_global,
+                    infinity_global: infinity_global.to_string(),
                     pair_immutable,
                     pair_config,
                 })?,

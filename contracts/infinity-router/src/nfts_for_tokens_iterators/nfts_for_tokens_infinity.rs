@@ -2,12 +2,11 @@ use crate::ContractError;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Deps, StdError, Uint128};
-use infinity_global::GlobalConfig;
 use infinity_index::{msg::QueryMsg as InfinityIndexQueryMsg, state::PairQuote};
-use infinity_pair::msg::QueryMsg as PairQueryMsg;
+use infinity_pair::helpers::load_payout_context;
 use infinity_pair::pair::Pair;
+use infinity_pair::{helpers::PayoutContext, msg::QueryMsg as PairQueryMsg};
 use sg_index_query::QueryOptions;
-use stargaze_royalty_registry::state::RoyaltyEntry;
 use std::{cmp::Ordering, collections::BTreeSet};
 
 #[cw_serde]
@@ -33,10 +32,8 @@ impl Eq for InfinityQuote {}
 
 pub struct NftsForTokensInfinity<'a> {
     deps: Deps<'a>,
-    global_config: GlobalConfig<Addr>,
+    payout_context: PayoutContext,
     collection: Addr,
-    denom: String,
-    royalty_entry: Option<RoyaltyEntry>,
     quotes: BTreeSet<InfinityQuote>,
     latest_pair: Option<Addr>,
 }
@@ -46,10 +43,10 @@ impl<'a> NftsForTokensInfinity<'a> {
         let mut infinity_quote = None;
 
         let mut pair_quotes = self.deps.querier.query_wasm_smart::<Vec<PairQuote>>(
-            &self.global_config.infinity_index,
+            &self.payout_context.global_config.infinity_index,
             &InfinityIndexQueryMsg::SellToPairQuotes {
                 collection: self.collection.to_string(),
-                denom: self.denom.to_string(),
+                denom: self.payout_context.denom.to_string(),
                 query_options: Some(QueryOptions {
                     limit: Some(1),
                     descending: Some(true),
@@ -79,17 +76,16 @@ impl<'a> NftsForTokensInfinity<'a> {
 
     pub fn initialize(
         deps: Deps<'a>,
-        global_config: GlobalConfig<Addr>,
         collection: Addr,
         denom: String,
-        royalty_entry: Option<RoyaltyEntry>,
     ) -> Result<Self, ContractError> {
+        let payout_context = load_payout_context(deps, &collection, &denom)
+            .map_err(|e| StdError::generic_err(e.to_string()))?;
+
         let mut retval = Self {
             deps,
-            global_config,
+            payout_context,
             collection,
-            denom,
-            royalty_entry,
             quotes: BTreeSet::new(),
             latest_pair: None,
         };
@@ -123,10 +119,7 @@ impl<'a> Iterator for NftsForTokensInfinity<'a> {
                 }
             }
 
-            infinity_quote.pair.swap_nft_for_tokens(
-                self.global_config.fair_burn_fee_percent,
-                self.royalty_entry.as_ref().map(|e| e.share),
-            );
+            infinity_quote.pair.sim_swap_nft_for_tokens(&self.payout_context);
 
             if let Some(summary) = &infinity_quote.pair.internal.sell_to_pair_quote_summary {
                 infinity_quote.amount = summary.seller_amount;
