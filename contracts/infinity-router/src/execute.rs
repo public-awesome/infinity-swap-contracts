@@ -3,7 +3,6 @@ use std::iter::zip;
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, NftOrder, SwapParams};
 use crate::nfts_for_tokens_iterators::{NftForTokensQuote, NftForTokensSource, NftsForTokens};
-use crate::state::INFINITY_GLOBAL;
 use crate::tokens_for_nfts_iterators::{TokensForNftQuote, TokensForNftSource, TokensForNfts};
 
 use cosmwasm_std::{
@@ -11,14 +10,12 @@ use cosmwasm_std::{
     WasmMsg,
 };
 use cw_utils::{maybe_addr, must_pay, nonpayable};
-use infinity_global::load_global_config;
 use infinity_pair::msg::ExecuteMsg as PairExecuteMsg;
 use infinity_shared::InfinityError;
 use sg_marketplace_common::address::address_or;
 use sg_marketplace_common::coin::transfer_coin;
 use sg_marketplace_common::nft::transfer_nft;
 use sg_std::Response;
-use stargaze_royalty_registry::fetch_or_set_royalties;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -81,30 +78,13 @@ pub fn execute_swap_nfts_for_tokens(
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
-    let global_config = load_global_config(&deps.querier, &infinity_global)?;
-
-    let response = Response::new();
-    let (royalty_entry, mut response) = fetch_or_set_royalties(
-        deps.as_ref(),
-        &global_config.royalty_registry,
-        &collection,
-        Some(&infinity_global),
-        response,
-    )
-    .unwrap();
-
-    let iterator = NftsForTokens::initialize(
-        deps.as_ref(),
-        global_config,
-        collection.clone(),
-        denom.clone(),
-        royalty_entry,
-        filter_sources,
-    );
+    let iterator =
+        NftsForTokens::initialize(deps.as_ref(), collection.clone(), denom.clone(), filter_sources);
 
     let requested_swaps = nft_orders.len();
     let quotes = iterator.take(requested_swaps).collect::<Vec<NftForTokensQuote>>();
+
+    let mut response = Response::new();
 
     let mut num_swaps = 0u32;
     for (nft_order, quote) in zip(nft_orders, quotes) {
@@ -165,30 +145,13 @@ pub fn execute_swap_tokens_for_nfts(
         }
     );
 
-    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
-    let global_config = load_global_config(&deps.querier, &infinity_global)?;
-
-    let response = Response::new();
-    let (royalty_entry, mut response) = fetch_or_set_royalties(
-        deps.as_ref(),
-        &global_config.royalty_registry,
-        &collection,
-        Some(&infinity_global),
-        response,
-    )
-    .unwrap();
-
-    let iterator = TokensForNfts::initialize(
-        deps.as_ref(),
-        global_config,
-        collection,
-        denom.clone(),
-        royalty_entry,
-        filter_sources,
-    );
+    let iterator =
+        TokensForNfts::initialize(deps.as_ref(), collection, denom.clone(), filter_sources);
 
     let requested_swaps = max_inputs.len();
     let quotes = iterator.take(requested_swaps).collect::<Vec<TokensForNftQuote>>();
+
+    let mut response = Response::new();
 
     let mut num_swaps = 0u32;
     for (max_input, quote) in zip(max_inputs, quotes) {

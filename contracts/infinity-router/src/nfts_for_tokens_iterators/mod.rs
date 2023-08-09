@@ -6,8 +6,6 @@ use crate::nfts_for_tokens_iterators::nfts_for_tokens_infinity::NftsForTokensInf
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Deps, Uint128};
-use infinity_global::GlobalConfig;
-use stargaze_royalty_registry::state::RoyaltyEntry;
 
 #[cw_serde]
 pub enum NftForTokensSource {
@@ -32,10 +30,8 @@ pub struct NftsForTokens<'a> {
 impl<'a> NftsForTokens<'a> {
     pub fn initialize(
         deps: Deps<'a>,
-        global_config: GlobalConfig<Addr>,
         collection: Addr,
         denom: String,
-        royalty_entry: Option<RoyaltyEntry>,
         filter_sources: Vec<NftForTokensSource>,
     ) -> Self {
         let quote_sources = vec![NftForTokensSource::Infinity]
@@ -48,15 +44,9 @@ impl<'a> NftsForTokens<'a> {
             match quote_source {
                 NftForTokensSource::Infinity => {
                     sources.push(SourceIters::Infinity(
-                        NftsForTokensInfinity::initialize(
-                            deps,
-                            global_config.clone(),
-                            collection.clone(),
-                            denom.clone(),
-                            royalty_entry.clone(),
-                        )
-                        .unwrap()
-                        .peekable(),
+                        NftsForTokensInfinity::initialize(deps, collection.clone(), denom.clone())
+                            .unwrap()
+                            .peekable(),
                     ));
                 },
             };

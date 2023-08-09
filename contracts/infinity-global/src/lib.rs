@@ -1,12 +1,12 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, QuerierWrapper,
-    StdError, StdResult,
+    coin, to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, QuerierWrapper,
+    StdError, StdResult, Uint128,
 };
 use cosmwasm_std::{Api, Coin, Decimal};
 use cw2::set_contract_version;
 use cw_address_like::AddressLike;
-use cw_storage_plus::Item;
+use cw_storage_plus::{Item, Map};
 use sg_std::Response;
 
 #[cfg(not(feature = "library"))]
@@ -60,10 +60,12 @@ impl GlobalConfig<String> {
 }
 
 pub const GLOBAL_CONFIG: Item<GlobalConfig<Addr>> = Item::new("g");
+pub const MIN_PRICES: Map<String, Uint128> = Map::new("m");
 
 #[cw_serde]
 pub struct InstantiateMsg {
     pub global_config: GlobalConfig<String>,
+    pub min_prices: Vec<Coin>,
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -77,6 +79,14 @@ pub fn instantiate(
 
     let global_config = msg.global_config.str_to_addr(deps.api)?;
     GLOBAL_CONFIG.save(deps.storage, &global_config)?;
+
+    for min_price in msg.min_prices {
+        if MIN_PRICES.has(deps.storage, min_price.denom.clone()) {
+            return Err(StdError::generic_err("Duplicate min price"));
+        } else {
+            MIN_PRICES.save(deps.storage, min_price.denom, &min_price.amount)?;
+        }
+    }
 
     Ok(Response::new()
         .add_attribute("action", "instantiate")
@@ -99,12 +109,22 @@ pub fn execute(
 pub enum QueryMsg {
     #[returns(GlobalConfig<Addr>)]
     GlobalConfig {},
+    #[returns(Option<Coin>)]
+    MinPrice {
+        denom: String,
+    },
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GlobalConfig {} => to_binary(&GLOBAL_CONFIG.load(deps.storage)?),
+        QueryMsg::MinPrice {
+            denom,
+        } => {
+            let min_amount = MIN_PRICES.may_load(deps.storage, denom.clone())?;
+            to_binary(&Some(min_amount.map(|a| coin(a.u128(), denom))))
+        },
     }
 }
 
@@ -113,6 +133,19 @@ pub fn load_global_config(
     infinity_global: &Addr,
 ) -> StdResult<GlobalConfig<Addr>> {
     querier.query_wasm_smart::<GlobalConfig<Addr>>(infinity_global, &QueryMsg::GlobalConfig {})
+}
+
+pub fn load_min_price(
+    querier: &QuerierWrapper,
+    infinity_global: &Addr,
+    denom: &String,
+) -> StdResult<Option<Coin>> {
+    querier.query_wasm_smart::<Option<Coin>>(
+        infinity_global,
+        &QueryMsg::MinPrice {
+            denom: denom.clone(),
+        },
+    )
 }
 
 #[cw_serde]

@@ -1,13 +1,10 @@
 mod tokens_for_nfts_infinity;
 
-use std::iter::Peekable;
-
 use crate::tokens_for_nfts_iterators::tokens_for_nfts_infinity::TokensForNftsInfinity;
 
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Deps, Uint128};
-use infinity_global::GlobalConfig;
-use stargaze_royalty_registry::state::RoyaltyEntry;
+use std::iter::Peekable;
 
 #[cw_serde]
 pub enum TokensForNftSource {
@@ -32,10 +29,8 @@ pub struct TokensForNfts<'a> {
 impl<'a> TokensForNfts<'a> {
     pub fn initialize(
         deps: Deps<'a>,
-        global_config: GlobalConfig<Addr>,
         collection: Addr,
         denom: String,
-        royalty_entry: Option<RoyaltyEntry>,
         filter_sources: Vec<TokensForNftSource>,
     ) -> Self {
         let quote_sources = vec![TokensForNftSource::Infinity]
@@ -48,15 +43,9 @@ impl<'a> TokensForNfts<'a> {
             match quote_source {
                 TokensForNftSource::Infinity => {
                     sources.push(SourceIters::Infinity(
-                        TokensForNftsInfinity::initialize(
-                            deps,
-                            global_config.clone(),
-                            collection.clone(),
-                            denom.clone(),
-                            royalty_entry.clone(),
-                        )
-                        .unwrap()
-                        .peekable(),
+                        TokensForNftsInfinity::initialize(deps, collection.clone(), denom.clone())
+                            .unwrap()
+                            .peekable(),
                     ));
                 },
             };

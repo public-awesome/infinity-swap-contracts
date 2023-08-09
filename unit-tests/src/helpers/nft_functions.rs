@@ -47,11 +47,11 @@ pub fn approve(
     owner: &Addr,
     collection: &Addr,
     spender: &Addr,
-    token_id: u32,
+    token_id: String,
 ) {
     let approve_msg: Sg721ExecuteMsg<CollectionInfoResponse, Empty> = Sg721ExecuteMsg::Approve {
         spender: spender.to_string(),
-        token_id: token_id.to_string(),
+        token_id: token_id,
         expires: None,
     };
     let res = router.execute_contract(owner.clone(), collection.clone(), &approve_msg, &[]);

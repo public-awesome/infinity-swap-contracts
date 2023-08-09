@@ -46,6 +46,7 @@ pub struct InstantiateMsg {
     pub max_royalty_fee_percent: Decimal,
     pub max_swap_fee_percent: Decimal,
     pub code_ids: CodeIds,
+    pub min_prices: Vec<Coin>,
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -105,6 +106,7 @@ pub fn instantiate(
                 max_royalty_fee_percent: msg.max_royalty_fee_percent,
                 max_swap_fee_percent: msg.max_swap_fee_percent,
             },
+            min_prices: msg.min_prices,
         })?,
         funds: vec![],
         salt: infinity_global_salt,

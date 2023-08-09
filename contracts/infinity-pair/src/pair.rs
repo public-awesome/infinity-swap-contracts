@@ -1,4 +1,5 @@
 use crate::error::ContractError;
+use crate::helpers::PayoutContext;
 use crate::math::{
     calc_cp_trade_buy_from_pair_price, calc_cp_trade_sell_to_pair_price,
     calc_exponential_spot_price_user_submits_nft, calc_exponential_spot_price_user_submits_tokens,
@@ -8,7 +9,7 @@ use crate::math::{
 use crate::msg::TransactionType;
 use crate::state::{
     BondingCurve, PairConfig, PairImmutable, PairInternal, PairType, QuoteSummary, PAIR_CONFIG,
-    PAIR_INTERNAL,
+    PAIR_IMMUTABLE, PAIR_INTERNAL,
 };
 
 use cosmwasm_schema::cw_serde;
@@ -20,49 +21,37 @@ use sg_std::Response;
 use stargaze_fair_burn::append_fair_burn_msg;
 
 impl QuoteSummary {
-    pub fn new(
-        sale_ammount: Uint128,
-        fair_burn_fee_percent: Decimal,
-        royalty_fee_percent: Option<Decimal>,
-    ) -> Self {
-        let fair_burn_amount = sale_ammount.mul_ceil(fair_burn_fee_percent);
-        let royalty_amount = royalty_fee_percent.map(|fee| sale_ammount.mul_ceil(fee));
-        let seller_amount =
-            sale_ammount - fair_burn_amount - royalty_amount.unwrap_or(Uint128::zero());
-        Self {
-            fair_burn_amount,
-            royalty_amount,
-            seller_amount,
-        }
-    }
-
     pub fn total(&self) -> Uint128 {
-        self.fair_burn_amount + self.royalty_amount.unwrap_or(Uint128::zero()) + self.seller_amount
+        self.fair_burn.amount
+            + self.royalty.as_ref().map_or(Uint128::zero(), |p| p.amount)
+            + self.swap.as_ref().map_or(Uint128::zero(), |p| p.amount)
+            + self.seller_amount
     }
 
     pub fn payout(
         &self,
-        denom: &str,
-        fair_burn: &Addr,
-        royalty_recipient: Option<&Addr>,
+        denom: &String,
         seller_recipient: &Addr,
         mut response: Response,
-    ) -> Response {
+    ) -> Result<Response, ContractError> {
         response = append_fair_burn_msg(
-            fair_burn,
-            vec![coin(self.fair_burn_amount.u128(), denom)],
+            &self.fair_burn.recipient,
+            vec![coin(self.fair_burn.amount.u128(), denom)],
             None,
             response,
         );
 
-        if let (Some(royalty_amount), Some(royalty_recipient)) =
-            (self.royalty_amount, royalty_recipient)
-        {
+        if let Some(royalty) = &self.royalty {
             response = transfer_coins(
-                vec![coin(royalty_amount.u128(), denom)],
-                royalty_recipient,
+                vec![coin(royalty.amount.u128(), denom)],
+                &royalty.recipient,
                 response,
             );
+        }
+
+        if let Some(swap) = &self.swap {
+            response =
+                transfer_coins(vec![coin(swap.amount.u128(), denom)], &swap.recipient, response);
         }
 
         response = transfer_coins(
@@ -71,31 +60,41 @@ impl QuoteSummary {
             response,
         );
 
-        response
+        Ok(response)
     }
 }
 
 #[cw_serde]
 pub struct Pair {
-    pub immutable: PairImmutable,
-    pub config: PairConfig,
+    pub immutable: PairImmutable<Addr>,
+    pub config: PairConfig<Addr>,
     pub internal: PairInternal,
     pub total_tokens: Uint128,
 }
 
 impl Pair {
-    pub fn initialize(immutable: PairImmutable, config: PairConfig) -> Self {
-        let pair_internal = PairInternal {
-            total_nfts: 0u64,
-            buy_from_pair_quote_summary: None,
-            sell_to_pair_quote_summary: None,
-        };
-        Pair::new(immutable, config, pair_internal, Uint128::zero())
+    pub fn initialize(
+        storage: &mut dyn Storage,
+        immutable: PairImmutable<Addr>,
+        config: PairConfig<Addr>,
+    ) -> Result<Self, ContractError> {
+        PAIR_IMMUTABLE.save(storage, &immutable)?;
+
+        Ok(Pair::new(
+            immutable,
+            config,
+            PairInternal {
+                total_nfts: 0u64,
+                buy_from_pair_quote_summary: None,
+                sell_to_pair_quote_summary: None,
+            },
+            Uint128::zero(),
+        ))
     }
 
     pub fn new(
-        immutable: PairImmutable,
-        config: PairConfig,
+        immutable: PairImmutable<Addr>,
+        config: PairConfig<Addr>,
         internal: PairInternal,
         total_tokens: Uint128,
     ) -> Self {
@@ -110,13 +109,16 @@ impl Pair {
     pub fn save_and_update_indices(
         &mut self,
         storage: &mut dyn Storage,
-        infinity_index: &Addr,
+        payout_context: &PayoutContext,
         mut response: Response,
     ) -> Result<Response, ContractError> {
+        self.update_sell_to_pair_quote_summary(payout_context);
+        self.update_buy_from_pair_quote_summary(payout_context);
+
         PAIR_CONFIG.save(storage, &self.config)?;
         PAIR_INTERNAL.save(storage, &self.internal)?;
 
-        response = self.update_index(infinity_index, response);
+        response = self.update_index(&payout_context.global_config.infinity_index, response);
 
         Ok(response)
     }
@@ -145,11 +147,17 @@ impl Pair {
         }
     }
 
-    pub fn swap_nft_for_tokens(
-        &mut self,
-        fair_burn_fee_percent: Decimal,
-        royalty_fee_percent: Option<Decimal>,
-    ) {
+    pub fn swap_fee_percent(&self) -> Decimal {
+        match self.config.pair_type {
+            PairType::Trade {
+                swap_fee_percent,
+                ..
+            } => swap_fee_percent,
+            _ => Decimal::zero(),
+        }
+    }
+
+    pub fn swap_nft_for_tokens(&mut self) {
         self.total_tokens -= self.internal.sell_to_pair_quote_summary.as_ref().unwrap().total();
 
         if self.reinvest_nfts() {
@@ -157,15 +165,15 @@ impl Pair {
         };
 
         self.update_spot_price(TransactionType::UserSubmitsNfts);
-        self.update_sell_to_pair_quote_summary(fair_burn_fee_percent, royalty_fee_percent);
-        self.update_buy_from_pair_quote_summary(fair_burn_fee_percent, royalty_fee_percent);
     }
 
-    pub fn swap_tokens_for_nft(
-        &mut self,
-        fair_burn_fee_percent: Decimal,
-        royalty_fee_percent: Option<Decimal>,
-    ) {
+    pub fn sim_swap_nft_for_tokens(&mut self, payout_context: &PayoutContext) {
+        self.swap_nft_for_tokens();
+        self.update_sell_to_pair_quote_summary(payout_context);
+        self.update_buy_from_pair_quote_summary(payout_context);
+    }
+
+    pub fn swap_tokens_for_nft(&mut self) {
         self.internal.total_nfts -= 1u64;
 
         if self.reinvest_tokens() {
@@ -174,8 +182,12 @@ impl Pair {
         };
 
         self.update_spot_price(TransactionType::UserSubmitsTokens);
-        self.update_sell_to_pair_quote_summary(fair_burn_fee_percent, royalty_fee_percent);
-        self.update_buy_from_pair_quote_summary(fair_burn_fee_percent, royalty_fee_percent);
+    }
+
+    pub fn sim_swap_tokens_for_nft(&mut self, payout_context: &PayoutContext) {
+        self.swap_tokens_for_nft();
+        self.update_sell_to_pair_quote_summary(payout_context);
+        self.update_buy_from_pair_quote_summary(payout_context);
     }
 
     fn update_spot_price(&mut self, tx_type: TransactionType) {
@@ -232,17 +244,13 @@ impl Pair {
         };
     }
 
-    fn update_sell_to_pair_quote_summary(
-        &mut self,
-        fair_burn_fee_percent: Decimal,
-        royalty_fee_percent: Option<Decimal>,
-    ) {
+    fn update_sell_to_pair_quote_summary(&mut self, payout_context: &PayoutContext) {
         if !self.config.is_active {
             self.internal.sell_to_pair_quote_summary = None;
             return;
         }
 
-        let quote = match self.config.bonding_curve {
+        let sale_amount_option = match self.config.bonding_curve {
             BondingCurve::Linear {
                 spot_price,
                 ..
@@ -256,25 +264,21 @@ impl Pair {
             },
         };
 
-        self.internal.sell_to_pair_quote_summary = match quote {
-            Some(quote) if quote <= self.total_tokens => {
-                Some(QuoteSummary::new(quote, fair_burn_fee_percent, royalty_fee_percent))
+        self.internal.sell_to_pair_quote_summary = match sale_amount_option {
+            Some(sale_amount) if sale_amount <= self.total_tokens => {
+                payout_context.build_quote_summary(&self, sale_amount)
             },
             _ => None,
         };
     }
 
-    fn update_buy_from_pair_quote_summary(
-        &mut self,
-        fair_burn_fee_percent: Decimal,
-        royalty_fee_percent: Option<Decimal>,
-    ) {
+    fn update_buy_from_pair_quote_summary(&mut self, payout_context: &PayoutContext) {
         if !self.config.is_active || self.internal.total_nfts == 0u64 {
             self.internal.buy_from_pair_quote_summary = None;
             return;
         }
 
-        let price = match (&self.config.pair_type, &self.config.bonding_curve) {
+        let sale_amount_option = match (&self.config.pair_type, &self.config.bonding_curve) {
             (
                 PairType::Nft,
                 BondingCurve::Linear {
@@ -315,10 +319,8 @@ impl Pair {
             _ => None,
         };
 
-        self.internal.sell_to_pair_quote_summary = match price {
-            Some(price) if price <= self.total_tokens => {
-                Some(QuoteSummary::new(price, fair_burn_fee_percent, royalty_fee_percent))
-            },
+        self.internal.buy_from_pair_quote_summary = match sale_amount_option {
+            Some(sale_amount) => payout_context.build_quote_summary(&self, sale_amount),
             _ => None,
         };
     }

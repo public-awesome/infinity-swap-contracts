@@ -2,7 +2,9 @@ use cosmwasm_std::{coin, Addr, Decimal};
 use cw_multi_test::{Contract, ContractWrapper, Executor};
 use infinity_global::GlobalConfig;
 use sg_multi_test::StargazeApp;
-use sg_std::StargazeMsgWrapper;
+use sg_std::{StargazeMsgWrapper, NATIVE_DENOM};
+
+pub const UOSMO: &str = "uosmo";
 
 pub fn contract_infinity_global() -> Box<dyn Contract<StargazeMsgWrapper>> {
     let contract = ContractWrapper::new(
@@ -40,6 +42,7 @@ pub fn setup_infinity_global(
             max_royalty_fee_percent: Decimal::percent(5),
             max_swap_fee_percent: Decimal::percent(5),
         },
+        min_prices: vec![coin(10u128, NATIVE_DENOM), coin(10u128, UOSMO)],
     };
     router
         .instantiate_contract(
