@@ -221,10 +221,9 @@ pub fn execute_deposit_tokens(
     _deps: DepsMut,
     info: MessageInfo,
     _env: Env,
-    mut pair: Pair,
+    pair: Pair,
 ) -> Result<(Pair, Response), ContractError> {
-    pair.total_tokens += must_pay(&info, &pair.immutable.denom)?;
-
+    must_pay(&info, &pair.immutable.denom)?;
     Ok((pair, Response::new()))
 }
 
@@ -346,7 +345,7 @@ pub fn execute_swap_tokens_for_specific_nft(
     token_id: String,
     asset_recipient: Option<Addr>,
 ) -> Result<(Pair, Response), ContractError> {
-    let max_input = must_pay(&info, &pair.immutable.denom)?;
+    let received_amount = must_pay(&info, &pair.immutable.denom)?;
 
     let quote_summary = pair
         .internal
@@ -354,9 +353,10 @@ pub fn execute_swap_tokens_for_specific_nft(
         .as_ref()
         .ok_or(ContractError::InvalidPair("pair cannot produce quote".to_string()))?;
 
-    ensure!(
-        max_input >= quote_summary.total(),
-        ContractError::InvalidPairQuote("payment required is greater than max input".to_string())
+    ensure_eq!(
+        received_amount,
+        quote_summary.total(),
+        InfinityError::InvalidInput("received funds does not equal quote".to_string())
     );
 
     let mut response = Response::new();
@@ -370,21 +370,17 @@ pub fn execute_swap_tokens_for_specific_nft(
     response = quote_summary.payout(&pair.immutable.denom, &seller_recipient, response)?;
 
     // Payout NFT
+    ensure!(
+        NFT_DEPOSITS.has(deps.storage, token_id.clone()),
+        InfinityError::InvalidInput("pair does not own NFT".to_string())
+    );
+    NFT_DEPOSITS.remove(deps.storage, token_id.clone());
+
     let nft_recipient = address_or(asset_recipient.as_ref(), &info.sender);
     response = transfer_nft(&pair.immutable.collection, &token_id, &nft_recipient, response);
-    NFT_DEPOSITS.remove(deps.storage, token_id);
-
-    // Refund excess tokens
-    let refund_amount = max_input - quote_summary.total();
-    if !refund_amount.is_zero() {
-        response = transfer_coin(
-            coin(refund_amount.u128(), &pair.immutable.denom),
-            &info.sender,
-            response,
-        );
-    }
 
     // Update pair state
+    pair.total_tokens -= received_amount;
     pair.swap_tokens_for_nft();
 
     Ok((pair, response))

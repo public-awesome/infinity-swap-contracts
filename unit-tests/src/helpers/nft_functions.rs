@@ -6,16 +6,16 @@ use sg721_base::msg::CollectionInfoResponse;
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
 
-pub const MINT_PRICE: u128 = 100_000_000;
+pub const _MINT_PRICE: u128 = 100_000_000;
 
 // Mints an NFT for a creator
-pub fn mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) -> String {
+pub fn _mint(router: &mut StargazeApp, creator: &Addr, minter_addr: &Addr) -> String {
     let minter_msg = vending_minter::msg::ExecuteMsg::Mint {};
     let res = router.execute_contract(
         creator.clone(),
         minter_addr.clone(),
         &minter_msg,
-        &coins(MINT_PRICE, NATIVE_DENOM),
+        &coins(_MINT_PRICE, NATIVE_DENOM),
     );
     assert!(res.is_ok());
 
@@ -58,7 +58,12 @@ pub fn approve(
     assert!(res.is_ok());
 }
 
-pub fn approve_all(router: &mut StargazeApp, owner: &Addr, collection: &Addr, approve_addr: &Addr) {
+pub fn _approve_all(
+    router: &mut StargazeApp,
+    owner: &Addr,
+    collection: &Addr,
+    approve_addr: &Addr,
+) {
     let approve_msg: Sg721ExecuteMsg<CollectionInfoResponse, Empty> = Sg721ExecuteMsg::ApproveAll {
         operator: approve_addr.to_string(),
         expires: None,
@@ -90,7 +95,7 @@ pub fn _burn(router: &mut StargazeApp, creator: &Addr, collection: &Addr, token_
     assert!(res.is_ok());
 }
 
-pub fn mint_and_approve_many(
+pub fn _mint_and_approve_many(
     router: &mut StargazeApp,
     creator: &Addr,
     owner: &Addr,
@@ -104,7 +109,7 @@ pub fn mint_and_approve_many(
         let token_id = mint_to(router, creator, owner, minter_addr);
         token_ids.push(token_id);
     }
-    approve_all(router, owner, collection, approve_addr);
+    _approve_all(router, owner, collection, approve_addr);
     token_ids
 }
 

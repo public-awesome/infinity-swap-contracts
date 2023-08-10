@@ -1,8 +1,10 @@
-use cosmwasm_std::{coins, Addr, Coin, StdResult};
+use cosmwasm_std::{coin, coins, Addr, Coin, StdResult};
 use cw_multi_test::SudoMsg as CwSudoMsg;
 use cw_multi_test::{BankSudo, SudoMsg};
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
+
+use crate::setup::setup_infinity_contracts::UOSMO;
 
 // all amounts in ustars
 pub const INITIAL_BALANCE: u128 = 5_000_000_000;
@@ -20,7 +22,7 @@ pub fn setup_accounts(router: &mut StargazeApp) -> StdResult<(Addr, Addr, Addr)>
     let bidder: Addr = Addr::unchecked("bidder");
     let creator: Addr = Addr::unchecked("creator");
     let creator_funds: Vec<Coin> = coins(2 * INITIAL_BALANCE, NATIVE_DENOM);
-    let funds: Vec<Coin> = coins(INITIAL_BALANCE, NATIVE_DENOM);
+    let funds: Vec<Coin> = vec![coin(INITIAL_BALANCE, UOSMO), coin(INITIAL_BALANCE, NATIVE_DENOM)];
     router
         .sudo(SudoMsg::Bank({
             BankSudo::Mint {
@@ -66,7 +68,7 @@ pub fn setup_addtl_account(
     initial_balance: u128,
 ) -> StdResult<Addr> {
     let addr: Addr = Addr::unchecked(input);
-    let funds: Vec<Coin> = coins(initial_balance, NATIVE_DENOM);
+    let funds: Vec<Coin> = vec![coin(initial_balance, UOSMO), coin(initial_balance, NATIVE_DENOM)];
     router
         .sudo(CwSudoMsg::Bank({
             BankSudo::Mint {

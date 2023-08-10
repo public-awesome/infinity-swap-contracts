@@ -9,11 +9,11 @@ pub fn assert_error(response: Result<AppResponse, Error>, expected: String) {
     assert_eq!(response.unwrap_err().source().unwrap().to_string(), expected);
 }
 
-pub fn assert_event(response: Result<AppResponse, Error>, ty: &str) {
+pub fn _assert_event(response: Result<AppResponse, Error>, ty: &str) {
     assert!(response.unwrap().events.iter().find(|event| event.ty == ty).is_some());
 }
 
-pub fn get_native_balances(router: &StargazeApp, addresses: &Vec<Addr>) -> HashMap<Addr, Coin> {
+pub fn _get_native_balances(router: &StargazeApp, addresses: &Vec<Addr>) -> HashMap<Addr, Coin> {
     let mut balances: HashMap<Addr, Coin> = HashMap::new();
     for address in addresses {
         let native_balance = router.wrap().query_balance(address, NATIVE_DENOM).unwrap();
@@ -22,6 +22,6 @@ pub fn get_native_balances(router: &StargazeApp, addresses: &Vec<Addr>) -> HashM
     balances
 }
 
-pub fn get_native_balance(router: &StargazeApp, address: Addr) -> Uint128 {
-    get_native_balances(router, &vec![address.clone()]).get(&address).unwrap().amount
+pub fn _get_native_balance(router: &StargazeApp, address: Addr) -> Uint128 {
+    _get_native_balances(router, &vec![address.clone()]).get(&address).unwrap().amount
 }

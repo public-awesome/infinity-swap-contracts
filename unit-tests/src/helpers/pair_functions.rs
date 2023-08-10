@@ -119,13 +119,15 @@ pub fn create_pair_with_deposits(
         token_ids.push(token_id)
     }
 
-    let response = router.execute_contract(
-        owner.clone(),
-        pair_addr.clone(),
-        &InfinityPairExecuteMsg::DepositTokens {},
-        &[coin(num_tokens.u128(), NATIVE_DENOM)],
-    );
-    assert!(response.is_ok());
+    if !num_tokens.is_zero() {
+        let response = router.execute_contract(
+            owner.clone(),
+            pair_addr.clone(),
+            &InfinityPairExecuteMsg::DepositTokens {},
+            &[coin(num_tokens.u128(), NATIVE_DENOM)],
+        );
+        assert!(response.is_ok());
+    }
 
     let pair = router
         .wrap()

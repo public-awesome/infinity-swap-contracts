@@ -1,7 +1,7 @@
 use crate::helpers::nft_functions::{assert_nft_owner, mint_to};
 use crate::helpers::pair_functions::create_pair;
 use crate::helpers::utils::assert_error;
-use crate::setup::templates::{setup_infinity_test, InfinityTestSetup};
+use crate::setup::templates::{setup_infinity_test, standard_minter_template, InfinityTestSetup};
 
 use cosmwasm_std::{coin, to_binary, Empty, Uint128};
 use cw721::Cw721ExecuteMsg;
@@ -14,6 +14,7 @@ use test_suite::common_setup::msg::MinterTemplateResponse;
 
 #[test]
 fn try_deposit_nft() {
+    let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
             MinterTemplateResponse {
@@ -24,7 +25,7 @@ fn try_deposit_nft() {
         infinity_global,
         infinity_factory,
         ..
-    } = setup_infinity_test(1000).unwrap();
+    } = setup_infinity_test(vt).unwrap();
 
     let collection_resp = &collection_response_vec[0];
     let minter = collection_resp.minter.clone().unwrap();
@@ -63,6 +64,7 @@ fn try_deposit_nft() {
 
 #[test]
 fn try_withdraw_nfts() {
+    let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
             MinterTemplateResponse {
@@ -73,7 +75,7 @@ fn try_withdraw_nfts() {
         infinity_global,
         infinity_factory,
         ..
-    } = setup_infinity_test(1000).unwrap();
+    } = setup_infinity_test(vt).unwrap();
 
     let collection_resp = &collection_response_vec[0];
     let minter = collection_resp.minter.clone().unwrap();
@@ -183,6 +185,7 @@ fn try_withdraw_nfts() {
 
 #[test]
 fn try_deposit_tokens() {
+    let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
             MinterTemplateResponse {
@@ -193,7 +196,7 @@ fn try_deposit_tokens() {
         infinity_global,
         infinity_factory,
         ..
-    } = setup_infinity_test(1000).unwrap();
+    } = setup_infinity_test(vt).unwrap();
 
     let collection_resp = &collection_response_vec[0];
     let _minter = collection_resp.minter.clone().unwrap();
@@ -247,6 +250,7 @@ fn try_deposit_tokens() {
 
 #[test]
 fn try_withdraw_tokens() {
+    let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
             MinterTemplateResponse {
@@ -257,7 +261,7 @@ fn try_withdraw_tokens() {
         infinity_global,
         infinity_factory,
         ..
-    } = setup_infinity_test(1000).unwrap();
+    } = setup_infinity_test(vt).unwrap();
 
     let collection_resp = &collection_response_vec[0];
     let _minter = collection_resp.minter.clone().unwrap();
