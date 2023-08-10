@@ -1,11 +1,6 @@
 use crate::error::ContractError;
 use crate::helpers::PayoutContext;
-use crate::math::{
-    calc_cp_trade_buy_from_pair_price, calc_cp_trade_sell_to_pair_price,
-    calc_exponential_spot_price_user_submits_nft, calc_exponential_spot_price_user_submits_tokens,
-    calc_exponential_trade_buy_from_pair_price, calc_linear_spot_price_user_submits_nft,
-    calc_linear_spot_price_user_submits_tokens, calc_linear_trade_buy_from_pair_price,
-};
+use crate::math;
 use crate::msg::TransactionType;
 use crate::state::{
     BondingCurve, PairConfig, PairImmutable, PairInternal, PairType, QuoteSummary, PAIR_CONFIG,
@@ -198,10 +193,10 @@ impl Pair {
             } => {
                 let result = match tx_type {
                     TransactionType::UserSubmitsNfts => {
-                        calc_linear_spot_price_user_submits_nft(spot_price, delta)
+                        math::calc_linear_spot_price_user_submits_nft(spot_price, delta)
                     },
                     TransactionType::UserSubmitsTokens => {
-                        calc_linear_spot_price_user_submits_tokens(spot_price, delta)
+                        math::calc_linear_spot_price_user_submits_tokens(spot_price, delta)
                     },
                 };
                 match result {
@@ -222,10 +217,10 @@ impl Pair {
             } => {
                 let result = match tx_type {
                     TransactionType::UserSubmitsNfts => {
-                        calc_exponential_spot_price_user_submits_nft(spot_price, delta)
+                        math::calc_exponential_spot_price_user_submits_nft(spot_price, delta)
                     },
                     TransactionType::UserSubmitsTokens => {
-                        calc_exponential_spot_price_user_submits_tokens(spot_price, delta)
+                        math::calc_exponential_spot_price_user_submits_tokens(spot_price, delta)
                     },
                 };
                 match result {
@@ -260,7 +255,8 @@ impl Pair {
                 ..
             } => Some(spot_price),
             BondingCurve::ConstantProduct => {
-                calc_cp_trade_sell_to_pair_price(self.total_tokens, self.internal.total_nfts).ok()
+                math::calc_cp_trade_sell_to_pair_price(self.total_tokens, self.internal.total_nfts)
+                    .ok()
             },
         };
 
@@ -301,7 +297,7 @@ impl Pair {
                     spot_price,
                     delta,
                 },
-            ) => calc_linear_trade_buy_from_pair_price(*spot_price, *delta).ok(),
+            ) => math::calc_linear_trade_buy_from_pair_price(*spot_price, *delta).ok(),
             (
                 PairType::Trade {
                     ..
@@ -310,14 +306,15 @@ impl Pair {
                     spot_price,
                     delta,
                 },
-            ) => calc_exponential_trade_buy_from_pair_price(*spot_price, *delta).ok(),
+            ) => math::calc_exponential_trade_buy_from_pair_price(*spot_price, *delta).ok(),
             (
                 PairType::Trade {
                     ..
                 },
                 BondingCurve::ConstantProduct,
             ) => {
-                calc_cp_trade_buy_from_pair_price(self.total_tokens, self.internal.total_nfts).ok()
+                math::calc_cp_trade_buy_from_pair_price(self.total_tokens, self.internal.total_nfts)
+                    .ok()
             },
             _ => None,
         };
@@ -333,7 +330,7 @@ impl Pair {
             self.internal.sell_to_pair_quote_summary.as_ref().map(|summary| summary.seller_amount);
 
         let buy_from_pair_quote =
-            self.internal.sell_to_pair_quote_summary.as_ref().map(|summary| summary.total());
+            self.internal.buy_from_pair_quote_summary.as_ref().map(|summary| summary.total());
 
         response.add_message(WasmMsg::Execute {
             contract_addr: infinity_index.to_string(),
