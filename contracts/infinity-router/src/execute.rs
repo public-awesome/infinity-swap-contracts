@@ -1,21 +1,26 @@
-use std::iter::zip;
-
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, NftOrder, SwapParams};
-use crate::nfts_for_tokens_iterators::{NftForTokensQuote, NftForTokensSource, NftsForTokens};
-use crate::tokens_for_nfts_iterators::{TokensForNftQuote, TokensForNftSource, TokensForNfts};
+use crate::helpers::approve_nft;
+use crate::msg::{ExecuteMsg, SellOrder, SwapParams};
+use crate::nfts_for_tokens_iterators::{
+    iter::NftsForTokens,
+    types::{NftForTokensQuote, NftForTokensSource, NftForTokensSourceData},
+};
+use crate::state::INFINITY_GLOBAL;
+use crate::tokens_for_nfts_iterators::types::{TokensForNftQuote, TokensForNftSourceData};
+use crate::tokens_for_nfts_iterators::{iter::TokensForNfts, types::TokensForNftSource};
 
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Uint128,
     WasmMsg,
 };
-use cw_utils::{maybe_addr, must_pay, nonpayable};
+use cw_utils::{must_pay, nonpayable};
 use infinity_pair::msg::ExecuteMsg as PairExecuteMsg;
 use infinity_shared::InfinityError;
 use sg_marketplace_common::address::address_or;
 use sg_marketplace_common::coin::transfer_coin;
 use sg_marketplace_common::nft::transfer_nft;
 use sg_std::Response;
+use std::iter::zip;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -33,7 +38,7 @@ pub fn execute(
         ExecuteMsg::SwapNftsForTokens {
             collection,
             denom,
-            nft_orders,
+            sell_orders,
             swap_params,
             filter_sources,
         } => execute_swap_nfts_for_tokens(
@@ -42,8 +47,8 @@ pub fn execute(
             info,
             api.addr_validate(&collection)?,
             denom,
-            nft_orders,
-            swap_params.unwrap_or_default(),
+            sell_orders,
+            swap_params.unwrap_or_default().str_to_addr(api)?,
             filter_sources.unwrap_or_default(),
         ),
         ExecuteMsg::SwapTokensForNfts {
@@ -59,7 +64,7 @@ pub fn execute(
             api.addr_validate(&collection)?,
             denom,
             max_inputs,
-            swap_params.unwrap_or_default(),
+            swap_params.unwrap_or_default().str_to_addr(api)?,
             filter_sources.unwrap_or_default(),
         ),
     }
@@ -72,37 +77,48 @@ pub fn execute_swap_nfts_for_tokens(
     info: MessageInfo,
     collection: Addr,
     denom: String,
-    nft_orders: Vec<NftOrder>,
-    swap_params: SwapParams,
+    sell_orders: Vec<SellOrder>,
+    swap_params: SwapParams<Addr>,
     filter_sources: Vec<NftForTokensSource>,
 ) -> Result<Response, ContractError> {
     nonpayable(&info)?;
 
-    let iterator =
-        NftsForTokens::initialize(deps.as_ref(), collection.clone(), denom.clone(), filter_sources);
+    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
+    let iterator = NftsForTokens::initialize(
+        deps.as_ref(),
+        &infinity_global,
+        &collection,
+        &denom,
+        filter_sources,
+    )?;
 
-    let requested_swaps = nft_orders.len();
+    let requested_swaps = sell_orders.len();
     let quotes = iterator.take(requested_swaps).collect::<Vec<NftForTokensQuote>>();
 
     let mut response = Response::new();
 
     let mut num_swaps = 0u32;
-    for (nft_order, quote) in zip(nft_orders, quotes) {
-        response =
-            transfer_nft(&collection, &nft_order.input_token_id, &env.contract.address, response);
-
-        if quote.amount < nft_order.min_output {
+    for (sell_order, quote) in zip(sell_orders, quotes) {
+        if quote.amount < sell_order.min_output {
             break;
         }
 
-        match quote.source {
-            NftForTokensSource::Infinity {} => {
+        response =
+            transfer_nft(&collection, &sell_order.input_token_id, &env.contract.address, response);
+
+        match quote.source_data {
+            NftForTokensSourceData::Infinity(_) => {
+                response =
+                    approve_nft(&collection, &quote.address, &sell_order.input_token_id, response);
                 response = response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: quote.address.to_string(),
                     msg: to_binary(&PairExecuteMsg::SwapNftForTokens {
-                        token_id: nft_order.input_token_id,
-                        min_output: coin(nft_order.min_output.u128(), &denom),
-                        asset_recipient: swap_params.asset_recipient.clone(),
+                        token_id: sell_order.input_token_id,
+                        min_output: coin(sell_order.min_output.u128(), &denom),
+                        asset_recipient: Some(
+                            address_or(swap_params.asset_recipient.as_ref(), &info.sender)
+                                .to_string(),
+                        ),
                     })?,
                     funds: vec![],
                 }))
@@ -132,10 +148,10 @@ pub fn execute_swap_tokens_for_nfts(
     collection: Addr,
     denom: String,
     max_inputs: Vec<Uint128>,
-    swap_params: SwapParams,
+    swap_params: SwapParams<Addr>,
     filter_sources: Vec<TokensForNftSource>,
 ) -> Result<Response, ContractError> {
-    let mut received_amount = must_pay(&info, &denom)?;
+    let received_amount = must_pay(&info, &denom)?;
     let expected_amount = max_inputs.iter().sum::<Uint128>();
     ensure_eq!(
         received_amount,
@@ -145,33 +161,42 @@ pub fn execute_swap_tokens_for_nfts(
         }
     );
 
-    let iterator =
-        TokensForNfts::initialize(deps.as_ref(), collection, denom.clone(), filter_sources);
+    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
+    let iterator = TokensForNfts::initialize(
+        deps.as_ref(),
+        &infinity_global,
+        &collection,
+        &denom,
+        filter_sources,
+    );
 
     let requested_swaps = max_inputs.len();
     let quotes = iterator.take(requested_swaps).collect::<Vec<TokensForNftQuote>>();
 
     let mut response = Response::new();
 
+    let asset_recipient = address_or(swap_params.asset_recipient.as_ref(), &info.sender);
+
     let mut num_swaps = 0u32;
+    let mut paid_amount = Uint128::zero();
     for (max_input, quote) in zip(max_inputs, quotes) {
-        if max_input > quote.amount {
+        if max_input < quote.amount {
             break;
         }
 
-        match quote.source {
-            TokensForNftSource::Infinity {} => {
+        match quote.source_data {
+            TokensForNftSourceData::Infinity(_) => {
                 response = response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: quote.address.to_string(),
                     msg: to_binary(&PairExecuteMsg::SwapTokensForAnyNft {
-                        asset_recipient: swap_params.asset_recipient.clone(),
+                        asset_recipient: Some(asset_recipient.to_string()),
                     })?,
                     funds: vec![coin(quote.amount.u128(), &denom)],
                 }))
             },
         }
 
-        received_amount -= quote.amount;
+        paid_amount += quote.amount;
         num_swaps += 1;
     }
 
@@ -184,10 +209,9 @@ pub fn execute_swap_tokens_for_nfts(
         )));
     }
 
-    if !received_amount.is_zero() {
-        let recipient =
-            address_or(maybe_addr(deps.api, swap_params.asset_recipient)?.as_ref(), &info.sender);
-        response = transfer_coin(coin(received_amount.u128(), &denom), &recipient, response);
+    let refund_amount = received_amount.checked_sub(paid_amount).unwrap();
+    if !refund_amount.is_zero() {
+        response = transfer_coin(coin(refund_amount.u128(), &denom), &asset_recipient, response);
     }
 
     Ok(response)

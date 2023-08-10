@@ -1,8 +1,6 @@
 use crate::{
     pair::Pair,
-    state::{
-        QuoteSummary, TokenPayment, INFINITY_GLOBAL, PAIR_CONFIG, PAIR_IMMUTABLE, PAIR_INTERNAL,
-    },
+    state::{QuoteSummary, TokenPayment, PAIR_CONFIG, PAIR_IMMUTABLE, PAIR_INTERNAL},
     ContractError,
 };
 
@@ -133,10 +131,10 @@ impl PayoutContext {
 
 pub fn load_payout_context(
     deps: Deps,
+    infinity_global: &Addr,
     collection: &Addr,
     denom: &String,
 ) -> Result<PayoutContext, ContractError> {
-    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
     let global_config = load_global_config(&deps.querier, &infinity_global)?;
 
     let min_price = load_min_price(&deps.querier, &infinity_global, denom)?
@@ -153,7 +151,7 @@ pub fn load_payout_context(
         global_config,
         royalty_entry,
         min_price,
-        infinity_global,
+        infinity_global: infinity_global.clone(),
         denom: denom.clone(),
     })
 }

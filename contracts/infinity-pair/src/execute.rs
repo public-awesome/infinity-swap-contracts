@@ -2,7 +2,7 @@ use crate::error::ContractError;
 use crate::helpers::{load_pair, load_payout_context, only_active, only_pair_owner};
 use crate::msg::ExecuteMsg;
 use crate::pair::Pair;
-use crate::state::{BondingCurve, PairType, TokenId, NFT_DEPOSITS};
+use crate::state::{BondingCurve, PairType, TokenId, INFINITY_GLOBAL, NFT_DEPOSITS};
 
 use cosmwasm_std::{
     coin, ensure, ensure_eq, has_coins, Addr, Coin, DepsMut, Env, MessageInfo, Order, StdResult,
@@ -29,8 +29,13 @@ pub fn execute(
 
     let (mut pair, mut response) = handle_execute_msg(deps.branch(), env, info, msg, pair)?;
 
-    let payout_context =
-        load_payout_context(deps.as_ref(), &pair.immutable.collection, &pair.immutable.denom)?;
+    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
+    let payout_context = load_payout_context(
+        deps.as_ref(),
+        &infinity_global,
+        &pair.immutable.collection,
+        &pair.immutable.denom,
+    )?;
 
     response = pair.save_and_update_indices(deps.storage, &payout_context, response)?;
 

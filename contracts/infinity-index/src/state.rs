@@ -7,7 +7,7 @@ pub const INFINITY_GLOBAL: Item<Addr> = Item::new("g");
 
 #[cw_serde]
 pub struct PairQuote {
-    pub pair: Addr,
+    pub address: Addr,
     pub collection: Addr,
     pub quote: Coin,
 }

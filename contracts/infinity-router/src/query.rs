@@ -1,8 +1,15 @@
 use crate::msg::QueryMsg;
-use crate::nfts_for_tokens_iterators::{NftForTokensQuote, NftForTokensSource, NftsForTokens};
-use crate::tokens_for_nfts_iterators::{TokensForNftQuote, TokensForNftSource, TokensForNfts};
+use crate::nfts_for_tokens_iterators::{
+    iter::NftsForTokens,
+    types::{NftForTokensQuote, NftForTokensSource},
+};
+use crate::state::INFINITY_GLOBAL;
+use crate::tokens_for_nfts_iterators::{
+    iter::TokensForNfts,
+    types::{TokensForNftQuote, TokensForNftSource},
+};
 
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdResult};
+use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -49,7 +56,10 @@ pub fn query_nfts_for_tokens(
     limit: u32,
     filter_sources: Vec<NftForTokensSource>,
 ) -> StdResult<Vec<NftForTokensQuote>> {
-    let iterator = NftsForTokens::initialize(deps, collection, denom, filter_sources);
+    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
+    let iterator =
+        NftsForTokens::initialize(deps, &infinity_global, &collection, &denom, filter_sources)
+            .map_err(|e| StdError::generic_err(e.to_string()))?;
 
     let result = iterator.take(limit as usize).collect::<Vec<NftForTokensQuote>>();
 
@@ -64,7 +74,9 @@ pub fn query_tokens_for_nfts(
     limit: u32,
     filter_sources: Vec<TokensForNftSource>,
 ) -> StdResult<Vec<TokensForNftQuote>> {
-    let iterator = TokensForNfts::initialize(deps, collection, denom, filter_sources);
+    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
+    let iterator =
+        TokensForNfts::initialize(deps, &infinity_global, &collection, &denom, filter_sources);
 
     let result = iterator.take(limit as usize).collect::<Vec<TokensForNftQuote>>();
 
