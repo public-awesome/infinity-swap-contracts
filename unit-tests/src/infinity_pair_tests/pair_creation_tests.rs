@@ -1,6 +1,6 @@
 use crate::helpers::pair_functions::create_pair;
 use crate::helpers::utils::assert_error;
-use crate::setup::templates::{setup_infinity_test, InfinityTestSetup};
+use crate::setup::templates::{setup_infinity_test, standard_minter_template, InfinityTestSetup};
 
 use cosmwasm_std::{Addr, Uint128};
 use cw_multi_test::Executor;
@@ -16,6 +16,7 @@ use test_suite::common_setup::msg::MinterTemplateResponse;
 
 #[test]
 fn try_create_pair() {
+    let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
             MinterTemplateResponse {
@@ -26,7 +27,7 @@ fn try_create_pair() {
         infinity_global,
         infinity_factory,
         ..
-    } = setup_infinity_test(1000).unwrap();
+    } = setup_infinity_test(vt).unwrap();
 
     let collection_resp = &collection_response_vec[0];
     let _minter = collection_resp.minter.clone().unwrap();
@@ -100,6 +101,7 @@ fn try_create_pair() {
 
 #[test]
 fn try_update_pair_config() {
+    let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
             MinterTemplateResponse {
@@ -110,7 +112,7 @@ fn try_update_pair_config() {
         infinity_global,
         infinity_factory,
         ..
-    } = setup_infinity_test(1000).unwrap();
+    } = setup_infinity_test(vt).unwrap();
 
     let collection_resp = &collection_response_vec[0];
     let _minter = collection_resp.minter.clone().unwrap();

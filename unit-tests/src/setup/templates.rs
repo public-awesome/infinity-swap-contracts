@@ -99,9 +99,9 @@ pub struct InfinityTestSetup {
     pub infinity_pair_code_id: u64,
 }
 
-pub fn setup_infinity_test(num_tokens: u32) -> Result<InfinityTestSetup, Error> {
-    let mut vt = standard_minter_template(num_tokens);
-
+pub fn setup_infinity_test(
+    mut vt: MinterTemplateResponse<MarketAccounts>,
+) -> Result<InfinityTestSetup, Error> {
     setup_block_time(&mut vt.router, GENESIS_MINT_START_TIME, None);
 
     let fair_burn = setup_fair_burn(&mut vt.router, &vt.accts.creator);

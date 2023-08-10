@@ -245,7 +245,7 @@ impl Pair {
     }
 
     fn update_sell_to_pair_quote_summary(&mut self, payout_context: &PayoutContext) {
-        if !self.config.is_active {
+        if !self.config.is_active || self.config.pair_type == PairType::Nft {
             self.internal.sell_to_pair_quote_summary = None;
             return;
         }
@@ -273,7 +273,10 @@ impl Pair {
     }
 
     fn update_buy_from_pair_quote_summary(&mut self, payout_context: &PayoutContext) {
-        if !self.config.is_active || self.internal.total_nfts == 0u64 {
+        if !self.config.is_active
+            || self.internal.total_nfts == 0u64
+            || self.config.pair_type == PairType::Token
+        {
             self.internal.buy_from_pair_quote_summary = None;
             return;
         }

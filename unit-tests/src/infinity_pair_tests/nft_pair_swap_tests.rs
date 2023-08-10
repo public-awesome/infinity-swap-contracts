@@ -18,7 +18,7 @@ use sg_std::NATIVE_DENOM;
 use test_suite::common_setup::msg::MinterTemplateResponse;
 
 #[test]
-fn try_token_pair_invalid_swaps() {
+fn try_nft_pair_invalid_swaps() {
     let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
@@ -29,7 +29,7 @@ fn try_token_pair_invalid_swaps() {
                     MarketAccounts {
                         creator,
                         owner,
-                        bidder: _,
+                        bidder,
                     },
             },
         infinity_global,
@@ -66,7 +66,7 @@ fn try_token_pair_invalid_swaps() {
         &creator,
         &owner,
         PairConfig {
-            pair_type: PairType::Token,
+            pair_type: PairType::Nft,
             bonding_curve: BondingCurve::Linear {
                 spot_price: Uint128::from(10_000_000u128),
                 delta: Uint128::from(1_000_000u128),
@@ -74,26 +74,24 @@ fn try_token_pair_invalid_swaps() {
             is_active: false,
             asset_recipient: None,
         },
-        0u64,
-        Uint128::from(100_000_000u128),
+        10u64,
+        Uint128::zero(),
     );
 
     assert_eq!(test_pair.pair.internal.sell_to_pair_quote_summary, None);
     assert_eq!(test_pair.pair.internal.buy_from_pair_quote_summary, None);
 
-    let seller = setup_addtl_account(&mut router, "seller", INITIAL_BALANCE).unwrap();
-    let token_id = mint_to(&mut router, &creator.clone(), &seller.clone(), &minter);
+    let token_id = test_pair.token_ids[0].clone();
 
     // Cannot swap with inactive pair
     let response = router.execute_contract(
-        seller.clone(),
+        bidder.clone(),
         test_pair.address.clone(),
-        &InfinityPairExecuteMsg::SwapNftForTokens {
+        &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
             token_id: token_id.clone(),
-            min_output: coin(9_400_000u128, NATIVE_DENOM),
             asset_recipient: None,
         },
-        &[],
+        &[coin(10_000_000u128, NATIVE_DENOM)],
     );
     assert_error(response, ContractError::InvalidPair("pair is inactive".to_string()).to_string());
 
@@ -116,8 +114,9 @@ fn try_token_pair_invalid_swaps() {
         .query_wasm_smart::<Pair>(test_pair.address.clone(), &InfinityPairQueryMsg::Pair {})
         .unwrap();
 
+    assert_eq!(test_pair.pair.internal.sell_to_pair_quote_summary, None);
     assert_eq!(
-        test_pair.pair.internal.sell_to_pair_quote_summary,
+        test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
                 recipient: global_config.fair_burn.clone(),
@@ -133,24 +132,11 @@ fn try_token_pair_invalid_swaps() {
             seller_amount: Uint128::from(9_400_000u128),
         })
     );
-    assert_eq!(test_pair.pair.internal.buy_from_pair_quote_summary, None);
 
-    // Cannot do a token to NFT swap with token pair
-    let response = router.execute_contract(
-        seller.clone(),
-        test_pair.address.clone(),
-        &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
-            token_id: token_id.clone(),
-            asset_recipient: None,
-        },
-        &[coin(10_000_000u128, NATIVE_DENOM)],
-    );
-    assert_error(
-        response,
-        ContractError::InvalidPair("pair cannot produce quote".to_string()).to_string(),
-    );
-
-    // Cannot swap unappoved NFT
+    // Cannot do a NFT to token swap with NFT pair
+    let seller = setup_addtl_account(&mut router, "seller", INITIAL_BALANCE).unwrap();
+    let token_id = mint_to(&mut router, &creator.clone(), &seller.clone(), &minter);
+    approve(&mut router, &seller, &collection, &test_pair.address.clone(), token_id.clone());
     let response = router.execute_contract(
         seller.clone(),
         test_pair.address.clone(),
@@ -163,30 +149,55 @@ fn try_token_pair_invalid_swaps() {
     );
     assert_error(
         response,
-        InfinityError::Unauthorized("contract is not approved".to_string()).to_string(),
+        ContractError::InvalidPair("pair cannot produce quote".to_string()).to_string(),
     );
 
-    // Cannot swap using an alt min output denom
-    approve(&mut router, &seller, &collection, &test_pair.address.clone(), token_id.clone());
+    // Cannot swap with insufficient funds
     let response = router.execute_contract(
-        seller.clone(),
+        bidder.clone(),
         test_pair.address.clone(),
-        &InfinityPairExecuteMsg::SwapNftForTokens {
+        &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
             token_id: token_id.clone(),
-            min_output: coin(0u128, UOSMO),
             asset_recipient: None,
         },
-        &[],
+        &[coin(1, NATIVE_DENOM)],
     );
     assert_error(
         response,
-        ContractError::InvalidPairQuote("seller coin is less than min output".to_string())
+        ContractError::InvalidPairQuote("payment required is greater than max input".to_string())
             .to_string(),
+    );
+
+    // Cannot swap using alt denom funds
+    let response = router.execute_contract(
+        bidder.clone(),
+        test_pair.address.clone(),
+        &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
+            token_id: token_id.clone(),
+            asset_recipient: None,
+        },
+        &[coin(10_000_000u128, UOSMO)],
+    );
+    assert_error(response, "Must send reserve token 'ustars'".to_string());
+
+    // Cannot swap for unnowned NFT
+    let response = router.execute_contract(
+        bidder.clone(),
+        test_pair.address.clone(),
+        &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
+            token_id: "99999".to_string(),
+            asset_recipient: None,
+        },
+        &[coin(10_000_000u128, NATIVE_DENOM)],
+    );
+    assert_error(
+        response,
+        InfinityError::InvalidInput("pair does not own NFT".to_string()).to_string(),
     );
 }
 
 #[test]
-fn try_token_pair_linear_user_submits_nfts_swap() {
+fn try_nft_pair_linear_user_submits_tokens_swap() {
     let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
@@ -197,7 +208,7 @@ fn try_token_pair_linear_user_submits_nfts_swap() {
                     MarketAccounts {
                         creator,
                         owner,
-                        bidder: _,
+                        bidder,
                     },
             },
         infinity_global,
@@ -234,7 +245,7 @@ fn try_token_pair_linear_user_submits_nfts_swap() {
         &creator,
         &owner,
         PairConfig {
-            pair_type: PairType::Token,
+            pair_type: PairType::Nft,
             bonding_curve: BondingCurve::Linear {
                 spot_price: Uint128::from(10_000_000u128),
                 delta: Uint128::from(1_000_000u128),
@@ -242,12 +253,13 @@ fn try_token_pair_linear_user_submits_nfts_swap() {
             is_active: true,
             asset_recipient: None,
         },
-        0u64,
-        Uint128::from(100_000_000u128),
+        10u64,
+        Uint128::zero(),
     );
 
+    assert_eq!(test_pair.pair.internal.sell_to_pair_quote_summary, None);
     assert_eq!(
-        test_pair.pair.internal.sell_to_pair_quote_summary,
+        test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
                 recipient: global_config.fair_burn.clone(),
@@ -263,52 +275,48 @@ fn try_token_pair_linear_user_submits_nfts_swap() {
             seller_amount: Uint128::from(9_400_000u128),
         })
     );
-    assert_eq!(test_pair.pair.internal.buy_from_pair_quote_summary, None);
 
-    let seller = setup_addtl_account(&mut router, "seller", INITIAL_BALANCE).unwrap();
-    let token_id = mint_to(&mut router, &creator.clone(), &seller.clone(), &minter);
-    approve(&mut router, &seller, &collection, &test_pair.address.clone(), token_id.clone());
+    let token_id = test_pair.token_ids[0].clone();
 
     // Can swap approved NFT
     let response = router.execute_contract(
-        seller.clone(),
+        bidder.clone(),
         test_pair.address.clone(),
-        &InfinityPairExecuteMsg::SwapNftForTokens {
+        &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
             token_id: token_id.clone(),
-            min_output: coin(9_400_000u128, NATIVE_DENOM),
             asset_recipient: None,
         },
-        &[],
+        &[coin(10_000_000u128, NATIVE_DENOM)],
     );
     assert!(response.is_ok());
 
-    assert_nft_owner(&router, &collection, token_id, &test_pair.pair.immutable.owner);
+    assert_nft_owner(&router, &collection, token_id, &bidder);
 
     test_pair.pair = router
         .wrap()
         .query_wasm_smart::<Pair>(test_pair.address.clone(), &InfinityPairQueryMsg::Pair {})
         .unwrap();
 
+    assert_eq!(test_pair.pair.internal.sell_to_pair_quote_summary, None);
     assert_eq!(
-        test_pair.pair.internal.sell_to_pair_quote_summary,
+        test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
                 recipient: global_config.fair_burn,
-                amount: Uint128::from(90_000u128),
+                amount: Uint128::from(110_000u128),
             },
             royalty: Some(TokenPayment {
                 recipient: Addr::unchecked(collection_info.royalty_info.unwrap().payment_address),
-                amount: Uint128::from(450_000u128),
+                amount: Uint128::from(550_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(8_460_000u128),
+            seller_amount: Uint128::from(10_340_000u128),
         })
     );
-    assert_eq!(test_pair.pair.internal.buy_from_pair_quote_summary, None);
 }
 
 #[test]
-fn try_token_pair_exponential_user_submits_nfts_swap() {
+fn try_nft_pair_exponential_user_submits_tokens_swap() {
     let vt = standard_minter_template(1000u32);
     let InfinityTestSetup {
         vending_template:
@@ -319,7 +327,7 @@ fn try_token_pair_exponential_user_submits_nfts_swap() {
                     MarketAccounts {
                         creator,
                         owner,
-                        bidder: _,
+                        bidder,
                     },
             },
         infinity_global,
@@ -356,7 +364,7 @@ fn try_token_pair_exponential_user_submits_nfts_swap() {
         &creator,
         &owner,
         PairConfig {
-            pair_type: PairType::Token,
+            pair_type: PairType::Nft,
             bonding_curve: BondingCurve::Exponential {
                 spot_price: Uint128::from(10_000_000u128),
                 delta: Decimal::percent(12),
@@ -364,12 +372,13 @@ fn try_token_pair_exponential_user_submits_nfts_swap() {
             is_active: true,
             asset_recipient: None,
         },
-        0u64,
-        Uint128::from(100_000_000u128),
+        10u64,
+        Uint128::zero(),
     );
 
+    assert_eq!(test_pair.pair.internal.sell_to_pair_quote_summary, None);
     assert_eq!(
-        test_pair.pair.internal.sell_to_pair_quote_summary,
+        test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
                 recipient: global_config.fair_burn.clone(),
@@ -385,46 +394,42 @@ fn try_token_pair_exponential_user_submits_nfts_swap() {
             seller_amount: Uint128::from(9_400_000u128),
         })
     );
-    assert_eq!(test_pair.pair.internal.buy_from_pair_quote_summary, None);
 
-    let seller = setup_addtl_account(&mut router, "seller", INITIAL_BALANCE).unwrap();
-    let token_id = mint_to(&mut router, &creator.clone(), &seller.clone(), &minter);
-    approve(&mut router, &seller, &collection, &test_pair.address.clone(), token_id.clone());
+    let token_id = test_pair.token_ids[0].clone();
 
     // Can swap approved NFT
     let response = router.execute_contract(
-        seller.clone(),
+        bidder.clone(),
         test_pair.address.clone(),
-        &InfinityPairExecuteMsg::SwapNftForTokens {
+        &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
             token_id: token_id.clone(),
-            min_output: coin(9_400_000u128, NATIVE_DENOM),
             asset_recipient: None,
         },
-        &[],
+        &[coin(10_000_000u128, NATIVE_DENOM)],
     );
     assert!(response.is_ok());
 
-    assert_nft_owner(&router, &collection, token_id, &test_pair.pair.immutable.owner);
+    assert_nft_owner(&router, &collection, token_id, &bidder);
 
     test_pair.pair = router
         .wrap()
         .query_wasm_smart::<Pair>(test_pair.address.clone(), &InfinityPairQueryMsg::Pair {})
         .unwrap();
 
+    assert_eq!(test_pair.pair.internal.sell_to_pair_quote_summary, None);
     assert_eq!(
-        test_pair.pair.internal.sell_to_pair_quote_summary,
+        test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
                 recipient: global_config.fair_burn,
-                amount: Uint128::from(89_286u128),
+                amount: Uint128::from(112_000u128),
             },
             royalty: Some(TokenPayment {
                 recipient: Addr::unchecked(collection_info.royalty_info.unwrap().payment_address),
-                amount: Uint128::from(446_429u128),
+                amount: Uint128::from(560_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(8_392_856u128),
+            seller_amount: Uint128::from(10_528_000u128),
         })
     );
-    assert_eq!(test_pair.pair.internal.buy_from_pair_quote_summary, None);
 }

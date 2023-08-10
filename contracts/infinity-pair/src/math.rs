@@ -20,8 +20,8 @@ pub fn calc_exponential_spot_price_user_submits_nft(
     spot_price: Uint128,
     delta: Decimal,
 ) -> Result<Uint128, ContractError> {
-    let net_delta = Decimal::one().checked_div(Decimal::one().checked_add(delta)?)?;
-    Ok(spot_price.mul_floor(net_delta))
+    let net_delta = Decimal::one().checked_add(delta)?;
+    Ok(spot_price.checked_div_floor(net_delta)?)
 }
 
 pub fn calc_exponential_spot_price_user_submits_tokens(
@@ -54,7 +54,7 @@ pub fn calc_cp_trade_sell_to_pair_price(
         ContractError::InvalidPair("pair must have at least 1 NFT".to_string(),)
     );
     let fraction = (Uint128::from(total_nfts + 1u64), Uint128::one());
-    Ok(total_tokens.checked_div_ceil(fraction)?)
+    Ok(total_tokens.checked_div_floor(fraction)?)
 }
 
 pub fn calc_cp_trade_buy_from_pair_price(
@@ -66,7 +66,7 @@ pub fn calc_cp_trade_buy_from_pair_price(
         ContractError::InvalidPair("pair must have greater than 1 NFT".to_string(),)
     );
     let fraction = (Uint128::from(total_nfts - 1u64), Uint128::one());
-    Ok(total_tokens.checked_div_floor(fraction)?)
+    Ok(total_tokens.checked_div_ceil(fraction)?)
 }
 
 #[cfg(test)]
