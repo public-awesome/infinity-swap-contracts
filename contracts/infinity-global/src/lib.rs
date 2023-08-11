@@ -138,12 +138,12 @@ pub fn load_global_config(
 pub fn load_min_price(
     querier: &QuerierWrapper,
     infinity_global: &Addr,
-    denom: &String,
+    denom: &str,
 ) -> StdResult<Option<Coin>> {
     querier.query_wasm_smart::<Option<Coin>>(
         infinity_global,
         &QueryMsg::MinPrice {
-            denom: denom.clone(),
+            denom: denom.to_string(),
         },
     )
 }

@@ -88,7 +88,7 @@ fn try_nft_pair_invalid_swaps() {
         bidder.clone(),
         test_pair.address.clone(),
         &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
-            token_id: token_id.clone(),
+            token_id,
             asset_recipient: None,
         },
         &[coin(10_000_000u128, NATIVE_DENOM)],
@@ -119,7 +119,7 @@ fn try_nft_pair_invalid_swaps() {
         test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
-                recipient: global_config.fair_burn.clone(),
+                recipient: global_config.fair_burn,
                 amount: Uint128::from(100_000u128),
             },
             royalty: Some(TokenPayment {
@@ -136,7 +136,7 @@ fn try_nft_pair_invalid_swaps() {
     // Cannot do a NFT to token swap with NFT pair
     let seller = setup_addtl_account(&mut router, "seller", INITIAL_BALANCE).unwrap();
     let token_id = mint_to(&mut router, &creator.clone(), &seller.clone(), &minter);
-    approve(&mut router, &seller, &collection, &test_pair.address.clone(), token_id.clone());
+    approve(&mut router, &seller, &collection, &test_pair.address, token_id.clone());
     let response = router.execute_contract(
         seller.clone(),
         test_pair.address.clone(),
@@ -172,7 +172,7 @@ fn try_nft_pair_invalid_swaps() {
         bidder.clone(),
         test_pair.address.clone(),
         &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
-            token_id: token_id.clone(),
+            token_id,
             asset_recipient: None,
         },
         &[coin(10_000_000u128, UOSMO)],
@@ -181,8 +181,8 @@ fn try_nft_pair_invalid_swaps() {
 
     // Cannot swap for unnowned NFT
     let response = router.execute_contract(
-        bidder.clone(),
-        test_pair.address.clone(),
+        bidder,
+        test_pair.address,
         &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
             token_id: "99999".to_string(),
             asset_recipient: None,

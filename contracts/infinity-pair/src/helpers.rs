@@ -133,16 +133,16 @@ pub fn load_payout_context(
     deps: Deps,
     infinity_global: &Addr,
     collection: &Addr,
-    denom: &String,
+    denom: &str,
 ) -> Result<PayoutContext, ContractError> {
-    let global_config = load_global_config(&deps.querier, &infinity_global)?;
+    let global_config = load_global_config(&deps.querier, infinity_global)?;
 
-    let min_price = load_min_price(&deps.querier, &infinity_global, denom)?
+    let min_price = load_min_price(&deps.querier, infinity_global, denom)?
         .ok_or(InfinityError::InternalError("denom not supported".to_string()))?;
 
     let royalty_entry = fetch_royalty_entry(
         &deps.querier,
-        &infinity_global,
+        infinity_global,
         &global_config.royalty_registry,
         collection,
     )?;
@@ -152,6 +152,6 @@ pub fn load_payout_context(
         royalty_entry,
         min_price,
         infinity_global: infinity_global.clone(),
-        denom: denom.clone(),
+        denom: denom.to_string(),
     })
 }

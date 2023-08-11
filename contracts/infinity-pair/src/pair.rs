@@ -262,7 +262,7 @@ impl Pair {
 
         self.internal.sell_to_pair_quote_summary = match sale_amount_option {
             Some(sale_amount) if sale_amount <= self.total_tokens => {
-                payout_context.build_quote_summary(&self, sale_amount)
+                payout_context.build_quote_summary(self, sale_amount)
             },
             _ => None,
         };
@@ -320,7 +320,7 @@ impl Pair {
         };
 
         self.internal.buy_from_pair_quote_summary = match sale_amount_option {
-            Some(sale_amount) => payout_context.build_quote_summary(&self, sale_amount),
+            Some(sale_amount) => payout_context.build_quote_summary(self, sale_amount),
             _ => None,
         };
     }

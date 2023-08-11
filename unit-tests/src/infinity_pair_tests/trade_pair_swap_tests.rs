@@ -200,7 +200,7 @@ fn try_trade_pair_invalid_swaps() {
         test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
-                recipient: global_config.fair_burn.clone(),
+                recipient: global_config.fair_burn,
                 amount: Uint128::from(110_000u128),
             },
             royalty: Some(TokenPayment {
@@ -234,7 +234,7 @@ fn try_trade_pair_invalid_swaps() {
         bidder.clone(),
         test_pair.address.clone(),
         &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
-            token_id: token_id.clone(),
+            token_id,
             asset_recipient: None,
         },
         &[coin(10_000_000u128, UOSMO)],
@@ -243,7 +243,7 @@ fn try_trade_pair_invalid_swaps() {
 
     // Cannot swap for unnowned NFT
     let response = router.execute_contract(
-        bidder.clone(),
+        bidder,
         test_pair.address.clone(),
         &InfinityPairExecuteMsg::SwapTokensForSpecificNft {
             token_id: "99999".to_string(),
@@ -413,7 +413,7 @@ fn try_trade_pair_linear_swaps() {
     );
 
     // Can swap for tokens
-    approve(&mut router, &bidder, &collection, &test_pair.address.clone(), token_id.clone());
+    approve(&mut router, &bidder, &collection, &test_pair.address, token_id.clone());
     let response = router.execute_contract(
         bidder.clone(),
         test_pair.address.clone(),
@@ -453,7 +453,7 @@ fn try_trade_pair_linear_swaps() {
         test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
-                recipient: global_config.fair_burn.clone(),
+                recipient: global_config.fair_burn,
                 amount: Uint128::from(110_000u128),
             },
             royalty: Some(TokenPayment {
@@ -624,7 +624,7 @@ fn try_trade_pair_exponential_swaps() {
     );
 
     // Can swap for tokens
-    approve(&mut router, &bidder, &collection, &test_pair.address.clone(), token_id.clone());
+    approve(&mut router, &bidder, &collection, &test_pair.address, token_id.clone());
     let response = router.execute_contract(
         bidder.clone(),
         test_pair.address.clone(),
@@ -664,7 +664,7 @@ fn try_trade_pair_exponential_swaps() {
         test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
-                recipient: global_config.fair_burn.clone(),
+                recipient: global_config.fair_burn,
                 amount: Uint128::from(106_000u128),
             },
             royalty: Some(TokenPayment {
@@ -832,7 +832,7 @@ fn try_trade_pair_constant_product_swaps() {
     );
 
     // Can swap for tokens
-    approve(&mut router, &bidder, &collection, &test_pair.address.clone(), token_id.clone());
+    approve(&mut router, &bidder, &collection, &test_pair.address, token_id.clone());
     let response = router.execute_contract(
         bidder.clone(),
         test_pair.address.clone(),
@@ -872,7 +872,7 @@ fn try_trade_pair_constant_product_swaps() {
         test_pair.pair.internal.buy_from_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
-                recipient: global_config.fair_burn.clone(),
+                recipient: global_config.fair_burn,
                 amount: Uint128::from(112_500u128),
             },
             royalty: Some(TokenPayment {

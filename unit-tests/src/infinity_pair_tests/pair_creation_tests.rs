@@ -71,8 +71,8 @@ fn try_create_pair() {
 
     // Works with correct funds
     let response = router.execute_contract(
-        accts.creator.clone(),
-        infinity_factory.clone(),
+        accts.creator,
+        infinity_factory,
         &InfinityFactoryExecuteMsg::CreatePair {
             pair_immutable: pair_immutable.clone(),
             pair_config: pair_config.clone(),
@@ -123,7 +123,7 @@ fn try_update_pair_config() {
         &infinity_global,
         &infinity_factory,
         &collection,
-        &accts.owner.clone(),
+        &accts.owner,
     );
 
     // Non owner cannot withdraw tokens
@@ -163,7 +163,7 @@ fn try_update_pair_config() {
     let bonding_curve = BondingCurve::ConstantProduct;
     let asset_recipient = Addr::unchecked("asset_recipient");
     let response = router.execute_contract(
-        accts.owner.clone(),
+        accts.owner,
         pair_addr.clone(),
         &InfinityPairExecuteMsg::UpdatePairConfig {
             is_active: Some(is_active),
@@ -177,7 +177,7 @@ fn try_update_pair_config() {
 
     let pair = router
         .wrap()
-        .query_wasm_smart::<Pair>(pair_addr.clone(), &InfinityPairQueryMsg::Pair {})
+        .query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {})
         .unwrap();
     assert_eq!(pair.config.is_active, is_active);
     assert_eq!(pair.config.pair_type, pair_type);

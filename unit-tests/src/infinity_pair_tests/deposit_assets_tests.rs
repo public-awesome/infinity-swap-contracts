@@ -36,13 +36,13 @@ fn try_deposit_nft() {
         &infinity_global,
         &infinity_factory,
         &collection,
-        &accts.owner.clone(),
+        &accts.owner,
     );
 
-    let token_id = mint_to(&mut router, &accts.creator.clone(), &accts.owner.clone(), &minter);
+    let token_id = mint_to(&mut router, &accts.creator, &accts.owner, &minter);
 
     let response = router.execute_contract(
-        accts.owner.clone(),
+        accts.owner,
         collection.clone(),
         &Cw721ExecuteMsg::SendNft {
             contract: pair_addr.to_string(),
@@ -53,11 +53,11 @@ fn try_deposit_nft() {
     );
     assert!(response.is_ok());
 
-    assert_nft_owner(&router, &collection, token_id, &pair_addr.clone());
+    assert_nft_owner(&router, &collection, token_id, &pair_addr);
 
     let pair = router
         .wrap()
-        .query_wasm_smart::<Pair>(pair_addr.clone(), &InfinityPairQueryMsg::Pair {})
+        .query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {})
         .unwrap();
     assert!(pair.internal.total_nfts == 1);
 }
@@ -86,7 +86,7 @@ fn try_withdraw_nfts() {
         &infinity_global,
         &infinity_factory,
         &collection,
-        &accts.owner.clone(),
+        &accts.owner,
     );
 
     let num_nfts: usize = 10;
@@ -178,7 +178,7 @@ fn try_withdraw_nfts() {
 
     let pair = router
         .wrap()
-        .query_wasm_smart::<Pair>(pair_addr.clone(), &InfinityPairQueryMsg::Pair {})
+        .query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {})
         .unwrap();
     assert!(pair.internal.total_nfts == 0);
 }
@@ -207,7 +207,7 @@ fn try_deposit_tokens() {
         &infinity_global,
         &infinity_factory,
         &collection,
-        &accts.owner.clone(),
+        &accts.owner,
     );
 
     // Non owner cannot deposit tokens
@@ -234,7 +234,7 @@ fn try_deposit_tokens() {
     // Invokable with funds
     let deposit_amount = 100_000_000u128;
     let response = router.execute_contract(
-        accts.owner.clone(),
+        accts.owner,
         pair_addr.clone(),
         &InfinityPairExecuteMsg::DepositTokens {},
         &[coin(deposit_amount, NATIVE_DENOM)],
@@ -243,7 +243,7 @@ fn try_deposit_tokens() {
 
     let pair = router
         .wrap()
-        .query_wasm_smart::<Pair>(pair_addr.clone(), &InfinityPairQueryMsg::Pair {})
+        .query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {})
         .unwrap();
     assert_eq!(pair.total_tokens.u128(), deposit_amount);
 }
@@ -272,7 +272,7 @@ fn try_withdraw_tokens() {
         &infinity_global,
         &infinity_factory,
         &collection,
-        &accts.owner.clone(),
+        &accts.owner,
     );
 
     let deposit_amount = 100_000_000u128;
@@ -323,7 +323,7 @@ fn try_withdraw_tokens() {
 
     // Owner can withdraw all tokens
     let response = router.execute_contract(
-        accts.owner.clone(),
+        accts.owner,
         pair_addr.clone(),
         &InfinityPairExecuteMsg::WithdrawAllTokens {},
         &[],
@@ -332,7 +332,7 @@ fn try_withdraw_tokens() {
 
     let pair = router
         .wrap()
-        .query_wasm_smart::<Pair>(pair_addr.clone(), &InfinityPairQueryMsg::Pair {})
+        .query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {})
         .unwrap();
     assert_eq!(pair.total_tokens.u128(), 0u128);
 }

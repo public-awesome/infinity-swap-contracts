@@ -19,7 +19,7 @@ impl<'a> TokensForNfts<'a> {
         deps: Deps<'a>,
         infinity_global: &Addr,
         collection: &Addr,
-        denom: &String,
+        denom: &str,
         filter_sources: Vec<TokensForNftSource>,
     ) -> Self {
         let quote_sources = vec![TokensForNftSource::Infinity]
@@ -59,9 +59,7 @@ impl<'a> Iterator for TokensForNfts<'a> {
             })
             .min_by_key(|&(_, q)| q.amount);
 
-        if result.is_none() {
-            return None;
-        }
+        result?;
 
         let (idx, _) = result.unwrap();
 

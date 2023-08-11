@@ -22,7 +22,7 @@ impl<'a> NftsForTokens<'a> {
         deps: Deps<'a>,
         infinity_global: &Addr,
         collection: &Addr,
-        denom: &String,
+        denom: &str,
         filter_sources: Vec<NftForTokensSource>,
     ) -> Result<Self, ContractError> {
         let quote_sources = vec![NftForTokensSource::Infinity]
@@ -66,9 +66,7 @@ impl<'a> Iterator for NftsForTokens<'a> {
             })
             .max_by_key(|&(_, q)| q.amount);
 
-        if result.is_none() {
-            return None;
-        }
+        result?;
 
         let (idx, _) = result.unwrap();
 
