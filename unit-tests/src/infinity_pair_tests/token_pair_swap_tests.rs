@@ -120,7 +120,7 @@ fn try_token_pair_invalid_swaps() {
         test_pair.pair.internal.sell_to_pair_quote_summary,
         Some(QuoteSummary {
             fair_burn: TokenPayment {
-                recipient: global_config.fair_burn.clone(),
+                recipient: global_config.fair_burn,
                 amount: Uint128::from(100_000u128),
             },
             royalty: Some(TokenPayment {
@@ -167,12 +167,12 @@ fn try_token_pair_invalid_swaps() {
     );
 
     // Cannot swap using an alt min output denom
-    approve(&mut router, &seller, &collection, &test_pair.address.clone(), token_id.clone());
+    approve(&mut router, &seller, &collection, &test_pair.address, token_id.clone());
     let response = router.execute_contract(
         seller.clone(),
-        test_pair.address.clone(),
+        test_pair.address,
         &InfinityPairExecuteMsg::SwapNftForTokens {
-            token_id: token_id.clone(),
+            token_id,
             min_output: coin(0u128, UOSMO),
             asset_recipient: None,
         },
@@ -267,7 +267,7 @@ fn try_token_pair_linear_user_submits_nfts_swap() {
 
     let seller = setup_addtl_account(&mut router, "seller", INITIAL_BALANCE).unwrap();
     let token_id = mint_to(&mut router, &creator.clone(), &seller.clone(), &minter);
-    approve(&mut router, &seller, &collection, &test_pair.address.clone(), token_id.clone());
+    approve(&mut router, &seller, &collection, &test_pair.address, token_id.clone());
 
     // Can swap approved NFT
     let response = router.execute_contract(
@@ -389,7 +389,7 @@ fn try_token_pair_exponential_user_submits_nfts_swap() {
 
     let seller = setup_addtl_account(&mut router, "seller", INITIAL_BALANCE).unwrap();
     let token_id = mint_to(&mut router, &creator.clone(), &seller.clone(), &minter);
-    approve(&mut router, &seller, &collection, &test_pair.address.clone(), token_id.clone());
+    approve(&mut router, &seller, &collection, &test_pair.address, token_id.clone());
 
     // Can swap approved NFT
     let response = router.execute_contract(

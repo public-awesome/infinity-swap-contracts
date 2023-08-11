@@ -27,7 +27,7 @@ impl<'a> TokensForNftsInfinity<'a> {
         deps: Deps<'a>,
         infinity_global: &Addr,
         collection: &Addr,
-        denom: &String,
+        denom: &str,
     ) -> Result<Self, ContractError> {
         let payout_context = load_payout_context(deps, infinity_global, collection, denom)
             .map_err(|e| StdError::generic_err(e.to_string()))?;
@@ -98,7 +98,7 @@ impl<'a> Iterator for TokensForNftsInfinity<'a> {
 
         if let Some(mut next_quote) = next_quote_option {
             if let Some(cursor) = &self.cursor {
-                if cursor.pair == next_quote.address.to_string() {
+                if cursor.pair == next_quote.address {
                     self.fetch_quote();
                 }
             }

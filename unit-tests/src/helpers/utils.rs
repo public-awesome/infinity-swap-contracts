@@ -10,7 +10,7 @@ pub fn assert_error(response: Result<AppResponse, Error>, expected: String) {
 }
 
 pub fn _assert_event(response: Result<AppResponse, Error>, ty: &str) {
-    assert!(response.unwrap().events.iter().find(|event| event.ty == ty).is_some());
+    assert!(response.unwrap().events.iter().any(|event| event.ty == ty));
 }
 
 pub fn _get_native_balances(router: &StargazeApp, addresses: &Vec<Addr>) -> HashMap<Addr, Coin> {

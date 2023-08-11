@@ -16,6 +16,7 @@ pub fn contract_infinity_global() -> Box<dyn Contract<StargazeMsgWrapper>> {
     Box::new(contract)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn setup_infinity_global(
     router: &mut StargazeApp,
     creator: String,

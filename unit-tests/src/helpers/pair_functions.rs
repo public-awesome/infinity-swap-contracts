@@ -50,8 +50,8 @@ pub fn create_pair(
         owner.clone(),
         infinity_factory.clone(),
         &InfinityFactoryExecuteMsg::CreatePair {
-            pair_immutable: pair_immutable.clone(),
-            pair_config: pair_config.clone(),
+            pair_immutable,
+            pair_config,
         },
         &[global_config.pair_creation_fee],
     );
@@ -72,6 +72,7 @@ pub struct TestPair {
     pub pair: Pair,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn create_pair_with_deposits(
     router: &mut StargazeApp,
     infinity_global: &Addr,
@@ -94,7 +95,7 @@ pub fn create_pair_with_deposits(
             is_active: Some(pair_config.is_active),
             pair_type: Some(pair_config.pair_type),
             bonding_curve: Some(pair_config.bonding_curve),
-            asset_recipient: pair_config.asset_recipient.map(|a| a.to_string()),
+            asset_recipient: pair_config.asset_recipient,
         },
         &[],
     );
@@ -102,7 +103,7 @@ pub fn create_pair_with_deposits(
 
     let mut token_ids: Vec<String> = vec![];
     for _ in 0..num_nfts {
-        let token_id = mint_to(router, &creator.clone(), &owner.clone(), &minter);
+        let token_id = mint_to(router, &creator.clone(), &owner.clone(), minter);
 
         let response = router.execute_contract(
             owner.clone(),

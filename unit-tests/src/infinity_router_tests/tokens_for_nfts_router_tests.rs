@@ -101,7 +101,7 @@ fn try_router_tokens_for_nfts_swap_simple() {
     let quotes = router
         .wrap()
         .query_wasm_smart::<Vec<TokensForNftQuote>>(
-            &global_config.infinity_router.clone(),
+            &global_config.infinity_router,
             &InfinityRouterQueryMsg::TokensForNfts {
                 collection: collection.to_string(),
                 denom: NATIVE_DENOM.to_string(),
@@ -117,8 +117,8 @@ fn try_router_tokens_for_nfts_swap_simple() {
     let max_inputs = quotes.iter().map(|q| q.amount).collect::<Vec<Uint128>>();
     let total_tokens = max_inputs.iter().sum::<Uint128>();
     let response = router.execute_contract(
-        bidder.clone(),
-        global_config.infinity_router.clone(),
+        bidder,
+        global_config.infinity_router,
         &InfinityRouterExecuteMsg::SwapTokensForNfts {
             collection: collection.to_string(),
             denom: NATIVE_DENOM.to_string(),

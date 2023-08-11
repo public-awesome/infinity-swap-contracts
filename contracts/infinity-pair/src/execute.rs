@@ -263,7 +263,7 @@ pub fn execute_withdraw_all_tokens(
     env: Env,
     pair: Pair,
 ) -> Result<(Pair, Response), ContractError> {
-    let total_tokens = pair.total_tokens.clone();
+    let total_tokens = pair.total_tokens;
     execute_withdraw_tokens(deps, info, env, pair, total_tokens)
 }
 
