@@ -58,9 +58,9 @@ pub fn setup_infinity_global(
 
 pub fn contract_infinity_factory() -> Box<dyn Contract<StargazeMsgWrapper>> {
     let contract = ContractWrapper::new(
-        infinity_factory::execute,
-        infinity_factory::instantiate,
-        infinity_factory::query,
+        infinity_factory::execute::execute,
+        infinity_factory::instantiate::instantiate,
+        infinity_factory::query::query,
     );
     Box::new(contract)
 }
@@ -71,7 +71,7 @@ pub fn setup_infinity_factory(
     infinity_global: &Addr,
 ) -> Addr {
     let infinity_factory_code_id = router.store_code(contract_infinity_factory());
-    let msg = infinity_factory::InstantiateMsg {
+    let msg = infinity_factory::msg::InstantiateMsg {
         infinity_global: infinity_global.to_string(),
     };
     router

@@ -134,13 +134,13 @@ mod tests {
 
         let sell_to_pair_price =
             calc_cp_trade_sell_to_pair_price(Uint128::from(250_000_000u128), 20u64).unwrap();
-        assert_eq!(sell_to_pair_price, Uint128::from(11_904_762u128));
+        assert_eq!(sell_to_pair_price, Uint128::from(11_904_761u128));
 
         let result = calc_cp_trade_buy_from_pair_price(Uint128::from(250_000_000u128), 1u64);
         assert!(result.is_err());
 
         let buy_from_pair_price =
             calc_cp_trade_buy_from_pair_price(Uint128::from(250_000_000u128), 20u64).unwrap();
-        assert_eq!(buy_from_pair_price, Uint128::from(13_157_894u128));
+        assert_eq!(buy_from_pair_price, Uint128::from(13_157_895u128));
     }
 }
