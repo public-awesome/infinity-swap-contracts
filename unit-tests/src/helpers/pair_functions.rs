@@ -3,7 +3,7 @@ use infinity_global::QueryMsg as InfinityGlobalQueryMsg;
 
 use cosmwasm_std::{coin, to_binary, Addr, Empty, Uint128};
 use cw_multi_test::Executor;
-use infinity_factory::ExecuteMsg as InfinityFactoryExecuteMsg;
+use infinity_factory::msg::ExecuteMsg as InfinityFactoryExecuteMsg;
 use infinity_global::GlobalConfig;
 use infinity_pair::{
     msg::{ExecuteMsg as InfinityPairExecuteMsg, QueryMsg as InfinityPairQueryMsg},

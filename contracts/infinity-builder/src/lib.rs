@@ -4,7 +4,7 @@ use cosmwasm_std::{
     Instantiate2AddressError, MessageInfo, StdError, StdResult, WasmMsg,
 };
 use cw2::set_contract_version;
-use infinity_factory::InstantiateMsg as InfinityFactoryInstantiateMsg;
+use infinity_factory::msg::InstantiateMsg as InfinityFactoryInstantiateMsg;
 use infinity_global::{GlobalConfig, InstantiateMsg as InfinityGlobalInstantiateMsg};
 use infinity_index::msg::InstantiateMsg as InfinityIndexInstantiateMsg;
 use infinity_router::msg::InstantiateMsg as InfinityRouterInstantiateMsg;

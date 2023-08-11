@@ -23,7 +23,6 @@ stargaze-fair-burn        = { workspace = true }
 stargaze-royalty-registry = { workspace = true }
 cosmwasm-std              = { workspace = true }
 cosmwasm-schema           = { workspace = true }
-cosmwasm-storage          = { workspace = true }
 cw-storage-plus           = { workspace = true }
 cw-utils                  = { workspace = true }
 cw2                       = { workspace = true }
@@ -40,4 +39,3 @@ sg-multi-test   = { workspace = true }
 test-suite      = { workspace = true }
 vending-minter  = { workspace = true }
 vending-factory = { workspace = true }
-mockall         = { workspace = true }

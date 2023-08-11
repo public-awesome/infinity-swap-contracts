@@ -4,7 +4,7 @@ use crate::setup::templates::{setup_infinity_test, standard_minter_template, Inf
 
 use cosmwasm_std::{Addr, Uint128};
 use cw_multi_test::Executor;
-use infinity_factory::ExecuteMsg as InfinityFactoryExecuteMsg;
+use infinity_factory::msg::ExecuteMsg as InfinityFactoryExecuteMsg;
 use infinity_global::{GlobalConfig, QueryMsg as InfinityGlobalQueryMsg};
 use infinity_pair::msg::{ExecuteMsg as InfinityPairExecuteMsg, QueryMsg as InfinityPairQueryMsg};
 use infinity_pair::pair::Pair;

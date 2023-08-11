@@ -164,8 +164,7 @@ fn try_nft_pair_invalid_swaps() {
     );
     assert_error(
         response,
-        ContractError::InvalidPairQuote("payment required is greater than max input".to_string())
-            .to_string(),
+        InfinityError::InvalidInput("received funds does not equal quote".to_string()).to_string(),
     );
 
     // Cannot swap using alt denom funds
