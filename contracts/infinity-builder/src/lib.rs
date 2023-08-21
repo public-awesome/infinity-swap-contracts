@@ -125,7 +125,7 @@ pub fn instantiate(
 
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
-        code_id: msg.code_ids.infinity_factory,
+        code_id: msg.code_ids.infinity_index,
         label: "Infinity Index".to_string(),
         msg: to_binary(&InfinityIndexInstantiateMsg {
             infinity_global: infinity_global.to_string(),
@@ -136,7 +136,7 @@ pub fn instantiate(
 
     response = response.add_message(WasmMsg::Instantiate2 {
         admin: Some(env.contract.address.to_string()),
-        code_id: msg.code_ids.infinity_factory,
+        code_id: msg.code_ids.infinity_router,
         label: "Infinity Router".to_string(),
         msg: to_binary(&InfinityRouterInstantiateMsg {
             infinity_global: infinity_global.to_string(),

@@ -1,11 +1,13 @@
+#[cfg_attr(not(debug_assertions), allow(unused_imports))]
 use crate::{
     pair::Pair,
     state::{BondingCurve, PairConfig, PairImmutable, PairType, TokenId},
 };
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Coin, Uint128};
+use cosmwasm_std::{Addr, Coin, Uint128};
 use cw721::Cw721ReceiveMsg;
+use sg_index_query::QueryOptions;
 
 /// Defines whether the end user is buying or selling NFTs
 #[cw_serde]
@@ -78,12 +80,14 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     #[returns(Pair)]
     Pair {},
-    // #[returns(Vec<TokenId>)]
-    // NftDeposits {
-    //     query_options: Option<QueryOptions<String>>,
-    // },
-    // #[returns(Option<Uint128>)]
-    // BuyFromPairQuote {},
-    // #[returns(Option<Uint128>)]
-    // SellToPairQuote {},
+    #[returns(NftDepositsResponse)]
+    NftDeposits {
+        query_options: Option<QueryOptions<String>>,
+    },
+}
+
+#[cw_serde]
+pub struct NftDepositsResponse {
+    pub collection: Addr,
+    pub token_ids: Vec<TokenId>,
 }

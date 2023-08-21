@@ -18,7 +18,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             deps,
             deps.api.addr_validate(&collection)?,
             denom,
-            query_options.unwrap_or(QueryOptions::default()),
+            query_options.unwrap_or_default(),
         )?),
         QueryMsg::BuyFromPairQuotes {
             collection,
@@ -28,7 +28,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             deps,
             deps.api.addr_validate(&collection)?,
             denom,
-            query_options.unwrap_or(QueryOptions::default()),
+            query_options.unwrap_or_default(),
         )?),
     }
 }

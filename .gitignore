@@ -14,16 +14,17 @@ target/
 .idea/
 *.iml
 
-# Auto-gen
-.cargo-ok
-
 # Build artifacts
+.cargo-ok
 hash.txt
 contracts.txt
 artifacts/
 
 # code coverage
 tarpaulin-report.*
-
-# integration tests
 gas_reports/
+
+# typescript
+node_modules/
+tmp/
+lib/
