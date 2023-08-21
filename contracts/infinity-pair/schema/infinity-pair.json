@@ -676,12 +676,139 @@
           }
         },
         "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "nft_deposits"
+        ],
+        "properties": {
+          "nft_deposits": {
+            "type": "object",
+            "properties": {
+              "query_options": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/QueryOptions_for_String"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
-    ]
+    ],
+    "definitions": {
+      "QueryBound_for_String": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "inclusive"
+            ],
+            "properties": {
+              "inclusive": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "exclusive"
+            ],
+            "properties": {
+              "exclusive": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "QueryOptions_for_String": {
+        "description": "QueryOptions are used to pass in options to a query function",
+        "type": "object",
+        "properties": {
+          "descending": {
+            "description": "Whether to sort items in ascending or descending order",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "limit": {
+            "description": "The number of items that will be returned",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "max": {
+            "description": "The maximum key value to fetch",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/QueryBound_for_String"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "min": {
+            "description": "The minimum key value to fetch",
+            "anyOf": [
+              {
+                "$ref": "#/definitions/QueryBound_for_String"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
   },
   "migrate": null,
   "sudo": null,
   "responses": {
+    "nft_deposits": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "NftDepositsResponse",
+      "type": "object",
+      "required": [
+        "collection",
+        "token_ids"
+      ],
+      "properties": {
+        "collection": {
+          "$ref": "#/definitions/Addr"
+        },
+        "token_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        }
+      }
+    },
     "pair": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Pair",

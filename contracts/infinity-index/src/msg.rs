@@ -1,3 +1,4 @@
+#[cfg_attr(not(debug_assertions), allow(unused_imports))]
 use crate::state::PairQuote;
 
 use cosmwasm_schema::{cw_serde, QueryResponses};

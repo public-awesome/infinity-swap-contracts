@@ -859,6 +859,7 @@ dependencies = [
  "infinity-global",
  "infinity-index",
  "infinity-shared",
+ "sg-index-query",
  "sg-marketplace-common",
  "sg-std",
  "sg721",

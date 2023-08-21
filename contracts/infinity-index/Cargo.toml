@@ -27,7 +27,7 @@ cosmwasm-std     = { workspace = true }
 cosmwasm-schema  = { workspace = true }
 cw-storage-plus  = { workspace = true }
 cw-storage-macro = { workspace = true }
-sg-index-query   = { version = "0.1.1" }
+sg-index-query   = { workspace = true }
 cw2              = { workspace = true }
 thiserror        = { workspace = true }
 sg-std           = { workspace = true }

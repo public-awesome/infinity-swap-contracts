@@ -10,13 +10,23 @@ authors     = ["Tasio tasiovictoria@ujulabs.com"]
 license     = "BUSL-1.1"
 
 [workspace.dependencies]
-infinity-builder = { path = "./contracts/infinity-builder" }
-infinity-factory = { path = "./contracts/infinity-factory" }
-infinity-global  = { path = "./contracts/infinity-global" }
-infinity-index   = { path = "./contracts/infinity-index" }
-infinity-pair    = { path = "./contracts/infinity-pair" }
-infinity-router  = { path = "./contracts/infinity-router" }
-infinity-shared  = { path = "./packages/infinity-shared" }
+infinity-builder = { path = "./contracts/infinity-builder", features = [
+    "library",
+] }
+infinity-factory = { path = "./contracts/infinity-factory", features = [
+    "library",
+] }
+infinity-global = { path = "./contracts/infinity-global", features = [
+    "library",
+] }
+infinity-index = { path = "./contracts/infinity-index", features = ["library"] }
+infinity-pair = { path = "./contracts/infinity-pair", features = ["library"] }
+infinity-router = { path = "./contracts/infinity-router", features = [
+    "library",
+] }
+infinity-shared = { path = "./packages/infinity-shared", features = [
+    "library",
+] }
 
 stargaze-fair-burn        = { version = "1.0.2", features = ["library"] }
 stargaze-royalty-registry = { version = "0.1.0", features = ["library"] }
@@ -46,13 +56,12 @@ sg721-base       = { version = "2.3.0", features = ["library"] }
 sg721            = { version = "2.3.0", features = ["library"] }
 sg-std           = { version = "2.3.0" }
 sg-index-query   = { version = "0.1.1" }
-
-sha2        = "0.10"
-thiserror   = { version = "1.0.31" }
-anyhow      = "1.0.51"
-proc-macro2 = "1.0"
-quote       = "1.0"
-syn         = { version = "1.0", features = ["derive"] }
+sha2             = "0.10"
+thiserror        = { version = "1.0.31" }
+anyhow           = "1.0.51"
+proc-macro2      = "1.0"
+quote            = "1.0"
+syn              = { version = "1.0", features = ["derive"] }
 
 # dev-dependencies
 itertools       = "0.10.5"

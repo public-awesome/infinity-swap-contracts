@@ -1,3 +1,4 @@
+#[cfg_attr(not(debug_assertions), allow(unused_imports))]
 use crate::{
     nfts_for_tokens_iterators::types::{NftForTokensQuote, NftForTokensSource},
     tokens_for_nfts_iterators::types::{TokensForNftQuote, TokensForNftSource},

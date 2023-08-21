@@ -27,6 +27,7 @@ infinity-shared           = { workspace = true }
 stargaze-fair-burn        = { workspace = true }
 stargaze-royalty-registry = { workspace = true }
 sg-marketplace-common     = { workspace = true }
+sg-index-query            = { workspace = true }
 cosmwasm-std              = { workspace = true }
 cosmwasm-schema           = { workspace = true }
 cw-storage-plus           = { workspace = true }
