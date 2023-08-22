@@ -1,14 +1,13 @@
-import { CosmWasmClient, SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate'
+import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate'
 import { toUtf8 } from '@cosmjs/encoding'
 import { denom } from '../../configs/chain_config.json'
 import Context, { CONTRACT_MAP } from '../setup/context'
 import { getQueryClient } from '../utils/client'
-import { approveNft, createMinter, mintNft } from '../utils/nft'
+import { createMinter, mintNft, mintNfts } from '../utils/nft'
 import { contracts } from '@stargazezone/infinity-types'
 import { ExecuteMsg as InfinityFactoryExecuteMsg } from '@stargazezone/infinity-types/lib/InfinityFactory.types'
 import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/InfinityGlobal.types'
 import { ExecuteMsg as InfinityPairExecuteMsg, QuoteSummary } from '@stargazezone/infinity-types/lib/InfinityPair.types'
-import { InfinityRouterClient } from '@stargazezone/infinity-types/lib/InfinityRouter.client'
 import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
 import _ from 'lodash'
 
@@ -49,12 +48,8 @@ describe('InfinityPair', () => {
     const lpAssetRecipient = context.getTestUser(lpAssetRecipientName)
 
     let numNfts = 3
-    let tokenIds = []
-    for (let i = 0; i < numNfts; i++) {
-      let tokenId = await mintNft(context, creator.client, creator.address, liquidityProvider.address)
-      // await approveNft(seller.client, seller.address, collectionAddress, tokenId, reserveAuctionAddress)
-      tokenIds.push(tokenId)
-    }
+    let tokenIds = await mintNfts(context, globalConfig, numNfts, liquidityProvider)
+
     let infinityFactoryQueryClient = new InfinityFactoryQueryClient(queryClient, globalConfig.infinity_factory)
     let nextPairResponse = await infinityFactoryQueryClient.nextPair({ sender: liquidityProvider.address })
     pairAddress = nextPairResponse.pair
@@ -179,8 +174,7 @@ describe('InfinityPair', () => {
     let sellToPairQuoteSummary = pair.internal.sell_to_pair_quote_summary as QuoteSummary
     expect(sellToPairQuoteSummary).toBeDefined()
 
-    let tokenId = await mintNft(context, creator.client, creator.address, swapper.address)
-    await approveNft(swapper.client, swapper.address, collectionAddress, tokenId, pairAddress)
+    let tokenId = await mintNft(context, globalConfig, swapper, pairAddress)
 
     let infinityPairClient = new InfinityPairClient(swapper.client, swapper.address, pairAddress)
 
@@ -219,8 +213,7 @@ describe('InfinityPair', () => {
       parseInt(buyFromPairQuoteSummary.seller_amount) +
       parseInt(buyFromPairQuoteSummary.swap?.amount || '0')
 
-    let tokenId = await mintNft(context, creator.client, creator.address, swapper.address)
-    await approveNft(swapper.client, swapper.address, collectionAddress, tokenId, pairAddress)
+    let tokenId = await mintNft(context, globalConfig, swapper, pairAddress)
 
     let infinityPairClient = new InfinityPairClient(swapper.client, swapper.address, pairAddress)
 

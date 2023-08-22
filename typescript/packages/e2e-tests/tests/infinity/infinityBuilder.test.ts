@@ -1,7 +1,4 @@
 import Context, { CONTRACT_MAP } from '../setup/context'
-import { getQueryClient } from '../utils/client'
-import { approveNft, createMinter, mintNft } from '../utils/nft'
-import { sleep } from '../utils/sleep'
 import _ from 'lodash'
 
 describe('InfinityBuilder', () => {

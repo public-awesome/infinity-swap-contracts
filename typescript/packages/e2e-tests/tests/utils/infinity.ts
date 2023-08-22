@@ -2,7 +2,7 @@ import { toUtf8 } from '@cosmjs/encoding'
 import { denom } from '../../configs/chain_config.json'
 import Context from '../setup/context'
 import { getQueryClient } from '../utils/client'
-import { mintNft } from '../utils/nft'
+import { mintNfts } from '../utils/nft'
 import { contracts } from '@stargazezone/infinity-types'
 import { ExecuteMsg as InfinityFactoryExecuteMsg } from '@stargazezone/infinity-types/lib/InfinityFactory.types'
 import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/InfinityGlobal.types'
@@ -27,11 +27,7 @@ export const createPair = async (
 
   const queryClient = await getQueryClient()
 
-  let tokenIds = []
-  for (let i = 0; i < numNfts; i++) {
-    let tokenId = await mintNft(context, creator.client, creator.address, liquidityProvider.address)
-    tokenIds.push(tokenId)
-  }
+  let tokenIds = await mintNfts(context, globalConfig, numNfts, liquidityProvider)
 
   let infinityFactoryQueryClient = new InfinityFactoryQueryClient(queryClient, globalConfig.infinity_factory)
 
