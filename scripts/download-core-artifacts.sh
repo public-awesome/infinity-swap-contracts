@@ -24,7 +24,7 @@ for contract in "${contracts[@]}"; do
     fi
 
     version=$(grep "^$contract_tmp" Cargo.toml | awk -F'"' '{print $2}')
-    url=https://github.com/public-awesome/core/releases/download/${contract}-v${version}/${contract}.wasm
+    url=https://github.com/public-awesome/core/releases/download/${contract_tmp}/v${version}/${contract}.wasm
     
     if [ -z "$version" ]; then
         echo "Version not found for $contract"
