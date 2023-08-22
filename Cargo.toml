@@ -1,39 +1,45 @@
 [workspace]
-members = ["contracts/*",  "packages/*",  "test/*"]
+members = ["contracts/*", "packages/*", "test/*"]
 
 [workspace.package]
-version = "0.1.0"
-edition = "2021"
-repository = "https://github.com/tasiov/infinity-swap"
+version     = "0.1.0"
+edition     = "2021"
+repository  = "https://github.com/tasiov/infinity-swap"
 description = "A set of contracts and libraries for the Infinity Swap project."
-authors = ["Tasio tasiovictoria@ujulabs.com"]
-license = "BUSL-1.1"
+authors     = ["Tasio tasiovictoria@ujulabs.com"]
+license     = "BUSL-1.1"
 
 [workspace.dependencies]
-infinity-macros = { path = "./packages/infinity-macros" }
-infinity-shared = { path = "./packages/infinity-shared" }
-infinity-swap = { path = "./contracts/infinity-swap" }
+stargaze-fair-burn = { version = "1.0.2", features = ["library"] }
+stargaze-royalty-registry = { version = "0.1.0", features = ["library"] }
+sg-marketplace = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes", features = [
+    "library",
+] }
+
+sg-marketplace-common        = { version = "1.1.0" }
+infinity-macros              = { path = "./packages/infinity-macros" }
+infinity-shared              = { path = "./packages/infinity-shared" }
+infinity-swap                = { path = "./contracts/infinity-swap" }
 infinity-marketplace-adapter = { path = "./contracts/infinity-marketplace-adapter" }
-cosmwasm-schema  = "1.2.1"
-cosmwasm-std     = "1.2.1"
-cosmwasm-storage = "1.2.1"
-cw-storage-plus = "0.16.0"
-cw-utils = "0.16.0"
-cw2 = "0.16.0"
-cw721-base = { version = "0.16.0", features = ["library"] }
-cw721 = "0.16.0"
-sg1 = "2.1.0"
-sg2 = "2.1.0"
-sg721-base = { version = "2.1.0", features = ["library"] }
-sg721 = { version = "2.1.0", features = ["library"] }
-sg-std = "2.1.0"
-sg-marketplace = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes", features = ["library"] }
-sg-marketplace-common = { git = "https://github.com/tasiov/marketplace", branch = "infinity-marketplace-changes" }
-thiserror = { version = "1.0.31" }
-anyhow = "1.0.51"
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "1.0", features = ["derive"] }
+cosmwasm-schema              = "1.2.1"
+cosmwasm-std                 = "1.2.1"
+cosmwasm-storage             = "1.2.1"
+cw-storage-plus              = "0.16.0"
+cw-utils                     = "0.16.0"
+cw2                          = "0.16.0"
+cw721-base                   = { version = "0.16.0", features = ["library"] }
+cw721                        = "0.16.0"
+cw-address-like              = "1.0.4"
+sg1                          = "2.1.0"
+sg2                          = "2.1.0"
+sg721-base                   = { version = "2.1.0", features = ["library"] }
+sg721                        = { version = "2.1.0", features = ["library"] }
+sg-std                       = "2.1.0"
+thiserror                    = { version = "1.0.31" }
+anyhow                       = "1.0.51"
+proc-macro2                  = "1.0"
+quote                        = "1.0"
+syn                          = { version = "1.0", features = ["derive"] }
 
 # dev-dependencies
 itertools       = "0.10.5"
@@ -57,12 +63,12 @@ rand            = "0.8"
 
 [profile.release.package.infinity-swap]
 codegen-units = 1
-incremental = false
+incremental   = false
 
 [profile.release]
-rpath = false
-lto = true
-overflow-checks = true
-opt-level = 3
-debug = false
+rpath            = false
+lto              = true
+overflow-checks  = true
+opt-level        = 3
+debug            = false
 debug-assertions = false

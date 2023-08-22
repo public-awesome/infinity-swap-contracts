@@ -1,5 +1,5 @@
 [package]
-name = "infinity-swap"
+name       = "infinity-swap"
 version    = { workspace = true }
 edition    = { workspace = true }
 repository = { workspace = true }
@@ -21,20 +21,22 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 
 [dependencies]
-cosmwasm-std = { workspace = true }
-cosmwasm-schema = { workspace = true }
-cosmwasm-storage = { workspace = true }
-cw-storage-plus = { workspace = true }
-cw-utils = { workspace = true }
-cw2 = { workspace = true }
-thiserror = { workspace = true }
-anyhow = { workspace = true }
-sg1 = { workspace = true }
-sg2 = { workspace = true }
-sg721-base = { workspace = true }
-sg721 = { workspace = true }
-sg-std = { workspace = true }
-sg-marketplace = { workspace = true }
-cw721-base = { workspace = true }
-cw721 = { workspace = true }
-
+stargaze-fair-burn        = { workspace = true }
+stargaze-royalty-registry = { workspace = true }
+sg-marketplace-common     = { workspace = true }
+cosmwasm-std              = { workspace = true }
+cosmwasm-schema           = { workspace = true }
+cosmwasm-storage          = { workspace = true }
+cw-storage-plus           = { workspace = true }
+cw-utils                  = { workspace = true }
+cw2                       = { workspace = true }
+cw-address-like           = { workspace = true }
+thiserror                 = { workspace = true }
+anyhow                    = { workspace = true }
+sg1                       = { workspace = true }
+sg2                       = { workspace = true }
+sg721-base                = { workspace = true }
+sg721                     = { workspace = true }
+sg-std                    = { workspace = true }
+cw721-base                = { workspace = true }
+cw721                     = { workspace = true }

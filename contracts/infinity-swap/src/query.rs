@@ -1,15 +1,15 @@
-use crate::helpers::{option_bool_to_order, prep_for_swap};
+use crate::helpers::{option_bool_to_pair, prep_for_swap};
 use crate::msg::{
-    ConfigResponse, NftSwap, NftTokenIdsResponse, PoolNftSwap, PoolQuoteResponse,
-    PoolsByIdResponse, PoolsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
+    ConfigResponse, NftSwap, NftTokenIdsResponse, PairNftSwap, PairQuoteResponse,
+    PairsByIdResponse, PairsResponse, QueryMsg, QueryOptions, SwapParams, SwapResponse,
     TransactionType,
 };
 use crate::state::{
-    buy_from_pool_quotes, pools, sell_to_pool_quotes, PoolQuote, CONFIG, NFT_DEPOSITS,
+    buy_from_pair_quotes, pairs, sell_to_pair_quotes, PairQuote, CONFIG, NFT_DEPOSITS,
 };
 use crate::swap_processor::SwapProcessor;
 use cosmwasm_std::{
-    entry_point, to_binary, Addr, Binary, Deps, Env, Order, StdError, StdResult, Uint128,
+    entry_point, to_binary, Addr, Binary, Deps, Env, Pair, StdError, StdResult, Uint128,
 };
 use cw_storage_plus::Bound;
 
@@ -23,45 +23,45 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
-        QueryMsg::Pools { query_options } => to_binary(&query_pools(deps, query_options)?),
-        QueryMsg::PoolsById { pool_ids } => to_binary(&query_pools_by_id(deps, pool_ids)?),
-        QueryMsg::PoolsByOwner {
+        QueryMsg::Pairs { query_options } => to_binary(&query_pairs(deps, query_options)?),
+        QueryMsg::PairsById { pair_ids } => to_binary(&query_pairs_by_id(deps, pair_ids)?),
+        QueryMsg::PairsByOwner {
             owner,
             query_options,
-        } => to_binary(&query_pools_by_owner(
+        } => to_binary(&query_pairs_by_owner(
             deps,
             api.addr_validate(&owner)?,
             query_options,
         )?),
-        QueryMsg::PoolNftTokenIds {
-            pool_id,
+        QueryMsg::PairNftTokenIds {
+            pair_id,
             query_options,
-        } => to_binary(&query_pool_nft_token_ids(deps, pool_id, query_options)?),
-        QueryMsg::QuotesBuyFromPool {
+        } => to_binary(&query_pair_nft_token_ids(deps, pair_id, query_options)?),
+        QueryMsg::QuotesBuyFromPair {
             collection,
             query_options,
-        } => to_binary(&query_quotes_buy_from_pool(
+        } => to_binary(&query_quotes_buy_from_pair(
             deps,
             api.addr_validate(&collection)?,
             query_options,
         )?),
-        QueryMsg::QuotesSellToPool {
+        QueryMsg::QuotesSellToPair {
             collection,
             query_options,
-        } => to_binary(&query_quotes_sell_to_pool(
+        } => to_binary(&query_quotes_sell_to_pair(
             deps,
             api.addr_validate(&collection)?,
             query_options,
         )?),
         QueryMsg::SimDirectSwapNftsForTokens {
-            pool_id,
+            pair_id,
             nfts_to_swap,
             sender,
             swap_params,
         } => to_binary(&sim_direct_swap_nfts_for_tokens(
             deps,
             env,
-            pool_id,
+            pair_id,
             nfts_to_swap,
             api.addr_validate(&sender)?,
             swap_params,
@@ -80,28 +80,28 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             swap_params,
         )?),
         QueryMsg::SimDirectSwapTokensForSpecificNfts {
-            pool_id,
+            pair_id,
             nfts_to_swap_for,
             sender,
             swap_params,
         } => to_binary(&sim_direct_swap_tokens_for_specific_nfts(
             deps,
             env,
-            pool_id,
+            pair_id,
             nfts_to_swap_for,
             api.addr_validate(&sender)?,
             swap_params,
         )?),
         QueryMsg::SimSwapTokensForSpecificNfts {
             collection,
-            pool_nfts_to_swap_for,
+            pair_nfts_to_swap_for,
             sender,
             swap_params,
         } => to_binary(&sim_swap_tokens_for_specific_nfts(
             deps,
             env,
             api.addr_validate(&collection)?,
-            pool_nfts_to_swap_for,
+            pair_nfts_to_swap_for,
             api.addr_validate(&sender)?,
             swap_params,
         )?),
@@ -126,59 +126,59 @@ pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     Ok(ConfigResponse { config })
 }
 
-pub fn query_pools(deps: Deps, query_options: QueryOptions<u64>) -> StdResult<PoolsResponse> {
+pub fn query_pairs(deps: Deps, query_options: QueryOptions<u64>) -> StdResult<PairsResponse> {
     let limit = query_options
         .limit
         .unwrap_or(DEFAULT_QUERY_LIMIT)
         .min(MAX_QUERY_LIMIT) as usize;
     let start = query_options.start_after.map(Bound::exclusive);
-    let order = option_bool_to_order(query_options.descending, Order::Ascending);
+    let pair = option_bool_to_pair(query_options.descending, Pair::Ascending);
 
-    let pools = pools()
-        .range(deps.storage, start, None, order)
+    let pairs = pairs()
+        .range(deps.storage, start, None, pair)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<_>>()?;
 
-    Ok(PoolsResponse { pools })
+    Ok(PairsResponse { pairs })
 }
 
-pub fn query_pools_by_id(deps: Deps, pool_ids: Vec<u64>) -> StdResult<PoolsByIdResponse> {
+pub fn query_pairs_by_id(deps: Deps, pair_ids: Vec<u64>) -> StdResult<PairsByIdResponse> {
     let mut resp_vec = vec![];
-    for pool_id in pool_ids {
-        let pool = pools().may_load(deps.storage, pool_id)?;
-        resp_vec.push((pool_id, pool));
+    for pair_id in pair_ids {
+        let pair = pairs().may_load(deps.storage, pair_id)?;
+        resp_vec.push((pair_id, pair));
     }
-    Ok(PoolsByIdResponse { pools: resp_vec })
+    Ok(PairsByIdResponse { pairs: resp_vec })
 }
 
-pub fn query_pools_by_owner(
+pub fn query_pairs_by_owner(
     deps: Deps,
     owner: Addr,
     query_options: QueryOptions<u64>,
-) -> StdResult<PoolsResponse> {
+) -> StdResult<PairsResponse> {
     let limit = query_options
         .limit
         .unwrap_or(DEFAULT_QUERY_LIMIT)
         .min(MAX_QUERY_LIMIT) as usize;
     let start = query_options.start_after.map(Bound::exclusive);
-    let order = option_bool_to_order(query_options.descending, Order::Ascending);
+    let pair = option_bool_to_pair(query_options.descending, Pair::Ascending);
 
-    let pools = pools()
+    let pairs = pairs()
         .idx
         .owner
         .prefix(owner)
-        .range(deps.storage, start, None, order)
+        .range(deps.storage, start, None, pair)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<_>>()?;
 
-    Ok(PoolsResponse { pools })
+    Ok(PairsResponse { pairs })
 }
 
-pub fn query_pool_nft_token_ids(
+pub fn query_pair_nft_token_ids(
     deps: Deps,
-    pool_id: u64,
+    pair_id: u64,
     query_options: QueryOptions<String>,
 ) -> StdResult<NftTokenIdsResponse> {
     let limit = query_options
@@ -187,26 +187,26 @@ pub fn query_pool_nft_token_ids(
         .min(MAX_QUERY_LIMIT) as usize;
 
     let start = query_options.start_after.as_ref().map(Bound::exclusive);
-    let order = option_bool_to_order(query_options.descending, Order::Ascending);
+    let pair = option_bool_to_pair(query_options.descending, Pair::Ascending);
 
     let nft_token_ids: Vec<String> = NFT_DEPOSITS
-        .prefix(pool_id)
-        .range(deps.storage, start, None, order)
+        .prefix(pair_id)
+        .range(deps.storage, start, None, pair)
         .take(limit)
         .map(|item| item.map(|(nft_token_id, _)| nft_token_id))
         .collect::<StdResult<_>>()?;
 
     Ok(NftTokenIdsResponse {
-        pool_id,
+        pair_id,
         nft_token_ids,
     })
 }
 
-pub fn query_quotes_buy_from_pool(
+pub fn query_quotes_buy_from_pair(
     deps: Deps,
     collection: Addr,
     query_options: QueryOptions<(Uint128, u64)>,
-) -> StdResult<PoolQuoteResponse> {
+) -> StdResult<PairQuoteResponse> {
     let limit = query_options
         .limit
         .unwrap_or(DEFAULT_QUERY_LIMIT)
@@ -215,25 +215,25 @@ pub fn query_quotes_buy_from_pool(
         .start_after
         .as_ref()
         .map(|offset| Bound::exclusive((offset.0.u128(), offset.1)));
-    let order = option_bool_to_order(query_options.descending, Order::Ascending);
+    let pair = option_bool_to_pair(query_options.descending, Pair::Ascending);
 
-    let pool_quotes: Vec<PoolQuote> = buy_from_pool_quotes()
+    let pair_quotes: Vec<PairQuote> = buy_from_pair_quotes()
         .idx
         .collection_buy_price
         .sub_prefix(collection)
-        .range(deps.storage, start, None, order)
+        .range(deps.storage, start, None, pair)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<_>>()?;
 
-    Ok(PoolQuoteResponse { pool_quotes })
+    Ok(PairQuoteResponse { pair_quotes })
 }
 
-pub fn query_quotes_sell_to_pool(
+pub fn query_quotes_sell_to_pair(
     deps: Deps,
     collection: Addr,
     query_options: QueryOptions<(Uint128, u64)>,
-) -> StdResult<PoolQuoteResponse> {
+) -> StdResult<PairQuoteResponse> {
     let limit = query_options
         .limit
         .unwrap_or(DEFAULT_QUERY_LIMIT)
@@ -242,37 +242,37 @@ pub fn query_quotes_sell_to_pool(
         .start_after
         .as_ref()
         .map(|offset| Bound::exclusive((offset.0.u128(), offset.1)));
-    let order = option_bool_to_order(query_options.descending, Order::Descending);
+    let pair = option_bool_to_pair(query_options.descending, Pair::Descending);
 
-    let pool_quotes: Vec<PoolQuote> = sell_to_pool_quotes()
+    let pair_quotes: Vec<PairQuote> = sell_to_pair_quotes()
         .idx
         .collection_sell_price
         .sub_prefix(collection)
-        .range(deps.storage, start, None, order)
+        .range(deps.storage, start, None, pair)
         .take(limit)
         .map(|item| item.map(|(_, v)| v))
         .collect::<StdResult<_>>()?;
 
-    Ok(PoolQuoteResponse { pool_quotes })
+    Ok(PairQuoteResponse { pair_quotes })
 }
 
 pub fn sim_direct_swap_nfts_for_tokens(
     deps: Deps,
     env: Env,
-    pool_id: u64,
+    pair_id: u64,
     nfts_to_swap: Vec<NftSwap>,
     sender: Addr,
     swap_params: SwapParams,
 ) -> StdResult<SwapResponse> {
-    let pool = pools().load(deps.storage, pool_id)?;
+    let pair = pairs().load(deps.storage, pair_id)?;
 
-    let swap_prep_result = prep_for_swap(deps, &None, &sender, &pool.collection, &swap_params)
+    let swap_prep_result = prep_for_swap(deps, &None, &sender, &pair.collection, &swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let mut processor = SwapProcessor::new(
         TransactionType::UserSubmitsNfts,
         env.contract.address,
-        pool.collection.clone(),
+        pair.collection.clone(),
         sender,
         Uint128::zero(),
         swap_prep_result.asset_recipient,
@@ -286,7 +286,7 @@ pub fn sim_direct_swap_nfts_for_tokens(
         swap_prep_result.developer,
     );
     processor
-        .direct_swap_nfts_for_tokens(pool, nfts_to_swap, swap_params)
+        .direct_swap_nfts_for_tokens(pair, nfts_to_swap, swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     Ok(SwapResponse {
@@ -333,19 +333,19 @@ pub fn sim_swap_nfts_for_tokens(
 pub fn sim_direct_swap_tokens_for_specific_nfts(
     deps: Deps,
     env: Env,
-    pool_id: u64,
+    pair_id: u64,
     nfts_to_swap_for: Vec<NftSwap>,
     sender: Addr,
     swap_params: SwapParams,
 ) -> StdResult<SwapResponse> {
-    let pool = pools().load(deps.storage, pool_id)?;
+    let pair = pairs().load(deps.storage, pair_id)?;
 
     sim_swap_tokens_for_specific_nfts(
         deps,
         env,
-        pool.collection,
-        vec![PoolNftSwap {
-            pool_id,
+        pair.collection,
+        vec![PairNftSwap {
+            pair_id,
             nft_swaps: nfts_to_swap_for,
         }],
         sender,
@@ -357,7 +357,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
     deps: Deps,
     env: Env,
     collection: Addr,
-    pool_nfts_to_swap_for: Vec<PoolNftSwap>,
+    pair_nfts_to_swap_for: Vec<PairNftSwap>,
     sender: Addr,
     swap_params: SwapParams,
 ) -> StdResult<SwapResponse> {
@@ -365,8 +365,8 @@ pub fn sim_swap_tokens_for_specific_nfts(
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     let mut spend_amount = 0_u128;
-    for pool in pool_nfts_to_swap_for.iter() {
-        for nft_swap in pool.nft_swaps.iter() {
+    for pair in pair_nfts_to_swap_for.iter() {
+        for nft_swap in pair.nft_swaps.iter() {
             spend_amount += nft_swap.token_amount.u128();
         }
     }
@@ -388,7 +388,7 @@ pub fn sim_swap_tokens_for_specific_nfts(
         swap_prep_result.developer,
     );
     processor
-        .swap_tokens_for_specific_nfts(deps.storage, pool_nfts_to_swap_for, swap_params)
+        .swap_tokens_for_specific_nfts(deps.storage, pair_nfts_to_swap_for, swap_params)
         .map_err(|err| StdError::generic_err(err.to_string()))?;
 
     Ok(SwapResponse {

@@ -600,6 +600,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-address-like"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "451a4691083a88a3c0630a8a88799e9d4cd6679b7ce8ff22b8da2873ff31d380"
+dependencies = [
+ "cosmwasm-std",
+]
+
+[[package]]
 name = "cw-controllers"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -622,7 +631,7 @@ checksum = "c2eb84554bbfa6b66736abcd6a9bfdf237ee0ecb83910f746dff7f799093c80a"
 dependencies = [
  "anyhow",
  "cosmwasm-std",
- "cw-storage-plus 1.0.1",
+ "cw-storage-plus 1.1.0",
  "cw-utils 1.0.1",
  "derivative",
  "itertools",
@@ -643,6 +652,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-storage-macro"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95547c3d8c4a099d66a07f8a2a77347cefd2582ae6482c8ebc9a871f3fd7aef7"
+dependencies = [
+ "syn",
+]
+
+[[package]]
 name = "cw-storage-plus"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -655,9 +673,9 @@ dependencies = [
 
 [[package]]
 name = "cw-storage-plus"
-version = "1.0.1"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "053a5083c258acd68386734f428a5a171b29f7d733151ae83090c6fcc9417ffa"
+checksum = "3f0e92a069d62067f3472c62e30adedb4cab1754725c0f2a682b3128d2bf3c79"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -715,7 +733,7 @@ checksum = "8fb70cee2cf0b4a8ff7253e6bc6647107905e8eb37208f87d54f67810faa62f8"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-plus 1.0.1",
+ "cw-storage-plus 1.1.0",
  "schemars",
  "serde",
 ]
@@ -1441,7 +1459,7 @@ dependencies = [
  "infinity-shared",
  "infinity-swap",
  "sg-marketplace",
- "sg-marketplace-common",
+ "sg-marketplace-common 1.1.0",
  "sg-std",
  "sg1",
  "sg2",
@@ -1481,17 +1499,20 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "cw-address-like",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
  "cw721",
  "cw721-base",
- "sg-marketplace",
+ "sg-marketplace-common 1.1.0",
  "sg-std",
  "sg1",
  "sg2",
  "sg721",
  "sg721-base",
+ "stargaze-fair-burn",
+ "stargaze-royalty-registry",
  "thiserror",
 ]
 
@@ -2434,6 +2455,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sg-index-query"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bfc5df9962ea1f76eea280c1855c0c15ffd0489cdd2b7f04d4e32dd5b1d07c7"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 1.1.0",
+]
+
+[[package]]
 name = "sg-marketplace"
 version = "1.4.0"
 source = "git+https://github.com/tasiov/marketplace?branch=infinity-marketplace-changes#5ad284b5e1dddf84a59f22457724043bc7d4a5bf"
@@ -2448,7 +2480,7 @@ dependencies = [
  "semver",
  "serde",
  "sg-controllers",
- "sg-marketplace-common",
+ "sg-marketplace-common 1.0.0",
  "sg-std",
  "sg1",
  "sg2",
@@ -2465,7 +2497,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-storage-macro",
+ "cw-storage-macro 0.16.0",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
@@ -2477,6 +2509,31 @@ dependencies = [
  "sg1",
  "sg721",
  "sg721-base",
+ "thiserror",
+]
+
+[[package]]
+name = "sg-marketplace-common"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8576ca3bbf23da4e575c05f739c5f595bcea53d55411fdf738071b4f05fd95a1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-macro 0.16.0",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "cw721",
+ "cw721-base",
+ "schemars",
+ "serde",
+ "sg-std",
+ "sg1",
+ "sg721",
+ "sg721-base",
+ "stargaze-fair-burn",
  "thiserror",
 ]
 
@@ -2741,6 +2798,46 @@ checksum = "67cf02bbac7a337dc36e4f5a693db6c21e7863f45070f7064577eb4367a3212b"
 dependencies = [
  "base64ct",
  "der",
+]
+
+[[package]]
+name = "stargaze-fair-burn"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f46c24f9363c6212d943495a7bd6f17cbdfc2a15e8f05c23a24616f8f8d7e198"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 0.16.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "schemars",
+ "serde",
+ "sg-std",
+ "thiserror",
+]
+
+[[package]]
+name = "stargaze-royalty-registry"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "811c40a9c1c4f5fa350abcd11f55d23589230d647c5aba488e4289e92eb05303"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-macro 1.1.0",
+ "cw-storage-plus 1.1.0",
+ "cw-utils 0.16.0",
+ "cw2 0.16.0",
+ "schemars",
+ "serde",
+ "sg-index-query",
+ "sg-std",
+ "sg721",
+ "sg721-base",
+ "thiserror",
 ]
 
 [[package]]
