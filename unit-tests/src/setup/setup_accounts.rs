@@ -7,7 +7,7 @@ use sg_std::NATIVE_DENOM;
 use crate::setup::setup_infinity_contracts::UOSMO;
 
 // all amounts in ustars
-pub const INITIAL_BALANCE: u128 = 5_000_000_000;
+pub const INITIAL_BALANCE: u128 = 500_000_000_000;
 pub const _MINT_PRICE: u128 = 100_000_000;
 
 pub struct MarketAccounts {

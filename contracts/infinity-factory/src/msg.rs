@@ -27,8 +27,9 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub struct NextPairResponse {
     pub sender: Addr,
-    pub pair: Addr,
+    pub counter: u64,
     pub salt: Binary,
+    pub pair: Addr,
 }
 
 #[cw_serde]

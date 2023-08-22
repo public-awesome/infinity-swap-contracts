@@ -3,11 +3,13 @@ use crate::helpers::approve_nft;
 use crate::msg::{ExecuteMsg, SellOrder, SwapParams};
 use crate::nfts_for_tokens_iterators::{
     iter::NftsForTokens,
-    types::{NftForTokensQuote, NftForTokensSource, NftForTokensSourceData},
+    types::{NftForTokensQuote, NftForTokensSource},
 };
 use crate::state::INFINITY_GLOBAL;
-use crate::tokens_for_nfts_iterators::types::{TokensForNftQuote, TokensForNftSourceData};
-use crate::tokens_for_nfts_iterators::{iter::TokensForNfts, types::TokensForNftSource};
+use crate::tokens_for_nfts_iterators::{
+    types::TokensForNftQuote,
+    {iter::TokensForNfts, types::TokensForNftSource},
+};
 
 use cosmwasm_std::{
     coin, ensure, ensure_eq, to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Uint128,
@@ -106,8 +108,8 @@ pub fn execute_swap_nfts_for_tokens(
         response =
             transfer_nft(&collection, &sell_order.input_token_id, &env.contract.address, response);
 
-        match quote.source_data {
-            NftForTokensSourceData::Infinity(_) => {
+        match quote.source {
+            NftForTokensSource::Infinity => {
                 response =
                     approve_nft(&collection, &quote.address, &sell_order.input_token_id, response);
                 response = response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -184,8 +186,8 @@ pub fn execute_swap_tokens_for_nfts(
             break;
         }
 
-        match quote.source_data {
-            TokensForNftSourceData::Infinity(_) => {
+        match quote.source {
+            TokensForNftSource::Infinity => {
                 response = response.add_message(CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: quote.address.to_string(),
                     msg: to_binary(&PairExecuteMsg::SwapTokensForAnyNft {

@@ -1,4 +1,4 @@
-use crate::tokens_for_nfts_iterators::types::TokensForNftQuote;
+use crate::tokens_for_nfts_iterators::types::{TokensForNftInternal, TokensForNftQuote};
 use crate::ContractError;
 
 use cosmwasm_std::{Addr, Deps, StdError};
@@ -18,7 +18,7 @@ pub struct TokensForNftsInfinity<'a> {
     deps: Deps<'a>,
     payout_context: PayoutContext,
     collection: Addr,
-    quotes: BTreeSet<TokensForNftQuote>,
+    quotes: BTreeSet<TokensForNftInternal>,
     cursor: Option<PairQuoteOffset>,
 }
 
@@ -78,7 +78,7 @@ impl<'a> TokensForNftsInfinity<'a> {
                 .map_err(|_| StdError::generic_err("pair not found"))
                 .unwrap();
 
-            self.quotes.insert(TokensForNftQuote {
+            self.quotes.insert(TokensForNftInternal {
                 address: pair_quote.address,
                 amount: pair_quote.quote.amount,
                 source_data: TokensForNftSourceData::Infinity(pair),
@@ -93,10 +93,10 @@ impl<'a> Iterator for TokensForNftsInfinity<'a> {
     type Item = TokensForNftQuote;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next_quote_option = self.quotes.pop_first();
-        let retval = next_quote_option.clone();
+        let quote_option = self.quotes.pop_first();
+        let retval = quote_option.as_ref().map(|qo| qo.into());
 
-        if let Some(mut next_quote) = next_quote_option {
+        if let Some(mut next_quote) = quote_option {
             if let Some(cursor) = &self.cursor {
                 if cursor.pair == next_quote.address {
                     self.fetch_quote();

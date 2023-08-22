@@ -329,11 +329,17 @@
       "title": "NextPairResponse",
       "type": "object",
       "required": [
+        "counter",
         "pair",
         "salt",
         "sender"
       ],
       "properties": {
+        "counter": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
         "pair": {
           "$ref": "#/definitions/Addr"
         },

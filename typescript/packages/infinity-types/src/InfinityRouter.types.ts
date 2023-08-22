@@ -51,72 +51,15 @@ export type QueryMsg = {
   };
 };
 export type Addr = string;
-export type NftForTokensSourceData = {
-  infinity: Pair;
-};
-export type BondingCurve = "constant_product" | {
-  linear: {
-    delta: Uint128;
-    spot_price: Uint128;
-  };
-} | {
-  exponential: {
-    delta: Decimal;
-    spot_price: Uint128;
-  };
-};
-export type Decimal = string;
-export type PairType = ("token" | "nft") | {
-  trade: {
-    reinvest_nfts: boolean;
-    reinvest_tokens: boolean;
-    swap_fee_percent: Decimal;
-  };
-};
 export type ArrayOfNftForTokensQuote = NftForTokensQuote[];
 export interface NftForTokensQuote {
   address: Addr;
   amount: Uint128;
-  source_data: NftForTokensSourceData;
+  source: NftForTokensSource;
 }
-export interface Pair {
-  config: PairConfigForAddr;
-  immutable: PairImmutableForAddr;
-  internal: PairInternal;
-  total_tokens: Uint128;
-}
-export interface PairConfigForAddr {
-  asset_recipient?: Addr | null;
-  bonding_curve: BondingCurve;
-  is_active: boolean;
-  pair_type: PairType;
-}
-export interface PairImmutableForAddr {
-  collection: Addr;
-  denom: string;
-  owner: Addr;
-}
-export interface PairInternal {
-  buy_from_pair_quote_summary?: QuoteSummary | null;
-  sell_to_pair_quote_summary?: QuoteSummary | null;
-  total_nfts: number;
-}
-export interface QuoteSummary {
-  fair_burn: TokenPayment;
-  royalty?: TokenPayment | null;
-  seller_amount: Uint128;
-  swap?: TokenPayment | null;
-}
-export interface TokenPayment {
-  amount: Uint128;
-  recipient: Addr;
-}
-export type TokensForNftSourceData = {
-  infinity: Pair;
-};
 export type ArrayOfTokensForNftQuote = TokensForNftQuote[];
 export interface TokensForNftQuote {
   address: Addr;
   amount: Uint128;
-  source_data: TokensForNftSourceData;
+  source: TokensForNftSource;
 }

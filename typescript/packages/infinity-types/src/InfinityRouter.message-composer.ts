@@ -8,7 +8,7 @@ import { Coin } from "@cosmjs/amino";
 import { MsgExecuteContractEncodeObject } from "@cosmjs/cosmwasm-stargate";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { InstantiateMsg, ExecuteMsg, NftForTokensSource, Uint128, TokensForNftSource, SellOrder, SwapParamsForString, QueryMsg, Addr, NftForTokensSourceData, BondingCurve, Decimal, PairType, ArrayOfNftForTokensQuote, NftForTokensQuote, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment, TokensForNftSourceData, ArrayOfTokensForNftQuote, TokensForNftQuote } from "./InfinityRouter.types";
+import { InstantiateMsg, ExecuteMsg, NftForTokensSource, Uint128, TokensForNftSource, SellOrder, SwapParamsForString, QueryMsg, Addr, ArrayOfNftForTokensQuote, NftForTokensQuote, ArrayOfTokensForNftQuote, TokensForNftQuote } from "./InfinityRouter.types";
 export interface InfinityRouterMessage {
   contractAddress: string;
   sender: string;

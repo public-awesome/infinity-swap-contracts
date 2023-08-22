@@ -57,6 +57,7 @@ export type QueryMsg = {
 export type Addr = string;
 export type Binary = string;
 export interface NextPairResponse {
+  counter: number;
   pair: Addr;
   salt: Binary;
   sender: Addr;

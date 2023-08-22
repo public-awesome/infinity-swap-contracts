@@ -10,9 +10,7 @@ use infinity_pair::state::{BondingCurve, PairConfig, PairType};
 use infinity_router::msg::{
     ExecuteMsg as InfinityRouterExecuteMsg, QueryMsg as InfinityRouterQueryMsg, SellOrder,
 };
-use infinity_router::nfts_for_tokens_iterators::types::{
-    NftForTokensQuote, NftForTokensSourceData,
-};
+use infinity_router::nfts_for_tokens_iterators::types::NftForTokensQuote;
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_std::NATIVE_DENOM;
 use test_suite::common_setup::msg::MinterTemplateResponse;
@@ -57,47 +55,29 @@ fn try_router_nfts_for_tokens_swap_simple() {
         )
         .unwrap();
 
-    let test_pair_0 = create_pair_with_deposits(
-        &mut router,
-        &infinity_global,
-        &infinity_factory,
-        &minter,
-        &collection,
-        &creator,
-        &owner,
-        PairConfig {
-            pair_type: PairType::Token,
-            bonding_curve: BondingCurve::Linear {
-                spot_price: Uint128::from(10_100_000u128),
-                delta: Uint128::from(1_000_000u128),
+    let mut pairs = vec![];
+    for _ in 0..3 {
+        pairs.push(create_pair_with_deposits(
+            &mut router,
+            &infinity_global,
+            &infinity_factory,
+            &minter,
+            &collection,
+            &creator,
+            &owner,
+            PairConfig {
+                pair_type: PairType::Token,
+                bonding_curve: BondingCurve::Linear {
+                    spot_price: Uint128::from(100_000_000u128),
+                    delta: Uint128::from(1_000_000u128),
+                },
+                is_active: true,
+                asset_recipient: None,
             },
-            is_active: true,
-            asset_recipient: None,
-        },
-        0u64,
-        Uint128::from(1_000_000_000u128),
-    );
-
-    let test_pair_1 = create_pair_with_deposits(
-        &mut router,
-        &infinity_global,
-        &infinity_factory,
-        &minter,
-        &collection,
-        &creator,
-        &owner,
-        PairConfig {
-            pair_type: PairType::Token,
-            bonding_curve: BondingCurve::Linear {
-                spot_price: Uint128::from(10_000_000u128),
-                delta: Uint128::from(1_000_000u128),
-            },
-            is_active: true,
-            asset_recipient: None,
-        },
-        0u64,
-        Uint128::from(1_000_000_000u128),
-    );
+            0u64,
+            Uint128::from(10_000_000_000u128),
+        ));
+    }
 
     let quotes = router
         .wrap()
@@ -106,14 +86,13 @@ fn try_router_nfts_for_tokens_swap_simple() {
             &InfinityRouterQueryMsg::NftsForTokens {
                 collection: collection.to_string(),
                 denom: NATIVE_DENOM.to_string(),
-                limit: 2,
+                limit: 10,
                 filter_sources: None,
             },
         )
         .unwrap();
 
-    assert_eq!(quotes[0].source_data, NftForTokensSourceData::Infinity(test_pair_0.pair));
-    assert_eq!(quotes[1].source_data, NftForTokensSourceData::Infinity(test_pair_1.pair));
+    assert_eq!(quotes.len(), 10);
 
     let num_nfts = 2;
     let mut token_ids: Vec<String> = vec![];
@@ -135,12 +114,12 @@ fn try_router_nfts_for_tokens_swap_simple() {
         &InfinityRouterExecuteMsg::SwapNftsForTokens {
             collection: collection.to_string(),
             denom: NATIVE_DENOM.to_string(),
-            sell_orders: quotes
+            sell_orders: token_ids
                 .iter()
                 .enumerate()
-                .map(|(idx, q)| SellOrder {
-                    input_token_id: token_ids[idx].clone(),
-                    min_output: q.amount,
+                .map(|(idx, token_id)| SellOrder {
+                    input_token_id: token_id.clone(),
+                    min_output: quotes[idx].amount,
                 })
                 .collect(),
             swap_params: None,
