@@ -2,17 +2,11 @@ name: E2E Integration Tests
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
 
 jobs:
   test:
     name: E2E tests
     runs-on: ubuntu-latest
-    env:
-      GAS_OUT_DIR: gas_reports
-      GAS_LIMIT: 75000000
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
@@ -33,9 +27,6 @@ jobs:
             target/
             artifacts/
           key: ${{ runner.os }}-cargo-with-artifacts-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Get mainnet GAS_LIMIT
-        run: echo "MAINNET_GAS_LIMIT=$(curl -s https://rpc.stargaze-apis.com/consensus_params | jq -r '.result.consensus_params.block.max_gas')" >> $GITHUB_ENV
 
       - uses: extractions/setup-just@v1
 

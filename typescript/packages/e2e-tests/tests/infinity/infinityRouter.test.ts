@@ -1,16 +1,12 @@
-import { CosmWasmClient, SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate'
-import { toUtf8 } from '@cosmjs/encoding'
+import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate'
 import { denom } from '../../configs/chain_config.json'
 import Context, { CONTRACT_MAP } from '../setup/context'
 import { getQueryClient } from '../utils/client'
 import { createPair } from '../utils/infinity'
-import { approveNft, createMinter, mintNft } from '../utils/nft'
+import { createMinter, mintNfts } from '../utils/nft'
 import { contracts } from '@stargazezone/infinity-types'
-import { ExecuteMsg as InfinityFactoryExecuteMsg } from '@stargazezone/infinity-types/lib/InfinityFactory.types'
 import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/InfinityGlobal.types'
-import { ExecuteMsg as InfinityPairExecuteMsg } from '@stargazezone/infinity-types/lib/InfinityPair.types'
 import { InfinityRouterClient } from '@stargazezone/infinity-types/lib/InfinityRouter.client'
-import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
 import _ from 'lodash'
 
 const { InfinityGlobalQueryClient } = contracts.InfinityGlobal
@@ -98,12 +94,7 @@ describe('InfinityRouter', () => {
       limit,
     })
 
-    let tokenIds = []
-    for (let i = 0; i < limit; i++) {
-      let tokenId = await mintNft(context, creator.client, creator.address, swapper.address)
-      await approveNft(swapper.client, swapper.address, collectionAddress, tokenId, globalConfig.infinity_router)
-      tokenIds.push(tokenId)
-    }
+    let tokenIds = await mintNfts(context, globalConfig, limit, swapper, globalConfig.infinity_router)
 
     let swapperBalanceBefore = await queryClient.getBalance(swapper.address, denom)
 
