@@ -1,0 +1,52 @@
+name: Build and Upload Contracts
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build_and_upload_contracts:
+    runs-on: ubuntu-latest
+    container:
+      image: cibuilds/github:0.13
+
+    steps:
+      - uses: extractions/setup-just@v1
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Docker client
+        run: apk add docker-cli
+
+      - name: Prepare volume with source code
+        run: |
+          docker create -v /code --name with_code alpine /bin/true
+          docker cp Cargo.toml with_code:/code
+          docker cp Cargo.lock with_code:/code
+          docker cp ./contracts with_code:/code
+
+      - name: Build development contracts
+        run: |
+          just optimize
+          docker cp with_code:/code/artifacts ./artifacts
+
+      - name: Show data
+        run: |
+          ls -l artifacts
+          cat artifacts/checksums.txt
+
+      - name: Publish artifacts on GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          TITLE="$TAG"
+          BODY="Attached there are some build artifacts generated at this tag. Those are for development purposes only! Please use crates.io to find the packages of this release."
+          ghr \
+            -t "$GITHUB_TOKEN" \
+            -u "${{ github.repository_owner }}" -r "${{ github.event.repository.name }}" \
+            -c "${{ github.sha }}" \
+            -n "$TITLE" -b "$BODY" \
+            -delete \
+            "$TAG" ./artifacts/

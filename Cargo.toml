@@ -29,7 +29,7 @@ infinity-shared = { path = "./packages/infinity-shared", features = [
 ] }
 
 stargaze-fair-burn        = { version = "1.0.2", features = ["library"] }
-stargaze-royalty-registry = { version = "0.1.0", features = ["library"] }
+stargaze-royalty-registry = { version = "0.3.0", features = ["library"] }
 sg-marketplace-common     = { git = "https://github.com/public-awesome/marketplace", rev = "02be12b82ceb88188b227cc73d0c2631aaa201c0", package = "sg-marketplace-common" }
 sg-marketplace            = { git = "https://github.com/public-awesome/marketplace", rev = "6aef3689ebf9b7d47805a40111f7d6c9dda8a6b7", package = "sg-marketplace" }
 
