@@ -19,13 +19,6 @@ jobs:
       - name: Install Docker client
         run: apk add docker-cli
 
-      - name: Prepare volume with source code
-        run: |
-          docker create -v /code --name with_code alpine /bin/true
-          docker cp Cargo.toml with_code:/code
-          docker cp Cargo.lock with_code:/code
-          docker cp ./contracts with_code:/code
-
       - name: Build development contracts
         run: just optimize
 
