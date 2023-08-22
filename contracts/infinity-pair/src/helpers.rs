@@ -7,10 +7,7 @@ use crate::{
 use cosmwasm_std::{ensure_eq, Addr, Coin, Decimal, Deps, QuerierWrapper, Storage, Uint128};
 use infinity_global::{load_global_config, load_min_price, GlobalConfig};
 use infinity_shared::InfinityError;
-use stargaze_royalty_registry::{
-    msg::{QueryMsg as RoyaltyRegistryQueryMsg, RoyaltyPaymentResponse},
-    state::RoyaltyEntry,
-};
+use stargaze_royalty_registry::{fetch_royalty_entry, state::RoyaltyEntry};
 use std::cmp::min;
 
 pub fn only_pair_owner(sender: &Addr, pair: &Pair) -> Result<(), ContractError> {
@@ -29,31 +26,6 @@ pub fn only_active(pair: &Pair) -> Result<(), ContractError> {
         ContractError::InvalidPair("pair is inactive".to_string())
     );
     Ok(())
-}
-
-pub fn fetch_royalty_entry(
-    querier: &QuerierWrapper,
-    infinity_global: &Addr,
-    royalty_registry: &Addr,
-    collection: &Addr,
-) -> Result<Option<RoyaltyEntry>, ContractError> {
-    let royalty_payment_response = querier.query_wasm_smart::<RoyaltyPaymentResponse>(
-        royalty_registry,
-        &RoyaltyRegistryQueryMsg::RoyaltyPayment {
-            collection: collection.to_string(),
-            protocol: Some(infinity_global.to_string()),
-        },
-    )?;
-
-    if let Some(royalty_protocol) = royalty_payment_response.royalty_protocol {
-        return Ok(Some(royalty_protocol.royalty_entry));
-    }
-
-    if let Some(royalty_default) = royalty_payment_response.royalty_default {
-        return Ok(Some(royalty_default));
-    }
-
-    Ok(None)
 }
 
 pub fn load_pair(
@@ -142,9 +114,9 @@ pub fn load_payout_context(
 
     let royalty_entry = fetch_royalty_entry(
         &deps.querier,
-        infinity_global,
         &global_config.royalty_registry,
         collection,
+        Some(infinity_global),
     )?;
 
     Ok(PayoutContext {
