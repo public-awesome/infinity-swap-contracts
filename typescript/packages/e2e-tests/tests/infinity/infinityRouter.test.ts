@@ -59,8 +59,8 @@ describe('InfinityRouter', () => {
               is_active: true,
               bonding_curve: {
                 linear: {
-                  delta: '5000000',
-                  spot_price: '2000000',
+                  delta: '500000',
+                  spot_price: '10000000',
                 },
               },
               pair_type: {
@@ -129,11 +129,19 @@ describe('InfinityRouter', () => {
     let swapperBalanceBefore = await queryClient.getBalance(swapper.address, denom)
 
     let infinityRouterClient = new InfinityRouterClient(swapper.client, swapper.address, globalConfig.infinity_router)
-    await infinityRouterClient.swapTokensForNfts({
-      collection: collectionAddress,
-      denom,
-      maxInputs: _.map(tokensForNftsQuotes, (tokensForNftsQuote) => tokensForNftsQuote.amount),
-    })
+
+    let maxInputs = _.map(tokensForNftsQuotes, (tokensForNftsQuote) => tokensForNftsQuote.amount)
+    let totalFunds = _.sum(_.map(maxInputs, (input) => parseInt(input))).toString()
+    await infinityRouterClient.swapTokensForNfts(
+      {
+        collection: collectionAddress,
+        denom,
+        maxInputs,
+      },
+      'auto',
+      'swapTokensForNfts',
+      [{ denom, amount: totalFunds }],
+    )
 
     let swapperBalanceAfter = await queryClient.getBalance(swapper.address, denom)
     expect(parseInt(swapperBalanceBefore.amount)).toBeGreaterThan(parseInt(swapperBalanceAfter.amount))

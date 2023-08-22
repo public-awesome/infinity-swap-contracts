@@ -107,7 +107,7 @@ impl<'a> Iterator for TokensForNftsInfinity<'a> {
                 TokensForNftSourceData::Infinity(ref mut pair) => {
                     pair.sim_swap_tokens_for_nft(&self.payout_context);
 
-                    if let Some(summary) = &pair.internal.sell_to_pair_quote_summary {
+                    if let Some(summary) = &pair.internal.buy_from_pair_quote_summary {
                         next_quote.amount = summary.total();
                         self.quotes.insert(next_quote);
                     }
