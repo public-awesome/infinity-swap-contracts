@@ -23,12 +23,7 @@ jobs:
           cat artifacts/checksums.txt
 
       - name: Publish artifacts on GitHub
-        uses: tcnksm/ghr@v0.1.2
+        uses: softprops/action-gh-release@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.event.repository.name }}
-          tag: ${{ github.event.release.tag_name }}
-          title: ${{ github.event.release.tag_name }}
-          delete: true
-          files: ./artifacts/
+          files: |
+            artifacts/*
