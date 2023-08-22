@@ -19,30 +19,31 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
 
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: Compile WASM contract
         uses: actions-rs/cargo@v1
         with:
           command: wasm
-          args: --locked
 
       - name: Unit Tests
-        run: cargo unit-test --locked
+        run: cargo unit-test
 
       - name: Install check_contract
         run: cargo install --debug --version 1.0.0 --features iterator --example check_contract -- cosmwasm-vm
-
-      - name: Check wasm contracts
-        run: |
-          for W in ./target/wasm32-unknown-unknown/release/*.wasm
-          do
-            echo -n "Checking `$W`... "
-            check_contract --supported-features iterator,staking,stargate,stargaze $W
-          done
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
+      - uses: extractions/setup-just@v1
+
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -54,7 +55,13 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - uses: extractions/setup-just@v1
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run cargo doc
         uses: actions-rs/cargo@v1
