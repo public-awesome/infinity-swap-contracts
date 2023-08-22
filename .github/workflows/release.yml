@@ -23,16 +23,12 @@ jobs:
           cat artifacts/checksums.txt
 
       - name: Publish artifacts on GitHub
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ github.event.release.tag_name }}"
-          TITLE="$TAG"
-          BODY="Attached there are some build artifacts generated at this tag. Those are for development purposes only! Please use crates.io to find the packages of this release."
-          ghr \
-            -t "$GITHUB_TOKEN" \
-            -u "${{ github.repository_owner }}" -r "${{ github.event.repository.name }}" \
-            -c "${{ github.sha }}" \
-            -n "$TITLE" -b "$BODY" \
-            -delete \
-            "$TAG" ./artifacts/
+        uses: tcnksm/ghr@v0.1.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          owner: ${{ github.repository_owner }}
+          repo: ${{ github.event.repository.name }}
+          tag: ${{ github.event.release.tag_name }}
+          title: ${{ github.event.release.tag_name }}
+          delete: true
+          files: ./artifacts/
