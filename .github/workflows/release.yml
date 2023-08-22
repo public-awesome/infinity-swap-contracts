@@ -2,13 +2,11 @@ name: Build and Upload Contracts
 
 on:
   release:
-    types: [created]
+    types: [created, edited]
 
 jobs:
   build_and_upload_contracts:
     runs-on: ubuntu-latest
-    container:
-      image: cibuilds/github:0.13
 
     steps:
       - uses: extractions/setup-just@v1
@@ -17,7 +15,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install Docker client
-        run: apk add docker-cli
+        run: sudo apt-get install -y docker.io
 
       - name: Build development contracts
         run: just optimize
