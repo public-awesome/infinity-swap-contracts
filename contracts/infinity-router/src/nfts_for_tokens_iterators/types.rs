@@ -14,22 +14,41 @@ pub enum NftForTokensSourceData {
 }
 
 #[cw_serde]
-pub struct NftForTokensQuote {
+pub struct NftForTokensInternal {
     pub address: Addr,
     pub amount: Uint128,
     pub source_data: NftForTokensSourceData,
 }
 
-impl Ord for NftForTokensQuote {
+impl Ord for NftForTokensInternal {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.amount.cmp(&other.amount)
+        (&self.amount, &self.address).cmp(&(&other.amount, &other.address))
     }
 }
 
-impl PartialOrd for NftForTokensQuote {
+impl PartialOrd for NftForTokensInternal {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Eq for NftForTokensQuote {}
+impl Eq for NftForTokensInternal {}
+
+#[cw_serde]
+pub struct NftForTokensQuote {
+    pub address: Addr,
+    pub amount: Uint128,
+    pub source: NftForTokensSource,
+}
+
+impl From<&NftForTokensInternal> for NftForTokensQuote {
+    fn from(internal: &NftForTokensInternal) -> Self {
+        NftForTokensQuote {
+            address: internal.address.clone(),
+            amount: internal.amount,
+            source: match &internal.source_data {
+                NftForTokensSourceData::Infinity(_) => NftForTokensSource::Infinity,
+            },
+        }
+    }
+}

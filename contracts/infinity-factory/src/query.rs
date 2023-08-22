@@ -33,7 +33,8 @@ pub fn query_next_pair(deps: Deps, env: Env, sender: Addr) -> StdResult<NextPair
 
     Ok(NextPairResponse {
         sender,
-        pair,
+        counter,
         salt,
+        pair,
     })
 }

@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, NftForTokensSource, Uint128, TokensForNftSource, SellOrder, SwapParamsForString, QueryMsg, Addr, NftForTokensSourceData, BondingCurve, Decimal, PairType, ArrayOfNftForTokensQuote, NftForTokensQuote, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment, TokensForNftSourceData, ArrayOfTokensForNftQuote, TokensForNftQuote } from "./InfinityRouter.types";
+import { InstantiateMsg, ExecuteMsg, NftForTokensSource, Uint128, TokensForNftSource, SellOrder, SwapParamsForString, QueryMsg, Addr, ArrayOfNftForTokensQuote, NftForTokensQuote, ArrayOfTokensForNftQuote, TokensForNftQuote } from "./InfinityRouter.types";
 export interface InfinityRouterReadOnlyInterface {
   contractAddress: string;
   nftsForTokens: ({

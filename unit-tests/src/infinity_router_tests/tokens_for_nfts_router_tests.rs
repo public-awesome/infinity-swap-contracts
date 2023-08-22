@@ -9,9 +9,7 @@ use infinity_pair::state::{BondingCurve, PairConfig, PairType};
 use infinity_router::msg::{
     ExecuteMsg as InfinityRouterExecuteMsg, QueryMsg as InfinityRouterQueryMsg,
 };
-use infinity_router::tokens_for_nfts_iterators::types::{
-    TokensForNftQuote, TokensForNftSourceData,
-};
+use infinity_router::tokens_for_nfts_iterators::types::{TokensForNftQuote, TokensForNftSource};
 use sg721_base::msg::{CollectionInfoResponse, QueryMsg as Sg721QueryMsg};
 use sg_std::NATIVE_DENOM;
 use test_suite::common_setup::msg::MinterTemplateResponse;
@@ -56,7 +54,7 @@ fn try_router_tokens_for_nfts_swap_simple() {
         )
         .unwrap();
 
-    let test_pair_0 = create_pair_with_deposits(
+    let _test_pair_0 = create_pair_with_deposits(
         &mut router,
         &infinity_global,
         &infinity_factory,
@@ -77,7 +75,7 @@ fn try_router_tokens_for_nfts_swap_simple() {
         Uint128::zero(),
     );
 
-    let test_pair_1 = create_pair_with_deposits(
+    let _test_pair_1 = create_pair_with_deposits(
         &mut router,
         &infinity_global,
         &infinity_factory,
@@ -111,8 +109,8 @@ fn try_router_tokens_for_nfts_swap_simple() {
         )
         .unwrap();
 
-    assert_eq!(quotes[0].source_data, TokensForNftSourceData::Infinity(test_pair_0.pair));
-    assert_eq!(quotes[1].source_data, TokensForNftSourceData::Infinity(test_pair_1.pair));
+    assert_eq!(quotes[0].source, TokensForNftSource::Infinity);
+    assert_eq!(quotes[1].source, TokensForNftSource::Infinity);
 
     let max_inputs = quotes.iter().map(|q| q.amount).collect::<Vec<Uint128>>();
     let total_tokens = max_inputs.iter().sum::<Uint128>();
