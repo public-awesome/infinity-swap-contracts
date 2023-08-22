@@ -27,9 +27,7 @@ jobs:
           docker cp ./contracts with_code:/code
 
       - name: Build development contracts
-        run: |
-          just optimize
-          docker cp with_code:/code/artifacts ./artifacts
+        run: just optimize
 
       - name: Show data
         run: |
