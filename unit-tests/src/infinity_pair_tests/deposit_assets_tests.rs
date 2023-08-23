@@ -238,8 +238,8 @@ fn try_withdraw_other_collection_nfts() {
     let other_collection = &collection_response_vec[1].collection.clone().unwrap();
     let other_minter = &collection_response_vec[1].minter.clone().unwrap();
     let token_id = mint_to(&mut router, &creator.clone(), &owner.clone(), other_minter);
-    transfer(&mut router, &owner, &test_pair.address, &other_collection, &token_id);
-    assert_nft_owner(&router, &other_collection, token_id.clone(), &test_pair.address);
+    transfer(&mut router, &owner, &test_pair.address, other_collection, &token_id);
+    assert_nft_owner(&router, other_collection, token_id.clone(), &test_pair.address);
 
     // Non owner cannot withdraw other collection nfts
     let response = router.execute_contract(
@@ -269,7 +269,7 @@ fn try_withdraw_other_collection_nfts() {
         &[],
     );
     assert!(response.is_ok());
-    assert_nft_owner(&router, &other_collection, token_id, &owner);
+    assert_nft_owner(&router, other_collection, token_id, &owner);
 
     let pair = router
         .wrap()

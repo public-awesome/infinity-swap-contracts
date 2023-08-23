@@ -149,6 +149,7 @@ pub fn load_min_price(
 }
 
 #[cw_serde]
+#[allow(clippy::large_enum_variant)]
 pub enum SudoMsg {
     UpdateConfig {
         fair_burn: Option<String>,
@@ -209,6 +210,7 @@ pub fn sudo(deps: DepsMut, _env: Env, msg: SudoMsg) -> Result<Response, StdError
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn sudo_update_config(
     deps: DepsMut,
     fair_burn: Option<String>,
