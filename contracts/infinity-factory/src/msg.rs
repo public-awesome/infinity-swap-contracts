@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Binary};
 use infinity_pair::state::{PairConfig, PairImmutable};
+use sg_index_query::QueryOptions;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -38,5 +39,10 @@ pub enum QueryMsg {
     #[returns(NextPairResponse)]
     NextPair {
         sender: String,
+    },
+    #[returns(Vec<(u64, Addr)>)]
+    PairsByOwner {
+        owner: String,
+        query_options: Option<QueryOptions<u64>>,
     },
 }

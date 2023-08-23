@@ -38,3 +38,4 @@ cw2              = { workspace = true }
 thiserror        = { workspace = true }
 sg-std           = { workspace = true }
 sha2             = { workspace = true }
+sg-index-query   = { workspace = true }

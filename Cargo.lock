@@ -800,6 +800,7 @@ dependencies = [
  "infinity-global",
  "infinity-pair",
  "infinity-shared",
+ "sg-index-query",
  "sg-std",
  "sha2 0.10.6",
  "thiserror",
