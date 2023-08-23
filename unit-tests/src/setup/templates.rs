@@ -116,7 +116,7 @@ pub fn setup_infinity_test(
     let marketplace = setup_marketplace(&mut vt.router, &vt.accts.creator.clone());
 
     let pre_infinity_global =
-        Addr::unchecked(increment_number_in_string(&marketplace.to_string(), 4));
+        Addr::unchecked(increment_number_in_string(marketplace.as_ref(), 4));
 
     let infinity_factory =
         setup_infinity_factory(&mut vt.router, &vt.accts.creator.clone(), &pre_infinity_global);

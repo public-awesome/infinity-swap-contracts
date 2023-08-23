@@ -69,7 +69,7 @@ fn try_generate_quotes_token_linear() {
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            test_pair.address.clone(),
+            test_pair.address,
             &InfinityPairQueryMsg::SellToPairQuotes {
                 limit: u32::MAX,
             },
@@ -83,7 +83,7 @@ fn try_generate_quotes_token_linear() {
             - spot_price.mul_ceil(global_config.max_royalty_fee_percent);
         expected_quotes.push(quote);
         remaining_amount -= spot_price;
-        spot_price = spot_price - delta;
+        spot_price -= delta;
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
@@ -150,7 +150,7 @@ fn try_generate_quotes_token_exponential() {
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            test_pair.address.clone(),
+            test_pair.address,
             &InfinityPairQueryMsg::SellToPairQuotes {
                 limit: u32::MAX,
             },
@@ -223,7 +223,7 @@ fn try_generate_quotes_nft_linear() {
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            test_pair.address.clone(),
+            test_pair.address,
             &InfinityPairQueryMsg::BuyFromPairQuotes {
                 limit: u32::MAX,
             },
@@ -233,7 +233,7 @@ fn try_generate_quotes_nft_linear() {
     let mut expected_quotes = vec![];
     while num_nfts > 0 {
         expected_quotes.push(spot_price);
-        spot_price = spot_price + delta;
+        spot_price += delta;
         num_nfts -= 1;
     }
 
@@ -293,7 +293,7 @@ fn try_generate_quotes_nft_exponential() {
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            test_pair.address.clone(),
+            test_pair.address,
             &InfinityPairQueryMsg::BuyFromPairQuotes {
                 limit: u32::MAX,
             },
@@ -385,7 +385,7 @@ fn try_generate_quotes_trade_linear() {
         .unwrap();
 
     let mut expected_quotes = vec![];
-    let mut spot_price = original_spot_price.clone();
+    let mut spot_price = original_spot_price;
     while spot_price <= remaining_amount && spot_price >= delta {
         let quote = spot_price
             - spot_price.mul_ceil(global_config.fair_burn_fee_percent)
@@ -393,7 +393,7 @@ fn try_generate_quotes_trade_linear() {
             - spot_price.mul_ceil(swap_fee_percent);
         expected_quotes.push(quote);
         remaining_amount -= spot_price;
-        spot_price = spot_price - delta;
+        spot_price -= delta;
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
@@ -402,7 +402,7 @@ fn try_generate_quotes_trade_linear() {
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            test_pair.address.clone(),
+            test_pair.address,
             &InfinityPairQueryMsg::BuyFromPairQuotes {
                 limit: u32::MAX,
             },
@@ -410,10 +410,10 @@ fn try_generate_quotes_trade_linear() {
         .unwrap();
 
     let mut expected_quotes = vec![];
-    let mut spot_price = original_spot_price.clone() + delta;
+    let mut spot_price = original_spot_price + delta;
     while num_nfts > 0 {
         expected_quotes.push(spot_price);
-        spot_price = spot_price + delta;
+        spot_price += delta;
         num_nfts -= 1;
     }
 
@@ -495,7 +495,7 @@ fn try_generate_quotes_trade_exponential() {
         .unwrap();
 
     let mut expected_quotes = vec![];
-    let mut spot_price = original_spot_price.clone();
+    let mut spot_price = original_spot_price;
     while spot_price <= remaining_amount {
         let quote = spot_price
             - spot_price.mul_ceil(global_config.fair_burn_fee_percent)
@@ -512,7 +512,7 @@ fn try_generate_quotes_trade_exponential() {
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            test_pair.address.clone(),
+            test_pair.address,
             &InfinityPairQueryMsg::BuyFromPairQuotes {
                 limit: u32::MAX,
             },
@@ -520,7 +520,7 @@ fn try_generate_quotes_trade_exponential() {
         .unwrap();
 
     let mut expected_quotes = vec![];
-    let mut spot_price = original_spot_price.clone().mul_ceil(Decimal::one() + delta);
+    let mut spot_price = original_spot_price.mul_ceil(Decimal::one() + delta);
     while num_nfts > 0 {
         expected_quotes.push(spot_price);
         spot_price = spot_price.mul_ceil(Decimal::one() + delta);
@@ -601,7 +601,7 @@ fn try_generate_quotes_trade_cp() {
         .unwrap();
 
     let mut expected_quotes = vec![];
-    let mut remaining_amount = original_remaining_amount.clone();
+    let mut remaining_amount = original_remaining_amount;
     let mut spot_price =
         remaining_amount.div_floor((Uint128::from(original_num_nfts + 1), Uint128::one()));
     let mut counter = 0;
@@ -623,7 +623,7 @@ fn try_generate_quotes_trade_cp() {
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            test_pair.address.clone(),
+            test_pair.address,
             &InfinityPairQueryMsg::BuyFromPairQuotes {
                 limit: u32::MAX,
             },
@@ -631,7 +631,7 @@ fn try_generate_quotes_trade_cp() {
         .unwrap();
 
     let mut expected_quotes = vec![];
-    let mut num_nfts = original_num_nfts.clone();
+    let mut num_nfts = original_num_nfts;
     let mut spot_price: Uint128;
     while num_nfts > 1 {
         spot_price =

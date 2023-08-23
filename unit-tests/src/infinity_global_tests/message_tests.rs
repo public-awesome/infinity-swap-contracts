@@ -43,7 +43,7 @@ fn try_infinity_global_init() {
     };
     let response = router.instantiate_contract(
         infinity_global_code_id,
-        creator.clone(),
+        creator,
         &msg,
         &[],
         "Infinity Global",
@@ -63,7 +63,7 @@ fn try_infinity_global_init() {
     let min_price_response = router
         .wrap()
         .query_wasm_smart::<Option<Coin>>(
-            infinity_global.clone(),
+            infinity_global,
             &QueryMsg::MinPrice {
                 denom: NATIVE_DENOM.to_string(),
             },
@@ -103,12 +103,12 @@ fn try_infinity_global_update_config() {
     let min_prices = vec![coin(1_000_000u128, NATIVE_DENOM)];
 
     let msg = InstantiateMsg {
-        global_config: global_config.clone(),
-        min_prices: min_prices.clone(),
+        global_config,
+        min_prices,
     };
     let response = router.instantiate_contract(
         infinity_global_code_id,
-        creator.clone(),
+        creator,
         &msg,
         &[],
         "Infinity Global",
@@ -135,7 +135,7 @@ fn try_infinity_global_update_config() {
 
     let global_config_response = router
         .wrap()
-        .query_wasm_smart::<GlobalConfig<Addr>>(infinity_global.clone(), &QueryMsg::GlobalConfig {})
+        .query_wasm_smart::<GlobalConfig<Addr>>(infinity_global, &QueryMsg::GlobalConfig {})
         .unwrap();
 
     if let SudoMsg::UpdateConfig {
@@ -200,12 +200,12 @@ fn try_infinity_global_add_remove_min_prices() {
     let min_prices = vec![coin(1_000_000u128, NATIVE_DENOM)];
 
     let msg = InstantiateMsg {
-        global_config: global_config.clone(),
-        min_prices: min_prices.clone(),
+        global_config,
+        min_prices,
     };
     let response = router.instantiate_contract(
         infinity_global_code_id,
-        creator.clone(),
+        creator,
         &msg,
         &[],
         "Infinity Global",
@@ -243,7 +243,7 @@ fn try_infinity_global_add_remove_min_prices() {
     let min_price_response = router
         .wrap()
         .query_wasm_smart::<Option<Coin>>(
-            infinity_global.clone(),
+            infinity_global,
             &QueryMsg::MinPrice {
                 denom: UOSMO.to_string(),
             },
