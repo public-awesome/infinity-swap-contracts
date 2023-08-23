@@ -5,7 +5,7 @@ import { Sg2ExecuteMsgForVendingMinterInitMsgExtension } from '../types/vendingF
 import { getQueryClient, getSigningClient } from './client'
 import { getFutureTimestamp, nanoToMs, waitUntil } from './datetime'
 import { sleep } from './sleep'
-import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/InfinityGlobal.types'
+import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/codegen/InfinityGlobal.types'
 import { ExecuteMsg as BaseFactoryExecuteMsg } from '@stargazezone/launchpad/src/BaseFactory.types'
 import assert from 'assert'
 import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'

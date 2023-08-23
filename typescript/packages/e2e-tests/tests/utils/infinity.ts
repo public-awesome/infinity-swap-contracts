@@ -4,9 +4,9 @@ import Context from '../setup/context'
 import { getQueryClient } from '../utils/client'
 import { mintNfts } from '../utils/nft'
 import { contracts } from '@stargazezone/infinity-types'
-import { ExecuteMsg as InfinityFactoryExecuteMsg } from '@stargazezone/infinity-types/lib/InfinityFactory.types'
-import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/InfinityGlobal.types'
-import { ExecuteMsg as InfinityPairExecuteMsg } from '@stargazezone/infinity-types/lib/InfinityPair.types'
+import { ExecuteMsg as InfinityFactoryExecuteMsg } from '@stargazezone/infinity-types/lib/codegen/InfinityFactory.types'
+import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/codegen/InfinityGlobal.types'
+import { ExecuteMsg as InfinityPairExecuteMsg } from '@stargazezone/infinity-types/lib/codegen/InfinityPair.types'
 import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
 import _ from 'lodash'
 
@@ -21,8 +21,7 @@ export const createPair = async (
   collectionAddress: string,
   numNfts: number,
   depositTokens: { denom: string; amount: string },
-) => {
-  const creator = context.getTestUser('user1')
+): Promise<string> => {
   const liquidityProvider = context.getTestUser(liquidityProviderName)
 
   const queryClient = await getQueryClient()
@@ -46,20 +45,22 @@ export const createPair = async (
     }),
   })
 
-  // Deposit Tokens
-  let depositTokensMsg: InfinityPairExecuteMsg = {
-    deposit_tokens: {},
-  }
+  if (depositTokens.amount !== '0') {
+    // Deposit Tokens
+    let depositTokensMsg: InfinityPairExecuteMsg = {
+      deposit_tokens: {},
+    }
 
-  encodedMessages.push({
-    typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
-    value: MsgExecuteContract.fromPartial({
-      sender: liquidityProvider.address,
-      contract: pairAddress,
-      msg: toUtf8(JSON.stringify(depositTokensMsg)),
-      funds: [depositTokens],
-    }),
-  })
+    encodedMessages.push({
+      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
+      value: MsgExecuteContract.fromPartial({
+        sender: liquidityProvider.address,
+        contract: pairAddress,
+        msg: toUtf8(JSON.stringify(depositTokensMsg)),
+        funds: [depositTokens],
+      }),
+    })
+  }
 
   // Deposit NFTs
   _.forEach(tokenIds, (tokenId) => {
@@ -89,4 +90,6 @@ export const createPair = async (
   expect(pair.immutable.collection).toEqual(collectionAddress)
   expect(pair.immutable.owner).toEqual(liquidityProvider.address)
   expect(pair.immutable.denom).toEqual(denom)
+
+  return pairAddress
 }

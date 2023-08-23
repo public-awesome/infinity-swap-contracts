@@ -5,8 +5,8 @@ import { getQueryClient } from '../utils/client'
 import { createPair } from '../utils/infinity'
 import { createMinter, mintNfts } from '../utils/nft'
 import { contracts } from '@stargazezone/infinity-types'
-import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/InfinityGlobal.types'
-import { InfinityRouterClient } from '@stargazezone/infinity-types/lib/InfinityRouter.client'
+import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/codegen/InfinityGlobal.types'
+import { InfinityRouterClient } from '@stargazezone/infinity-types/lib/codegen/InfinityRouter.client'
 import _ from 'lodash'
 
 const { InfinityGlobalQueryClient } = contracts.InfinityGlobal

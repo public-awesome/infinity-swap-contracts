@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, BondingCurve, Uint128, Decimal, PairType, PairConfigForString, PairImmutableForString, QueryMsg, Addr, Binary, NextPairResponse } from "./InfinityFactory.types";
+import { InstantiateMsg, ExecuteMsg, BondingCurve, Uint128, Decimal, PairType, PairConfigForString, PairImmutableForString, QueryMsg, QueryBoundForUint64, QueryOptionsForUint64, Addr, Binary, NextPairResponse, ArrayOfTupleOfUint64AndAddr } from "./InfinityFactory.types";
 export interface InfinityFactoryReadOnlyInterface {
   contractAddress: string;
   nextPair: ({
@@ -14,6 +14,13 @@ export interface InfinityFactoryReadOnlyInterface {
   }: {
     sender: string;
   }) => Promise<NextPairResponse>;
+  pairsByOwner: ({
+    owner,
+    queryOptions
+  }: {
+    owner: string;
+    queryOptions?: QueryOptions_for_uint64;
+  }) => Promise<ArrayOfTupleOfUint64AndAddr>;
 }
 export class InfinityFactoryQueryClient implements InfinityFactoryReadOnlyInterface {
   client: CosmWasmClient;
@@ -23,6 +30,7 @@ export class InfinityFactoryQueryClient implements InfinityFactoryReadOnlyInterf
     this.client = client;
     this.contractAddress = contractAddress;
     this.nextPair = this.nextPair.bind(this);
+    this.pairsByOwner = this.pairsByOwner.bind(this);
   }
 
   nextPair = async ({
@@ -33,6 +41,20 @@ export class InfinityFactoryQueryClient implements InfinityFactoryReadOnlyInterf
     return this.client.queryContractSmart(this.contractAddress, {
       next_pair: {
         sender
+      }
+    });
+  };
+  pairsByOwner = async ({
+    owner,
+    queryOptions
+  }: {
+    owner: string;
+    queryOptions?: QueryOptions_for_uint64;
+  }): Promise<ArrayOfTupleOfUint64AndAddr> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      pairs_by_owner: {
+        owner,
+        query_options: queryOptions
       }
     });
   };

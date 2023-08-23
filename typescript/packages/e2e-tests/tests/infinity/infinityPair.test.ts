@@ -5,9 +5,12 @@ import Context, { CONTRACT_MAP } from '../setup/context'
 import { getQueryClient } from '../utils/client'
 import { createMinter, mintNft, mintNfts } from '../utils/nft'
 import { contracts } from '@stargazezone/infinity-types'
-import { ExecuteMsg as InfinityFactoryExecuteMsg } from '@stargazezone/infinity-types/lib/InfinityFactory.types'
-import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/InfinityGlobal.types'
-import { ExecuteMsg as InfinityPairExecuteMsg, QuoteSummary } from '@stargazezone/infinity-types/lib/InfinityPair.types'
+import { ExecuteMsg as InfinityFactoryExecuteMsg } from '@stargazezone/infinity-types/lib/codegen/InfinityFactory.types'
+import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/codegen/InfinityGlobal.types'
+import {
+  ExecuteMsg as InfinityPairExecuteMsg,
+  QuoteSummary,
+} from '@stargazezone/infinity-types/lib/codegen/InfinityPair.types'
 import { MsgExecuteContract } from 'cosmjs-types/cosmwasm/wasm/v1/tx'
 import _ from 'lodash'
 

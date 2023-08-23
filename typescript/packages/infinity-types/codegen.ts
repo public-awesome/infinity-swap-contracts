@@ -27,7 +27,7 @@ codegen({
       dir: '../../../contracts/infinity-router/schema',
     },
   ],
-  outPath: './src/',
+  outPath: './src/codegen',
 
   options: {
     bundle: {

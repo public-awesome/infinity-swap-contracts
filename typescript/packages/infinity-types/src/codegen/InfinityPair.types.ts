@@ -44,20 +44,27 @@ export type ExecuteMsg = {
   receive_nft: Cw721ReceiveMsg;
 } | {
   withdraw_nfts: {
+    asset_recipient?: string | null;
+    collection: string;
     token_ids: string[];
   };
 } | {
   withdraw_any_nfts: {
+    asset_recipient?: string | null;
+    collection: string;
     limit: number;
   };
 } | {
   deposit_tokens: {};
 } | {
   withdraw_tokens: {
-    amount: Uint128;
+    asset_recipient?: string | null;
+    funds: Coin[];
   };
 } | {
-  withdraw_all_tokens: {};
+  withdraw_all_tokens: {
+    asset_recipient?: string | null;
+  };
 } | {
   update_pair_config: {
     asset_recipient?: string | null;
@@ -98,6 +105,14 @@ export type QueryMsg = {
   nft_deposits: {
     query_options?: QueryOptionsForString | null;
   };
+} | {
+  sell_to_pair_quotes: {
+    limit: number;
+  };
+} | {
+  buy_from_pair_quotes: {
+    limit: number;
+  };
 };
 export type QueryBoundForString = {
   inclusive: string;
@@ -109,6 +124,10 @@ export interface QueryOptionsForString {
   limit?: number | null;
   max?: QueryBoundForString | null;
   min?: QueryBoundForString | null;
+}
+export interface QuotesResponse {
+  denom: string;
+  quotes: Uint128[];
 }
 export type Addr = string;
 export interface NftDepositsResponse {

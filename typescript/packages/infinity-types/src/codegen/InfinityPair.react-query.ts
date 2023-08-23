@@ -5,7 +5,7 @@
 */
 
 import { UseQueryOptions, useQuery } from "react-query";
-import { BondingCurve, Uint128, Decimal, PairType, InstantiateMsg, PairConfigForString, PairImmutableForString, ExecuteMsg, Binary, Cw721ReceiveMsg, Coin, QueryMsg, QueryBoundForString, QueryOptionsForString, Addr, NftDepositsResponse, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment } from "./InfinityPair.types";
+import { BondingCurve, Uint128, Decimal, PairType, InstantiateMsg, PairConfigForString, PairImmutableForString, ExecuteMsg, Binary, Cw721ReceiveMsg, Coin, QueryMsg, QueryBoundForString, QueryOptionsForString, QuotesResponse, Addr, NftDepositsResponse, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment } from "./InfinityPair.types";
 import { InfinityPairQueryClient } from "./InfinityPair.client";
 export const infinityPairQueryKeys = {
   contract: ([{
@@ -20,6 +20,14 @@ export const infinityPairQueryKeys = {
   }] as const),
   nftDeposits: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...infinityPairQueryKeys.address(contractAddress)[0],
     method: "nft_deposits",
+    args
+  }] as const),
+  sellToPairQuotes: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...infinityPairQueryKeys.address(contractAddress)[0],
+    method: "sell_to_pair_quotes",
+    args
+  }] as const),
+  buyFromPairQuotes: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...infinityPairQueryKeys.address(contractAddress)[0],
+    method: "buy_from_pair_quotes",
     args
   }] as const)
 };
@@ -44,11 +52,67 @@ export const infinityPairQueries = {
     }) : Promise.reject(new Error("Invalid client")),
     ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  sellToPairQuotes: <TData = QuotesResponse,>({
+    client,
+    args,
+    options
+  }: InfinityPairSellToPairQuotesQuery<TData>): UseQueryOptions<QuotesResponse, Error, TData> => ({
+    queryKey: infinityPairQueryKeys.sellToPairQuotes(client?.contractAddress, args),
+    queryFn: () => client ? client.sellToPairQuotes({
+      limit: args.limit
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  buyFromPairQuotes: <TData = QuotesResponse,>({
+    client,
+    args,
+    options
+  }: InfinityPairBuyFromPairQuotesQuery<TData>): UseQueryOptions<QuotesResponse, Error, TData> => ({
+    queryKey: infinityPairQueryKeys.buyFromPairQuotes(client?.contractAddress, args),
+    queryFn: () => client ? client.buyFromPairQuotes({
+      limit: args.limit
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   })
 };
 export interface InfinityPairReactQuery<TResponse, TData = TResponse> {
   client: InfinityPairQueryClient | undefined;
   options?: UseQueryOptions<TResponse, Error, TData>;
+}
+export interface InfinityPairBuyFromPairQuotesQuery<TData> extends InfinityPairReactQuery<QuotesResponse, TData> {
+  args: {
+    limit: number;
+  };
+}
+export function useInfinityPairBuyFromPairQuotesQuery<TData = QuotesResponse>({
+  client,
+  args,
+  options
+}: InfinityPairBuyFromPairQuotesQuery<TData>) {
+  return useQuery<QuotesResponse, Error, TData>(infinityPairQueryKeys.buyFromPairQuotes(client?.contractAddress, args), () => client ? client.buyFromPairQuotes({
+    limit: args.limit
+  }) : Promise.reject(new Error("Invalid client")), { ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  });
+}
+export interface InfinityPairSellToPairQuotesQuery<TData> extends InfinityPairReactQuery<QuotesResponse, TData> {
+  args: {
+    limit: number;
+  };
+}
+export function useInfinityPairSellToPairQuotesQuery<TData = QuotesResponse>({
+  client,
+  args,
+  options
+}: InfinityPairSellToPairQuotesQuery<TData>) {
+  return useQuery<QuotesResponse, Error, TData>(infinityPairQueryKeys.sellToPairQuotes(client?.contractAddress, args), () => client ? client.sellToPairQuotes({
+    limit: args.limit
+  }) : Promise.reject(new Error("Invalid client")), { ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  });
 }
 export interface InfinityPairNftDepositsQuery<TData> extends InfinityPairReactQuery<NftDepositsResponse, TData> {
   args: {
