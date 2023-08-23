@@ -63,7 +63,7 @@ pub fn standard_minter_template(num_tokens: u32) -> MinterTemplateResponse<Marke
     }
 }
 
-pub fn _minter_two_collections(num_tokens: u32) -> MinterTemplateResponse<MarketAccounts> {
+pub fn minter_two_collections(num_tokens: u32) -> MinterTemplateResponse<MarketAccounts> {
     let mut app = custom_mock_app();
     let (owner, bidder, creator) = setup_accounts(&mut app).unwrap();
     let start_time = Timestamp::from_nanos(GENESIS_MINT_START_TIME);
@@ -99,6 +99,13 @@ pub struct InfinityTestSetup {
     pub infinity_pair_code_id: u64,
 }
 
+fn increment_number_in_string(s: &str, increment: u32) -> String {
+    let prefix: String = s.chars().take_while(|c| c.is_alphabetic()).collect();
+    let number: String = s.chars().skip_while(|c| c.is_alphabetic()).collect();
+    let incremented_number = number.parse::<u32>().unwrap_or(0) + increment;
+    format!("{}{}", prefix, incremented_number)
+}
+
 pub fn setup_infinity_test(
     mut vt: MinterTemplateResponse<MarketAccounts>,
 ) -> Result<InfinityTestSetup, Error> {
@@ -108,7 +115,8 @@ pub fn setup_infinity_test(
     let royalty_registry = setup_royalty_registry(&mut vt.router, &vt.accts.creator);
     let marketplace = setup_marketplace(&mut vt.router, &vt.accts.creator.clone());
 
-    let pre_infinity_global = Addr::unchecked("contract9");
+    let pre_infinity_global =
+        Addr::unchecked(increment_number_in_string(&marketplace.to_string(), 4));
 
     let infinity_factory =
         setup_infinity_factory(&mut vt.router, &vt.accts.creator.clone(), &pre_infinity_global);

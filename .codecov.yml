@@ -11,3 +11,6 @@ coverage:
     patch:
       default:
         enabled: no
+
+ignore:
+  - "contracts/infinity-builder/.*"

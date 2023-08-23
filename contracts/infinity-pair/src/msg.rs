@@ -32,20 +32,27 @@ pub enum ExecuteMsg {
     ReceiveNft(Cw721ReceiveMsg),
     /// Withdraw NFTs from the pair
     WithdrawNfts {
+        collection: String,
         token_ids: Vec<TokenId>,
+        asset_recipient: Option<String>,
     },
     /// Withdraw any NFTs, from the pair
     WithdrawAnyNfts {
+        collection: String,
         limit: u32,
+        asset_recipient: Option<String>,
     },
     /// Deposit tokens into the pair
     DepositTokens {},
     /// Withdraw tokens from the pair
     WithdrawTokens {
-        amount: Uint128,
+        funds: Vec<Coin>,
+        asset_recipient: Option<String>,
     },
     /// Withdraw all tokens from the pair
-    WithdrawAllTokens {},
+    WithdrawAllTokens {
+        asset_recipient: Option<String>,
+    },
     /// Update the parameters of a pair
     UpdatePairConfig {
         is_active: Option<bool>,
@@ -68,11 +75,6 @@ pub enum ExecuteMsg {
     SwapTokensForAnyNft {
         asset_recipient: Option<String>,
     },
-    // /// Remove a pair from contract storage and indexing
-    // RemovePair {
-    //     pair_id: u64,
-    //     asset_recipient: Option<String>,
-    // },
 }
 
 #[cw_serde]
@@ -84,10 +86,24 @@ pub enum QueryMsg {
     NftDeposits {
         query_options: Option<QueryOptions<String>>,
     },
+    #[returns(QuotesResponse)]
+    SellToPairQuotes {
+        limit: u32,
+    },
+    #[returns(QuotesResponse)]
+    BuyFromPairQuotes {
+        limit: u32,
+    },
 }
 
 #[cw_serde]
 pub struct NftDepositsResponse {
     pub collection: Addr,
     pub token_ids: Vec<TokenId>,
+}
+
+#[cw_serde]
+pub struct QuotesResponse {
+    pub denom: String,
+    pub quotes: Vec<Uint128>,
 }

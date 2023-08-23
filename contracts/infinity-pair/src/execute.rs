@@ -6,12 +6,12 @@ use crate::state::{BondingCurve, PairType, TokenId, INFINITY_GLOBAL, NFT_DEPOSIT
 
 use cosmwasm_std::{
     coin, ensure, ensure_eq, has_coins, Addr, Coin, DepsMut, Env, MessageInfo, Order, StdResult,
-    Uint128,
 };
+use cw721::{Cw721QueryMsg, TokensResponse};
 use cw_utils::{maybe_addr, must_pay, nonpayable};
 use infinity_shared::InfinityError;
 use sg_marketplace_common::address::address_or;
-use sg_marketplace_common::coin::transfer_coin;
+use sg_marketplace_common::coin::transfer_coins;
 use sg_marketplace_common::nft::{only_with_owner_approval, transfer_nft};
 use sg_std::Response;
 
@@ -58,34 +58,56 @@ pub fn handle_execute_msg(
             execute_receive_nft(deps, info, pair, cw721_receive_msg.token_id)
         },
         ExecuteMsg::WithdrawNfts {
+            collection,
             token_ids,
+            asset_recipient,
         } => {
             nonpayable(&info)?;
             only_pair_owner(&info.sender, &pair)?;
-            execute_withdraw_nfts(deps, info, pair, token_ids)
+            execute_withdraw_nfts(
+                deps,
+                info,
+                pair,
+                api.addr_validate(&collection)?,
+                token_ids,
+                maybe_addr(api, asset_recipient)?,
+            )
         },
         ExecuteMsg::WithdrawAnyNfts {
+            collection,
             limit,
+            asset_recipient,
         } => {
             nonpayable(&info)?;
             only_pair_owner(&info.sender, &pair)?;
-            execute_withdraw_any_nfts(deps, info, pair, limit)
+            execute_withdraw_any_nfts(
+                deps,
+                env,
+                info,
+                pair,
+                api.addr_validate(&collection)?,
+                limit,
+                maybe_addr(api, asset_recipient)?,
+            )
         },
         ExecuteMsg::DepositTokens {} => {
             only_pair_owner(&info.sender, &pair)?;
             execute_deposit_tokens(deps, info, env, pair)
         },
         ExecuteMsg::WithdrawTokens {
-            amount,
+            funds,
+            asset_recipient,
         } => {
             nonpayable(&info)?;
             only_pair_owner(&info.sender, &pair)?;
-            execute_withdraw_tokens(deps, info, env, pair, amount)
+            execute_withdraw_tokens(deps, info, env, pair, funds, maybe_addr(api, asset_recipient)?)
         },
-        ExecuteMsg::WithdrawAllTokens {} => {
+        ExecuteMsg::WithdrawAllTokens {
+            asset_recipient,
+        } => {
             nonpayable(&info)?;
             only_pair_owner(&info.sender, &pair)?;
-            execute_withdraw_all_tokens(deps, info, env, pair)
+            execute_withdraw_all_tokens(deps, info, env, pair, maybe_addr(api, asset_recipient)?)
         },
         ExecuteMsg::UpdatePairConfig {
             is_active,
@@ -182,7 +204,9 @@ pub fn execute_withdraw_nfts(
     deps: DepsMut,
     _info: MessageInfo,
     mut pair: Pair,
+    collection: Addr,
     token_ids: Vec<String>,
+    asset_recipient: Option<Addr>,
 ) -> Result<(Pair, Response), ContractError> {
     ensure!(
         !token_ids.is_empty(),
@@ -191,17 +215,17 @@ pub fn execute_withdraw_nfts(
 
     let mut response = Response::new();
 
+    let asset_recipient = address_or(asset_recipient.as_ref(), &pair.asset_recipient());
+
     for token_id in &token_ids {
-        ensure!(
-            NFT_DEPOSITS.has(deps.storage, token_id.to_string()),
-            InfinityError::InvalidInput("token_id is not owned by pair".to_string())
-        );
-        NFT_DEPOSITS.remove(deps.storage, token_id.to_string());
+        response = transfer_nft(&collection, token_id, &asset_recipient, response);
 
-        pair.internal.total_nfts -= 1u64;
-
-        response =
-            transfer_nft(&pair.immutable.collection, token_id, &pair.asset_recipient(), response);
+        if pair.immutable.collection == collection
+            && NFT_DEPOSITS.has(deps.storage, token_id.to_string())
+        {
+            pair.internal.total_nfts -= 1u64;
+            NFT_DEPOSITS.remove(deps.storage, token_id.to_string());
+        }
     }
 
     Ok((pair, response))
@@ -209,17 +233,26 @@ pub fn execute_withdraw_nfts(
 
 pub fn execute_withdraw_any_nfts(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     pair: Pair,
+    collection: Addr,
     limit: u32,
+    asset_recipient: Option<Addr>,
 ) -> Result<(Pair, Response), ContractError> {
-    let token_ids = NFT_DEPOSITS
-        .range(deps.storage, None, None, Order::Ascending)
-        .take(limit as usize)
-        .map(|item| item.map(|(v, _)| v))
-        .collect::<StdResult<Vec<String>>>()?;
+    let token_ids = deps
+        .querier
+        .query_wasm_smart::<TokensResponse>(
+            &collection,
+            &Cw721QueryMsg::Tokens {
+                owner: env.contract.address.to_string(),
+                start_after: None,
+                limit: Some(limit),
+            },
+        )?
+        .tokens;
 
-    execute_withdraw_nfts(deps, info, pair, token_ids)
+    execute_withdraw_nfts(deps, info, pair, collection, token_ids, asset_recipient)
 }
 
 pub fn execute_deposit_tokens(
@@ -237,22 +270,20 @@ pub fn execute_withdraw_tokens(
     _info: MessageInfo,
     _env: Env,
     mut pair: Pair,
-    amount: Uint128,
+    funds: Vec<Coin>,
+    asset_recipient: Option<Addr>,
 ) -> Result<(Pair, Response), ContractError> {
-    ensure!(
-        amount <= pair.total_tokens,
-        InfinityError::InvalidInput("amount exceeds total tokens".to_string())
-    );
-
-    pair.total_tokens -= amount;
+    for fund in &funds {
+        if fund.denom == pair.immutable.denom {
+            pair.total_tokens -= fund.amount;
+        }
+    }
 
     let mut response = Response::new();
 
-    response = transfer_coin(
-        coin(amount.u128(), pair.immutable.denom.clone()),
-        &pair.asset_recipient(),
-        response,
-    );
+    let asset_recipient = address_or(asset_recipient.as_ref(), &pair.asset_recipient());
+
+    response = transfer_coins(funds, &asset_recipient, response);
 
     Ok((pair, response))
 }
@@ -262,9 +293,10 @@ pub fn execute_withdraw_all_tokens(
     info: MessageInfo,
     env: Env,
     pair: Pair,
+    asset_recipient: Option<Addr>,
 ) -> Result<(Pair, Response), ContractError> {
-    let total_tokens = pair.total_tokens;
-    execute_withdraw_tokens(deps, info, env, pair, total_tokens)
+    let all_tokens = deps.querier.query_all_balances(&env.contract.address)?;
+    execute_withdraw_tokens(deps, info, env, pair, all_tokens, asset_recipient)
 }
 
 #[allow(clippy::too_many_arguments)]
