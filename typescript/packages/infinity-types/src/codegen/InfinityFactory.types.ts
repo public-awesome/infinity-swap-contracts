@@ -53,7 +53,23 @@ export type QueryMsg = {
   next_pair: {
     sender: string;
   };
+} | {
+  pairs_by_owner: {
+    owner: string;
+    query_options?: QueryOptionsForUint64 | null;
+  };
 };
+export type QueryBoundForUint64 = {
+  inclusive: number;
+} | {
+  exclusive: number;
+};
+export interface QueryOptionsForUint64 {
+  descending?: boolean | null;
+  limit?: number | null;
+  max?: QueryBoundForUint64 | null;
+  min?: QueryBoundForUint64 | null;
+}
 export type Addr = string;
 export type Binary = string;
 export interface NextPairResponse {
@@ -62,3 +78,4 @@ export interface NextPairResponse {
   salt: Binary;
   sender: Addr;
 }
+export type ArrayOfTupleOfUint64AndAddr = [number, Addr][];

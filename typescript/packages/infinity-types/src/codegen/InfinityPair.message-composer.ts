@@ -7,7 +7,7 @@
 import { MsgExecuteContractEncodeObject } from "@cosmjs/cosmwasm-stargate";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { BondingCurve, Uint128, Decimal, PairType, InstantiateMsg, PairConfigForString, PairImmutableForString, ExecuteMsg, Binary, Cw721ReceiveMsg, Coin, QueryMsg, QueryBoundForString, QueryOptionsForString, Addr, NftDepositsResponse, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment } from "./InfinityPair.types";
+import { BondingCurve, Uint128, Decimal, PairType, InstantiateMsg, PairConfigForString, PairImmutableForString, ExecuteMsg, Binary, Cw721ReceiveMsg, Coin, QueryMsg, QueryBoundForString, QueryOptionsForString, QuotesResponse, Addr, NftDepositsResponse, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment } from "./InfinityPair.types";
 export interface InfinityPairMessage {
   contractAddress: string;
   sender: string;
@@ -21,22 +21,36 @@ export interface InfinityPairMessage {
     tokenId: string;
   }, _funds?: Coin[]) => MsgExecuteContractEncodeObject;
   withdrawNfts: ({
+    assetRecipient,
+    collection,
     tokenIds
   }: {
+    assetRecipient?: string;
+    collection: string;
     tokenIds: string[];
   }, _funds?: Coin[]) => MsgExecuteContractEncodeObject;
   withdrawAnyNfts: ({
+    assetRecipient,
+    collection,
     limit
   }: {
+    assetRecipient?: string;
+    collection: string;
     limit: number;
   }, _funds?: Coin[]) => MsgExecuteContractEncodeObject;
   depositTokens: (_funds?: Coin[]) => MsgExecuteContractEncodeObject;
   withdrawTokens: ({
-    amount
+    assetRecipient,
+    funds
   }: {
-    amount: Uint128;
+    assetRecipient?: string;
+    funds: Coin[];
   }, _funds?: Coin[]) => MsgExecuteContractEncodeObject;
-  withdrawAllTokens: (_funds?: Coin[]) => MsgExecuteContractEncodeObject;
+  withdrawAllTokens: ({
+    assetRecipient
+  }: {
+    assetRecipient?: string;
+  }, _funds?: Coin[]) => MsgExecuteContractEncodeObject;
   updatePairConfig: ({
     assetRecipient,
     bondingCurve,
@@ -115,8 +129,12 @@ export class InfinityPairMessageComposer implements InfinityPairMessage {
     };
   };
   withdrawNfts = ({
+    assetRecipient,
+    collection,
     tokenIds
   }: {
+    assetRecipient?: string;
+    collection: string;
     tokenIds: string[];
   }, _funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
@@ -126,6 +144,8 @@ export class InfinityPairMessageComposer implements InfinityPairMessage {
         contract: this.contractAddress,
         msg: toUtf8(JSON.stringify({
           withdraw_nfts: {
+            asset_recipient: assetRecipient,
+            collection,
             token_ids: tokenIds
           }
         })),
@@ -134,8 +154,12 @@ export class InfinityPairMessageComposer implements InfinityPairMessage {
     };
   };
   withdrawAnyNfts = ({
+    assetRecipient,
+    collection,
     limit
   }: {
+    assetRecipient?: string;
+    collection: string;
     limit: number;
   }, _funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
@@ -145,6 +169,8 @@ export class InfinityPairMessageComposer implements InfinityPairMessage {
         contract: this.contractAddress,
         msg: toUtf8(JSON.stringify({
           withdraw_any_nfts: {
+            asset_recipient: assetRecipient,
+            collection,
             limit
           }
         })),
@@ -166,9 +192,11 @@ export class InfinityPairMessageComposer implements InfinityPairMessage {
     };
   };
   withdrawTokens = ({
-    amount
+    assetRecipient,
+    funds
   }: {
-    amount: Uint128;
+    assetRecipient?: string;
+    funds: Coin[];
   }, _funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
@@ -177,21 +205,28 @@ export class InfinityPairMessageComposer implements InfinityPairMessage {
         contract: this.contractAddress,
         msg: toUtf8(JSON.stringify({
           withdraw_tokens: {
-            amount
+            asset_recipient: assetRecipient,
+            funds
           }
         })),
         funds: _funds
       })
     };
   };
-  withdrawAllTokens = (_funds?: Coin[]): MsgExecuteContractEncodeObject => {
+  withdrawAllTokens = ({
+    assetRecipient
+  }: {
+    assetRecipient?: string;
+  }, _funds?: Coin[]): MsgExecuteContractEncodeObject => {
     return {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
       value: MsgExecuteContract.fromPartial({
         sender: this.sender,
         contract: this.contractAddress,
         msg: toUtf8(JSON.stringify({
-          withdraw_all_tokens: {}
+          withdraw_all_tokens: {
+            asset_recipient: assetRecipient
+          }
         })),
         funds: _funds
       })

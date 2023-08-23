@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { StdFee } from "@cosmjs/amino";
-import { BondingCurve, Uint128, Decimal, PairType, InstantiateMsg, PairConfigForString, PairImmutableForString, ExecuteMsg, Binary, Cw721ReceiveMsg, Coin, QueryMsg, QueryBoundForString, QueryOptionsForString, Addr, NftDepositsResponse, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment } from "./InfinityPair.types";
+import { BondingCurve, Uint128, Decimal, PairType, InstantiateMsg, PairConfigForString, PairImmutableForString, ExecuteMsg, Binary, Cw721ReceiveMsg, Coin, QueryMsg, QueryBoundForString, QueryOptionsForString, QuotesResponse, Addr, NftDepositsResponse, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment } from "./InfinityPair.types";
 export interface InfinityPairReadOnlyInterface {
   contractAddress: string;
   pair: () => Promise<Pair>;
@@ -15,6 +15,16 @@ export interface InfinityPairReadOnlyInterface {
   }: {
     queryOptions?: QueryOptionsForString;
   }) => Promise<NftDepositsResponse>;
+  sellToPairQuotes: ({
+    limit
+  }: {
+    limit: number;
+  }) => Promise<QuotesResponse>;
+  buyFromPairQuotes: ({
+    limit
+  }: {
+    limit: number;
+  }) => Promise<QuotesResponse>;
 }
 export class InfinityPairQueryClient implements InfinityPairReadOnlyInterface {
   client: CosmWasmClient;
@@ -25,6 +35,8 @@ export class InfinityPairQueryClient implements InfinityPairReadOnlyInterface {
     this.contractAddress = contractAddress;
     this.pair = this.pair.bind(this);
     this.nftDeposits = this.nftDeposits.bind(this);
+    this.sellToPairQuotes = this.sellToPairQuotes.bind(this);
+    this.buyFromPairQuotes = this.buyFromPairQuotes.bind(this);
   }
 
   pair = async (): Promise<Pair> => {
@@ -43,6 +55,28 @@ export class InfinityPairQueryClient implements InfinityPairReadOnlyInterface {
       }
     });
   };
+  sellToPairQuotes = async ({
+    limit
+  }: {
+    limit: number;
+  }): Promise<QuotesResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sell_to_pair_quotes: {
+        limit
+      }
+    });
+  };
+  buyFromPairQuotes = async ({
+    limit
+  }: {
+    limit: number;
+  }): Promise<QuotesResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      buy_from_pair_quotes: {
+        limit
+      }
+    });
+  };
 }
 export interface InfinityPairInterface extends InfinityPairReadOnlyInterface {
   contractAddress: string;
@@ -57,22 +91,36 @@ export interface InfinityPairInterface extends InfinityPairReadOnlyInterface {
     tokenId: string;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   withdrawNfts: ({
+    assetRecipient,
+    collection,
     tokenIds
   }: {
+    assetRecipient?: string;
+    collection: string;
     tokenIds: string[];
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   withdrawAnyNfts: ({
+    assetRecipient,
+    collection,
     limit
   }: {
+    assetRecipient?: string;
+    collection: string;
     limit: number;
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   depositTokens: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   withdrawTokens: ({
-    amount
+    assetRecipient,
+    funds
   }: {
-    amount: Uint128;
+    assetRecipient?: string;
+    funds: Coin[];
   }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
-  withdrawAllTokens: (fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
+  withdrawAllTokens: ({
+    assetRecipient
+  }: {
+    assetRecipient?: string;
+  }, fee?: number | StdFee | "auto", memo?: string, _funds?: Coin[]) => Promise<ExecuteResult>;
   updatePairConfig: ({
     assetRecipient,
     bondingCurve,
@@ -146,23 +194,35 @@ export class InfinityPairClient extends InfinityPairQueryClient implements Infin
     }, fee, memo, _funds);
   };
   withdrawNfts = async ({
+    assetRecipient,
+    collection,
     tokenIds
   }: {
+    assetRecipient?: string;
+    collection: string;
     tokenIds: string[];
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       withdraw_nfts: {
+        asset_recipient: assetRecipient,
+        collection,
         token_ids: tokenIds
       }
     }, fee, memo, _funds);
   };
   withdrawAnyNfts = async ({
+    assetRecipient,
+    collection,
     limit
   }: {
+    assetRecipient?: string;
+    collection: string;
     limit: number;
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       withdraw_any_nfts: {
+        asset_recipient: assetRecipient,
+        collection,
         limit
       }
     }, fee, memo, _funds);
@@ -173,19 +233,28 @@ export class InfinityPairClient extends InfinityPairQueryClient implements Infin
     }, fee, memo, _funds);
   };
   withdrawTokens = async ({
-    amount
+    assetRecipient,
+    funds
   }: {
-    amount: Uint128;
+    assetRecipient?: string;
+    funds: Coin[];
   }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
       withdraw_tokens: {
-        amount
+        asset_recipient: assetRecipient,
+        funds
       }
     }, fee, memo, _funds);
   };
-  withdrawAllTokens = async (fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
+  withdrawAllTokens = async ({
+    assetRecipient
+  }: {
+    assetRecipient?: string;
+  }, fee: number | StdFee | "auto" = "auto", memo?: string, _funds?: Coin[]): Promise<ExecuteResult> => {
     return await this.client.execute(this.sender, this.contractAddress, {
-      withdraw_all_tokens: {}
+      withdraw_all_tokens: {
+        asset_recipient: assetRecipient
+      }
     }, fee, memo, _funds);
   };
   updatePairConfig = async ({

@@ -5,7 +5,7 @@
 */
 
 import { UseQueryOptions, useQuery } from "react-query";
-import { InstantiateMsg, ExecuteMsg, BondingCurve, Uint128, Decimal, PairType, PairConfigForString, PairImmutableForString, QueryMsg, Addr, Binary, NextPairResponse } from "./InfinityFactory.types";
+import { InstantiateMsg, ExecuteMsg, BondingCurve, Uint128, Decimal, PairType, PairConfigForString, PairImmutableForString, QueryMsg, QueryBoundForUint64, QueryOptionsForUint64, Addr, Binary, NextPairResponse, ArrayOfTupleOfUint64AndAddr } from "./InfinityFactory.types";
 import { InfinityFactoryQueryClient } from "./InfinityFactory.client";
 export const infinityFactoryQueryKeys = {
   contract: ([{
@@ -16,6 +16,10 @@ export const infinityFactoryQueryKeys = {
   }] as const),
   nextPair: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...infinityFactoryQueryKeys.address(contractAddress)[0],
     method: "next_pair",
+    args
+  }] as const),
+  pairsByOwner: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...infinityFactoryQueryKeys.address(contractAddress)[0],
+    method: "pairs_by_owner",
     args
   }] as const)
 };
@@ -31,11 +35,42 @@ export const infinityFactoryQueries = {
     }) : Promise.reject(new Error("Invalid client")),
     ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  pairsByOwner: <TData = ArrayOfTupleOfUint64AndAddr,>({
+    client,
+    args,
+    options
+  }: InfinityFactoryPairsByOwnerQuery<TData>): UseQueryOptions<ArrayOfTupleOfUint64AndAddr, Error, TData> => ({
+    queryKey: infinityFactoryQueryKeys.pairsByOwner(client?.contractAddress, args),
+    queryFn: () => client ? client.pairsByOwner({
+      owner: args.owner,
+      queryOptions: args.queryOptions
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   })
 };
 export interface InfinityFactoryReactQuery<TResponse, TData = TResponse> {
   client: InfinityFactoryQueryClient | undefined;
   options?: UseQueryOptions<TResponse, Error, TData>;
+}
+export interface InfinityFactoryPairsByOwnerQuery<TData> extends InfinityFactoryReactQuery<ArrayOfTupleOfUint64AndAddr, TData> {
+  args: {
+    owner: string;
+    queryOptions?: QueryOptions_for_uint64;
+  };
+}
+export function useInfinityFactoryPairsByOwnerQuery<TData = ArrayOfTupleOfUint64AndAddr>({
+  client,
+  args,
+  options
+}: InfinityFactoryPairsByOwnerQuery<TData>) {
+  return useQuery<ArrayOfTupleOfUint64AndAddr, Error, TData>(infinityFactoryQueryKeys.pairsByOwner(client?.contractAddress, args), () => client ? client.pairsByOwner({
+    owner: args.owner,
+    queryOptions: args.queryOptions
+  }) : Promise.reject(new Error("Invalid client")), { ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  });
 }
 export interface InfinityFactoryNextPairQuery<TData> extends InfinityFactoryReactQuery<NextPairResponse, TData> {
   args: {
