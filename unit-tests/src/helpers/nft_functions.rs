@@ -72,19 +72,19 @@ pub fn _approve_all(
     assert!(res.is_ok());
 }
 
-pub fn _transfer(
+pub fn transfer(
     router: &mut StargazeApp,
     creator: &Addr,
     recipient: &Addr,
     collection: &Addr,
-    token_id: u32,
+    token_id: &String,
 ) {
     let transfer_msg: Sg721ExecuteMsg<Empty, Empty> = Sg721ExecuteMsg::TransferNft {
         recipient: recipient.to_string(),
         token_id: token_id.to_string(),
     };
-    let res = router.execute_contract(creator.clone(), collection.clone(), &transfer_msg, &[]);
-    assert!(res.is_ok());
+    let response = router.execute_contract(creator.clone(), collection.clone(), &transfer_msg, &[]);
+    assert!(response.is_ok());
 }
 
 pub fn _burn(router: &mut StargazeApp, creator: &Addr, collection: &Addr, token_id: u32) {
