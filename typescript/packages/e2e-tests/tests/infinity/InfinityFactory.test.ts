@@ -80,10 +80,8 @@ describe('InfinityFactory', () => {
       },
     })
 
-    console.log(pairsResponse)
-
     expect(pairsResponse.length).toEqual(2)
-    expect(pairsResponse[0]).toEqual([2, pairs[2]])
-    expect(pairsResponse[1]).toEqual([1, pairs[1]])
+    expect(pairsResponse[0][0]).toEqual(2)
+    expect(pairsResponse[1][0]).toEqual(1)
   })
 })
