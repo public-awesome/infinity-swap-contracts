@@ -1,25 +1,17 @@
 import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate'
-import { denom } from '../../configs/chain_config.json'
 import Context, { CONTRACT_MAP } from '../setup/context'
 import { getQueryClient } from '../utils/client'
 import { createPair } from '../utils/infinity'
-import { createMinter, mintNfts } from '../utils/nft'
+import { createMinter } from '../utils/nft'
 import { contracts } from '@stargazezone/infinity-types'
 import { GlobalConfigForAddr } from '@stargazezone/infinity-types/lib/codegen/InfinityGlobal.types'
-import { InfinityRouterClient } from '@stargazezone/infinity-types/lib/codegen/InfinityRouter.client'
 import _ from 'lodash'
 
 const { InfinityGlobalQueryClient } = contracts.InfinityGlobal
 const { InfinityFactoryQueryClient } = contracts.InfinityFactory
-const { InfinityPairQueryClient } = contracts.InfinityPair
-const { InfinityRouterQueryClient } = contracts.InfinityRouter
 
 describe('InfinityFactory', () => {
-  const creatorName = 'user1'
   const liquidityProviderName = 'user2'
-  const lpAssetRecipientName = 'user3'
-  const swapperName = 'user4'
-  const swapperAssetRecipient = 'user5'
 
   let context: Context
   let queryClient: CosmWasmClient
@@ -45,6 +37,7 @@ describe('InfinityFactory', () => {
     // Create pairs
     let numPairs = 4
     let pairs = []
+
     for (let i = 0; i < numPairs; i++) {
       let pair = await createPair(
         context,
@@ -71,8 +64,6 @@ describe('InfinityFactory', () => {
           },
         },
         collectionAddress,
-        0,
-        { denom, amount: '0' },
       )
       pairs.push(pair)
     }
@@ -88,6 +79,8 @@ describe('InfinityFactory', () => {
         min: null,
       },
     })
+
+    console.log(pairsResponse)
 
     expect(pairsResponse.length).toEqual(2)
     expect(pairsResponse[0]).toEqual([2, pairs[2]])

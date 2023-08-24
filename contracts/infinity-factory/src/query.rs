@@ -84,16 +84,16 @@ pub fn query_pairs_by_owner(
         num_pairs - 1,
     );
 
-    let (start, end): (u64, u64) = match order {
-        Order::Ascending => (min_index, min(min_index + limit as u64, max_index)),
-        Order::Descending => (max_index, max(max_index - limit as u64, min_index)),
+    let range: Box<dyn Iterator<Item = u64>> = match order {
+        Order::Ascending => Box::new(min_index..min(min_index + limit as u64, max_index)),
+        Order::Descending => Box::new((max(max_index - limit as u64, min_index)..max_index).rev()),
     };
 
     let mut retval: Vec<(u64, Addr)> = vec![];
 
     let code_id = deps.querier.query_wasm_contract_info(&env.contract.address)?.code_id;
 
-    for idx in start..end {
+    for idx in range {
         let (pair, _) = generate_instantiate_2_addr(deps, &env, &owner, idx, code_id).unwrap();
         retval.push((idx, pair));
     }

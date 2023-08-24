@@ -19,14 +19,12 @@ export const createPair = async (
   liquidityProviderName: string,
   createPairMsg: InfinityFactoryExecuteMsg,
   collectionAddress: string,
-  numNfts: number,
-  depositTokens: { denom: string; amount: string },
+  depositNfts?: number,
+  depositTokens?: { denom: string; amount: string },
 ): Promise<string> => {
   const liquidityProvider = context.getTestUser(liquidityProviderName)
 
   const queryClient = await getQueryClient()
-
-  let tokenIds = await mintNfts(context, globalConfig, numNfts, liquidityProvider)
 
   let infinityFactoryQueryClient = new InfinityFactoryQueryClient(queryClient, globalConfig.infinity_factory)
 
@@ -45,7 +43,7 @@ export const createPair = async (
     }),
   })
 
-  if (depositTokens.amount !== '0') {
+  if (depositTokens) {
     // Deposit Tokens
     let depositTokensMsg: InfinityPairExecuteMsg = {
       deposit_tokens: {},
@@ -63,24 +61,27 @@ export const createPair = async (
   }
 
   // Deposit NFTs
-  _.forEach(tokenIds, (tokenId) => {
-    let depostNftsMsg = {
-      send_nft: {
-        contract: pairAddress,
-        token_id: tokenId,
-        msg: '',
-      },
-    }
-    encodedMessages.push({
-      typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
-      value: MsgExecuteContract.fromPartial({
-        sender: liquidityProvider.address,
-        contract: collectionAddress,
-        msg: toUtf8(JSON.stringify(depostNftsMsg)),
-        funds: [],
-      }),
+  if (depositNfts) {
+    let tokenIds = await mintNfts(context, globalConfig, depositNfts, liquidityProvider)
+    _.forEach(tokenIds, (tokenId) => {
+      let depostNftsMsg = {
+        send_nft: {
+          contract: pairAddress,
+          token_id: tokenId,
+          msg: '',
+        },
+      }
+      encodedMessages.push({
+        typeUrl: '/cosmwasm.wasm.v1.MsgExecuteContract',
+        value: MsgExecuteContract.fromPartial({
+          sender: liquidityProvider.address,
+          contract: collectionAddress,
+          msg: toUtf8(JSON.stringify(depostNftsMsg)),
+          funds: [],
+        }),
+      })
     })
-  })
+  }
 
   await liquidityProvider.client.signAndBroadcast(liquidityProvider.address, encodedMessages, 'auto')
 
