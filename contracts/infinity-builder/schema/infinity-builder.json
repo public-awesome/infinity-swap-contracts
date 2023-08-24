@@ -18,6 +18,12 @@
       "royalty_registry"
     ],
     "properties": {
+      "admin": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
       "code_ids": {
         "$ref": "#/definitions/CodeIds"
       },

@@ -47,6 +47,7 @@ pub struct InstantiateMsg {
     pub max_swap_fee_percent: Decimal,
     pub code_ids: CodeIds,
     pub min_prices: Vec<Coin>,
+    pub admin: Option<String>,
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -89,7 +90,7 @@ pub fn instantiate(
     let mut response = Response::new();
 
     response = response.add_message(WasmMsg::Instantiate2 {
-        admin: Some(env.contract.address.to_string()),
+        admin: msg.admin.clone(),
         code_id: msg.code_ids.infinity_global,
         label: "Infinity Global".to_string(),
         msg: to_binary(&InfinityGlobalInstantiateMsg {
@@ -113,7 +114,7 @@ pub fn instantiate(
     });
 
     response = response.add_message(WasmMsg::Instantiate2 {
-        admin: Some(env.contract.address.to_string()),
+        admin: msg.admin.clone(),
         code_id: msg.code_ids.infinity_factory,
         label: "Infinity Factory".to_string(),
         msg: to_binary(&InfinityFactoryInstantiateMsg {
@@ -124,7 +125,7 @@ pub fn instantiate(
     });
 
     response = response.add_message(WasmMsg::Instantiate2 {
-        admin: Some(env.contract.address.to_string()),
+        admin: msg.admin.clone(),
         code_id: msg.code_ids.infinity_index,
         label: "Infinity Index".to_string(),
         msg: to_binary(&InfinityIndexInstantiateMsg {
@@ -135,7 +136,7 @@ pub fn instantiate(
     });
 
     response = response.add_message(WasmMsg::Instantiate2 {
-        admin: Some(env.contract.address.to_string()),
+        admin: msg.admin.clone(),
         code_id: msg.code_ids.infinity_router,
         label: "Infinity Router".to_string(),
         msg: to_binary(&InfinityRouterInstantiateMsg {

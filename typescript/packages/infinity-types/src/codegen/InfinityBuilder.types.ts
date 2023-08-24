@@ -7,6 +7,7 @@
 export type Decimal = string;
 export type Uint128 = string;
 export interface InstantiateMsg {
+  admin?: string | null;
   code_ids: CodeIds;
   fair_burn: string;
   fair_burn_fee_percent: Decimal;
