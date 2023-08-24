@@ -62,8 +62,8 @@ dependencies = [
  "cw-storage-plus 0.16.0",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
- "cw721",
- "cw721-base",
+ "cw721 0.16.0",
+ "cw721-base 0.16.0",
  "schemars",
  "serde",
  "sg-std",
@@ -395,10 +395,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw-ownable"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "093dfb4520c48b5848274dd88ea99e280a04bc08729603341c7fb0d758c74321"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-address-like",
+ "cw-ownable-derive",
+ "cw-storage-plus 1.1.0",
+ "cw-utils 1.0.1",
+ "thiserror",
+]
+
+[[package]]
+name = "cw-ownable-derive"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1d3bf2e0f341bb6cc100d7d441d31cf713fbd3ce0c511f91e79f14b40a889af"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "cw-storage-macro"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec7a3de01064d249a0e7028b63f8168470dac4bcd0c5dc3710d17486f843d1a8"
+dependencies = [
+ "syn",
+]
+
+[[package]]
+name = "cw-storage-macro"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95547c3d8c4a099d66a07f8a2a77347cefd2582ae6482c8ebc9a871f3fd7aef7"
 dependencies = [
  "syn",
 ]
@@ -540,6 +575,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cw721"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3c4d286625ccadc957fe480dd3bdc54ada19e0e6b5b9325379db3130569e914"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-utils 1.0.1",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "cw721-base"
 version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -550,7 +598,26 @@ dependencies = [
  "cw-storage-plus 0.16.0",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
- "cw721",
+ "cw721 0.16.0",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "cw721-base"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da518d9f68bfda7d972cbaca2e8fcf04651d0edc3de72b04ae2bcd9289c81614"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-ownable",
+ "cw-storage-plus 1.1.0",
+ "cw-utils 1.0.1",
+ "cw2 1.1.0",
+ "cw721 0.18.0",
+ "cw721-base 0.16.0",
  "schemars",
  "serde",
  "thiserror",
@@ -772,10 +839,10 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-macro",
+ "cw-storage-macro 1.1.0",
  "cw-storage-plus 1.1.0",
  "cw-utils 0.16.0",
- "cw2 0.16.0",
+ "cw2 1.1.0",
  "infinity-factory",
  "infinity-global",
  "infinity-index",
@@ -793,10 +860,10 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-macro",
+ "cw-storage-macro 1.1.0",
  "cw-storage-plus 1.1.0",
  "cw-utils 0.16.0",
- "cw2 0.16.0",
+ "cw2 1.1.0",
  "infinity-global",
  "infinity-pair",
  "infinity-shared",
@@ -814,7 +881,7 @@ dependencies = [
  "cosmwasm-std",
  "cw-address-like",
  "cw-storage-plus 1.1.0",
- "cw2 0.16.0",
+ "cw2 1.1.0",
  "sg-std",
  "thiserror",
 ]
@@ -825,9 +892,9 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-storage-macro",
+ "cw-storage-macro 1.1.0",
  "cw-storage-plus 1.1.0",
- "cw2 0.16.0",
+ "cw2 1.1.0",
  "infinity-global",
  "infinity-shared",
  "sg-index-query",
@@ -845,9 +912,9 @@ dependencies = [
  "cw-address-like",
  "cw-storage-plus 1.1.0",
  "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw721",
- "cw721-base",
+ "cw2 1.1.0",
+ "cw721 0.18.0",
+ "cw721-base 0.18.0",
  "infinity-global",
  "infinity-index",
  "infinity-shared",
@@ -867,12 +934,12 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-address-like",
- "cw-storage-macro",
+ "cw-storage-macro 1.1.0",
  "cw-storage-plus 1.1.0",
  "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw721",
- "cw721-base",
+ "cw2 1.1.0",
+ "cw721 0.18.0",
+ "cw721-base 0.18.0",
  "infinity-global",
  "infinity-index",
  "infinity-pair",
@@ -1342,8 +1409,8 @@ dependencies = [
  "cw-utils 0.16.0",
  "cw2 0.16.0",
  "cw20",
- "cw721",
- "cw721-base",
+ "cw721 0.16.0",
+ "cw721-base 0.16.0",
  "schemars",
  "semver",
  "serde",
@@ -1364,12 +1431,12 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
- "cw-storage-macro",
+ "cw-storage-macro 0.16.0",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
- "cw721",
- "cw721-base",
+ "cw721 0.16.0",
+ "cw721-base 0.16.0",
  "schemars",
  "serde",
  "sg-std",
@@ -1416,14 +1483,14 @@ dependencies = [
 
 [[package]]
 name = "sg-std"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba6b7bed04a43538e04005584fb95674f181b2eed8132e13887ca6ad86a62cde"
+checksum = "fc9b4ab6090f777940d3277632b1a3fff89f5a52191443a19da7cd99e3845041"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-utils 0.16.0",
- "cw721",
+ "cw721 0.16.0",
  "schemars",
  "serde",
  "thiserror",
@@ -1492,31 +1559,31 @@ dependencies = [
 
 [[package]]
 name = "sg721"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f284472b4f580af7b64ade14af42623581534512d8a681642d79cfbd0c3a254"
+checksum = "b37ea61753635e1de01a16947784ddd5ba8e256fa403be6246b2d88578914fb2"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-utils 0.16.0",
- "cw721-base",
+ "cw721-base 0.16.0",
  "serde",
  "thiserror",
 ]
 
 [[package]]
 name = "sg721-base"
-version = "2.3.0"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8f638b1d6db71e7e61c796e510833f09eb6a4e2a14aecd368636b90a7c7b8c7"
+checksum = "3b81900474a5a2a6cf25e70720d62a565abc56caa1fe3613cfd15157c63dfb89"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus 0.16.0",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
- "cw721",
- "cw721-base",
+ "cw721 0.16.0",
+ "cw721-base 0.16.0",
  "serde",
  "sg-std",
  "sg721",
@@ -1534,8 +1601,8 @@ dependencies = [
  "cosmwasm-std",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
- "cw721",
- "cw721-base",
+ "cw721 0.16.0",
+ "cw721-base 0.16.0",
  "schemars",
  "serde",
  "sg-std",
@@ -1688,8 +1755,8 @@ dependencies = [
  "cw-multi-test",
  "cw4",
  "cw4-group",
- "cw721",
- "cw721-base",
+ "cw721 0.16.0",
+ "cw721-base 0.16.0",
  "sg-controllers",
  "sg-eth-airdrop",
  "sg-multi-test",
@@ -1786,9 +1853,9 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus 1.1.0",
  "cw-utils 0.16.0",
- "cw2 0.16.0",
- "cw721",
- "cw721-base",
+ "cw2 1.1.0",
+ "cw721 0.18.0",
+ "cw721-base 0.18.0",
  "infinity-factory",
  "infinity-global",
  "infinity-index",
@@ -1861,8 +1928,8 @@ dependencies = [
  "cw-storage-plus 0.16.0",
  "cw-utils 0.16.0",
  "cw2 0.16.0",
- "cw721",
- "cw721-base",
+ "cw721 0.16.0",
+ "cw721-base 0.16.0",
  "rand_core 0.6.4",
  "rand_xoshiro",
  "schemars",
