@@ -10,6 +10,8 @@ authors     = ["Tasio tasiovictoria@ujulabs.com"]
 license     = "BUSL-1.1"
 
 [workspace.dependencies]
+infinity-shared = { path = "./packages/infinity-shared" }
+
 infinity-builder = { path = "./contracts/infinity-builder", features = [
     "library",
 ] }
@@ -24,7 +26,6 @@ infinity-pair = { path = "./contracts/infinity-pair", features = ["library"] }
 infinity-router = { path = "./contracts/infinity-router", features = [
     "library",
 ] }
-infinity-shared = { path = "./packages/infinity-shared" }
 
 stargaze-fair-burn        = { version = "1.0.4", features = ["library"] }
 stargaze-royalty-registry = { version = "0.3.0", features = ["library"] }
