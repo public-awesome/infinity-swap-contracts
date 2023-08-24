@@ -1,11 +1,10 @@
-use crate::helpers::generate_instantiate_2_addr;
+use crate::helpers::{generate_instantiate_2_addr, index_range_from_query_options};
 use crate::msg::{NextPairResponse, QueryMsg};
 use crate::state::{INFINITY_GLOBAL, SENDER_COUNTER};
 
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, Order, StdResult};
+use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdResult};
 use infinity_global::load_global_config;
-use sg_index_query::{QueryBound, QueryOptions, QueryOptionsInternal};
-use std::cmp::{max, min};
+use sg_index_query::QueryOptions;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -61,33 +60,7 @@ pub fn query_pairs_by_owner(
         return Ok(vec![]);
     }
 
-    let num_pairs = num_pairs_option.unwrap();
-
-    let QueryOptionsInternal {
-        limit,
-        order,
-        ..
-    } = query_options.unpack(&(|&offset| offset), None, None);
-
-    let qo_min = query_options.min.unwrap_or(QueryBound::Inclusive(0u64));
-    let min_index = match qo_min {
-        QueryBound::Inclusive(min_index) => min_index,
-        QueryBound::Exclusive(min_index) => min_index + 1,
-    };
-
-    let qo_max = query_options.max.unwrap_or(QueryBound::Inclusive(u64::MAX));
-    let max_index = min(
-        match qo_max {
-            QueryBound::Inclusive(max_index) => max_index,
-            QueryBound::Exclusive(max_index) => max_index - 1,
-        },
-        num_pairs - 1,
-    );
-
-    let range: Box<dyn Iterator<Item = u64>> = match order {
-        Order::Ascending => Box::new(min_index..min(min_index + limit as u64, max_index)),
-        Order::Descending => Box::new((max(max_index - limit as u64, min_index)..max_index).rev()),
-    };
+    let range = index_range_from_query_options(num_pairs_option.unwrap(), query_options);
 
     let mut retval: Vec<(u64, Addr)> = vec![];
 
