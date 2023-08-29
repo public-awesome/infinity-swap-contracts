@@ -5,30 +5,31 @@ MSG=$(cat <<EOF
     "marketplace": "stars18cszlvm6pze0x9sz32qnjq4vtd45xehqs8dq7cwy8yhq35wfnn3qgzs5gu",
     "pair_creation_fee": {
         "denom": "ustars",
-        "amount": "1000000"
+        "amount": "50000000"
     },
-    "fair_burn_fee_percent": "0.01",
+    "fair_burn_fee_percent": "0.005",
     "max_royalty_fee_percent": "0.05",
     "max_swap_fee_percent": "0.1",
     "code_ids": {
-        "infinity_factory": 2894,
-        "infinity_global": 2895,
-        "infinity_index": 2896,
-        "infinity_pair": 2897,
-        "infinity_router": 2898
+        "infinity_factory": 2905,
+        "infinity_global": 2906,
+        "infinity_index": 2907,
+        "infinity_pair": 2908,
+        "infinity_router": 2909
     },
     "min_prices":[
         {
             "denom": "ustars",
             "amount": "1000000"
         }
-    ]
+    ],
+    "admin": "stars19mmkdpvem2xvrddt8nukf5kfpjwfslrsu7ugt5"
 }
 
 EOF
 )
 
-CODE_ID=2893
+CODE_ID=2904
 
 LABEL="Infinity Builder"
 
