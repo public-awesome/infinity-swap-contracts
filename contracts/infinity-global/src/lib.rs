@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    coin, to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo, QuerierWrapper,
-    StdError, StdResult, Uint128,
+    coin, ensure, to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo,
+    QuerierWrapper, StdError, StdResult, Uint128,
 };
 use cosmwasm_std::{Api, Coin, Decimal};
 use cw2::set_contract_version;
@@ -304,4 +304,35 @@ pub fn sudo_remove_min_prices(deps: DepsMut, denoms: Vec<String>) -> Result<Resp
     }
 
     Ok(Response::new())
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+#[allow(clippy::cmp_owned)]
+pub fn migrate(mut deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, StdError> {
+    let prev_contract_version = cw2::get_contract_version(deps.storage)?;
+
+    let valid_contract_names = vec![CONTRACT_NAME.to_string()];
+    ensure!(
+        valid_contract_names.contains(&prev_contract_version.contract),
+        StdError::generic_err("Invalid contract name for migration")
+    );
+
+    ensure!(
+        prev_contract_version.version < CONTRACT_VERSION.to_string(),
+        StdError::generic_err("Must upgrade contract version")
+    );
+
+    sudo(deps.branch(), env, msg)?;
+
+    cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    let response = Response::new().add_event(
+        Event::new("migrate")
+            .add_attribute("from_name", prev_contract_version.contract)
+            .add_attribute("from_version", prev_contract_version.version)
+            .add_attribute("to_name", CONTRACT_NAME)
+            .add_attribute("to_version", CONTRACT_VERSION),
+    );
+
+    Ok(response)
 }
