@@ -5,7 +5,7 @@
 */
 
 import { UseQueryOptions, useQuery } from "react-query";
-import { InstantiateMsg, ExecuteMsg, NftForTokensSource, Uint128, TokensForNftSource, SellOrder, SwapParamsForString, QueryMsg, Addr, ArrayOfNftForTokensQuote, NftForTokensQuote, ArrayOfTokensForNftQuote, TokensForNftQuote } from "./InfinityRouter.types";
+import { InstantiateMsg, ExecuteMsg, NftForTokensSource, Uint128, TokensForNftSource, SellOrder, SwapParamsForString, QueryMsg, Addr, BondingCurve, Decimal, PairType, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment, ArrayOfNftForTokensQuote, NftForTokensQuote, QuotesResponse, ArrayOfTokensForNftQuote, TokensForNftQuote } from "./InfinityRouter.types";
 import { InfinityRouterQueryClient } from "./InfinityRouter.client";
 export const infinityRouterQueryKeys = {
   contract: ([{
@@ -20,6 +20,14 @@ export const infinityRouterQueryKeys = {
   }] as const),
   tokensForNfts: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...infinityRouterQueryKeys.address(contractAddress)[0],
     method: "tokens_for_nfts",
+    args
+  }] as const),
+  simSellToPairQuotes: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...infinityRouterQueryKeys.address(contractAddress)[0],
+    method: "sim_sell_to_pair_quotes",
+    args
+  }] as const),
+  simBuyFromPairQuotes: (contractAddress: string | undefined, args?: Record<string, unknown>) => ([{ ...infinityRouterQueryKeys.address(contractAddress)[0],
+    method: "sim_buy_from_pair_quotes",
     args
   }] as const)
 };
@@ -53,11 +61,73 @@ export const infinityRouterQueries = {
     }) : Promise.reject(new Error("Invalid client")),
     ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  simSellToPairQuotes: <TData = QuotesResponse,>({
+    client,
+    args,
+    options
+  }: InfinityRouterSimSellToPairQuotesQuery<TData>): UseQueryOptions<QuotesResponse, Error, TData> => ({
+    queryKey: infinityRouterQueryKeys.simSellToPairQuotes(client?.contractAddress, args),
+    queryFn: () => client ? client.simSellToPairQuotes({
+      limit: args.limit,
+      pair: args.pair
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  }),
+  simBuyFromPairQuotes: <TData = QuotesResponse,>({
+    client,
+    args,
+    options
+  }: InfinityRouterSimBuyFromPairQuotesQuery<TData>): UseQueryOptions<QuotesResponse, Error, TData> => ({
+    queryKey: infinityRouterQueryKeys.simBuyFromPairQuotes(client?.contractAddress, args),
+    queryFn: () => client ? client.simBuyFromPairQuotes({
+      limit: args.limit,
+      pair: args.pair
+    }) : Promise.reject(new Error("Invalid client")),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
   })
 };
 export interface InfinityRouterReactQuery<TResponse, TData = TResponse> {
   client: InfinityRouterQueryClient | undefined;
   options?: UseQueryOptions<TResponse, Error, TData>;
+}
+export interface InfinityRouterSimBuyFromPairQuotesQuery<TData> extends InfinityRouterReactQuery<QuotesResponse, TData> {
+  args: {
+    limit: number;
+    pair: Pair;
+  };
+}
+export function useInfinityRouterSimBuyFromPairQuotesQuery<TData = QuotesResponse>({
+  client,
+  args,
+  options
+}: InfinityRouterSimBuyFromPairQuotesQuery<TData>) {
+  return useQuery<QuotesResponse, Error, TData>(infinityRouterQueryKeys.simBuyFromPairQuotes(client?.contractAddress, args), () => client ? client.simBuyFromPairQuotes({
+    limit: args.limit,
+    pair: args.pair
+  }) : Promise.reject(new Error("Invalid client")), { ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  });
+}
+export interface InfinityRouterSimSellToPairQuotesQuery<TData> extends InfinityRouterReactQuery<QuotesResponse, TData> {
+  args: {
+    limit: number;
+    pair: Pair;
+  };
+}
+export function useInfinityRouterSimSellToPairQuotesQuery<TData = QuotesResponse>({
+  client,
+  args,
+  options
+}: InfinityRouterSimSellToPairQuotesQuery<TData>) {
+  return useQuery<QuotesResponse, Error, TData>(infinityRouterQueryKeys.simSellToPairQuotes(client?.contractAddress, args), () => client ? client.simSellToPairQuotes({
+    limit: args.limit,
+    pair: args.pair
+  }) : Promise.reject(new Error("Invalid client")), { ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true)
+  });
 }
 export interface InfinityRouterTokensForNftsQuery<TData> extends InfinityRouterReactQuery<ArrayOfTokensForNftQuote, TData> {
   args: {
