@@ -9,6 +9,7 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Api, Uint128};
 use cw_address_like::AddressLike;
 use cw_utils::maybe_addr;
+use infinity_pair::pair::Pair;
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -76,4 +77,20 @@ pub enum QueryMsg {
         limit: u32,
         filter_sources: Option<Vec<TokensForNftSource>>,
     },
+    #[returns(QuotesResponse)]
+    SimSellToPairQuotes {
+        pair: Pair,
+        limit: u32,
+    },
+    #[returns(QuotesResponse)]
+    SimBuyFromPairQuotes {
+        pair: Pair,
+        limit: u32,
+    },
+}
+
+#[cw_serde]
+pub struct QuotesResponse {
+    pub denom: String,
+    pub quotes: Vec<Uint128>,
 }
