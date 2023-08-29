@@ -1,11 +1,13 @@
 use crate::error::ContractError;
+use crate::events::PairEvent;
 use crate::helpers::{load_pair, load_payout_context, only_active, only_pair_owner};
 use crate::msg::ExecuteMsg;
 use crate::pair::Pair;
 use crate::state::{BondingCurve, PairType, TokenId, INFINITY_GLOBAL, NFT_DEPOSITS};
 
 use cosmwasm_std::{
-    coin, ensure, ensure_eq, has_coins, Addr, Coin, DepsMut, Env, MessageInfo, Order, StdResult,
+    attr, coin, ensure, ensure_eq, has_coins, Addr, Coin, DepsMut, Env, Event, MessageInfo, Order,
+    StdResult,
 };
 use cw721::{Cw721QueryMsg, TokensResponse};
 use cw_utils::{maybe_addr, must_pay, nonpayable};
@@ -195,9 +197,14 @@ pub fn execute_receive_nft(
     );
 
     pair.internal.total_nfts += 1u64;
-    NFT_DEPOSITS.save(deps.storage, token_id, &true)?;
+    NFT_DEPOSITS.save(deps.storage, token_id.clone(), &true)?;
 
-    Ok((pair, Response::new()))
+    let response = Response::new().add_event(Event::new("deposit-nft").add_attributes(vec![
+        attr("collection", collection.to_string()),
+        attr("token_id", token_id.to_string()),
+    ]));
+
+    Ok((pair, response))
 }
 
 pub fn execute_withdraw_nfts(
@@ -226,6 +233,11 @@ pub fn execute_withdraw_nfts(
             pair.internal.total_nfts -= 1u64;
             NFT_DEPOSITS.remove(deps.storage, token_id.to_string());
         }
+
+        response = response.add_event(Event::new("withdraw-nft").add_attributes(vec![
+            attr("collection", collection.to_string()),
+            attr("token_id", token_id.to_string()),
+        ]));
     }
 
     Ok((pair, response))
@@ -279,9 +291,15 @@ pub fn execute_withdraw_tokens(
         }
     }
 
+    let asset_recipient = address_or(asset_recipient.as_ref(), &pair.asset_recipient());
+
     let mut response = Response::new();
 
-    let asset_recipient = address_or(asset_recipient.as_ref(), &pair.asset_recipient());
+    for fund in &funds {
+        response = response.add_event(
+            Event::new("withdraw-tokens").add_attributes(vec![attr("funds", fund.to_string())]),
+        );
+    }
 
     response = transfer_coins(funds, &asset_recipient, response);
 
@@ -328,7 +346,15 @@ pub fn execute_update_pair_config(
         pair.config.asset_recipient = Some(asset_recipient);
     }
 
-    Ok((pair, Response::new()))
+    let response = Response::new().add_event(
+        PairEvent {
+            ty: "update-pair",
+            pair: &pair,
+        }
+        .into(),
+    );
+
+    Ok((pair, response))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -346,6 +372,8 @@ pub fn execute_swap_nft_for_tokens(
         .sell_to_pair_quote_summary
         .as_ref()
         .ok_or(ContractError::InvalidPair("pair cannot produce quote".to_string()))?;
+
+    let quote_total = quote_summary.total();
 
     let seller_coin = coin(quote_summary.seller_amount.u128(), &pair.immutable.denom);
     ensure!(
@@ -371,6 +399,11 @@ pub fn execute_swap_nft_for_tokens(
     // Update pair state
     pair.swap_nft_for_tokens();
 
+    response = response.add_event(Event::new("swap-nft-for-tokens").add_attributes(vec![
+        attr("token_id", token_id.to_string()),
+        attr("sale_price", coin(quote_total.u128(), pair.immutable.denom.to_string()).to_string()),
+    ]));
+
     Ok((pair, response))
 }
 
@@ -390,9 +423,11 @@ pub fn execute_swap_tokens_for_specific_nft(
         .as_ref()
         .ok_or(ContractError::InvalidPair("pair cannot produce quote".to_string()))?;
 
+    let quote_total = quote_summary.total();
+
     ensure_eq!(
         received_amount,
-        quote_summary.total(),
+        quote_total,
         InfinityError::InvalidInput("received funds does not equal quote".to_string())
     );
 
@@ -419,6 +454,11 @@ pub fn execute_swap_tokens_for_specific_nft(
     // Update pair state
     pair.total_tokens -= received_amount;
     pair.swap_tokens_for_nft();
+
+    response = response.add_event(Event::new("swap-tokens-for-nft").add_attributes(vec![
+        attr("token_id", token_id.to_string()),
+        attr("sale_price", coin(quote_total.u128(), pair.immutable.denom.to_string()).to_string()),
+    ]));
 
     Ok((pair, response))
 }

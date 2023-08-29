@@ -1,3 +1,4 @@
+use crate::events::PairEvent;
 use crate::helpers::PayoutContext;
 use crate::msg::InstantiateMsg;
 use crate::pair::Pair;
@@ -83,6 +84,14 @@ pub fn instantiate(
         .add_attribute("action", "instantiate")
         .add_attribute("contract_name", CONTRACT_NAME)
         .add_attribute("contract_version", CONTRACT_VERSION);
+
+    response = response.add_event(
+        PairEvent {
+            ty: "create-pair",
+            pair: &pair,
+        }
+        .into(),
+    );
 
     Ok(response)
 }
