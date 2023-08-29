@@ -16,7 +16,7 @@ impl<'a> From<PairEvent<'a>> for Event {
     fn from(pe: PairEvent) -> Self {
         let mut event: Event = pe.pair.into();
         event.ty = pe.ty.to_string();
-        return event;
+        event
     }
 }
 

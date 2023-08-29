@@ -201,7 +201,7 @@ pub fn execute_receive_nft(
 
     let response = Response::new().add_event(Event::new("deposit-nft").add_attributes(vec![
         attr("collection", collection.to_string()),
-        attr("token_id", token_id.to_string()),
+        attr("token_id", token_id),
     ]));
 
     Ok((pair, response))
@@ -400,7 +400,7 @@ pub fn execute_swap_nft_for_tokens(
     pair.swap_nft_for_tokens();
 
     response = response.add_event(Event::new("swap-nft-for-tokens").add_attributes(vec![
-        attr("token_id", token_id.to_string()),
+        attr("token_id", token_id),
         attr("sale_price", coin(quote_total.u128(), pair.immutable.denom.to_string()).to_string()),
     ]));
 
@@ -456,7 +456,7 @@ pub fn execute_swap_tokens_for_specific_nft(
     pair.swap_tokens_for_nft();
 
     response = response.add_event(Event::new("swap-tokens-for-nft").add_attributes(vec![
-        attr("token_id", token_id.to_string()),
+        attr("token_id", token_id),
         attr("sale_price", coin(quote_total.u128(), pair.immutable.denom.to_string()).to_string()),
     ]));
 
