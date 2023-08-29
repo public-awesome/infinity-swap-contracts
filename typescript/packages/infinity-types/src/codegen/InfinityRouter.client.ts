@@ -6,7 +6,7 @@
 
 import { CosmWasmClient, SigningCosmWasmClient, ExecuteResult } from "@cosmjs/cosmwasm-stargate";
 import { Coin, StdFee } from "@cosmjs/amino";
-import { InstantiateMsg, ExecuteMsg, NftForTokensSource, Uint128, TokensForNftSource, SellOrder, SwapParamsForString, QueryMsg, Addr, ArrayOfNftForTokensQuote, NftForTokensQuote, ArrayOfTokensForNftQuote, TokensForNftQuote } from "./InfinityRouter.types";
+import { InstantiateMsg, ExecuteMsg, NftForTokensSource, Uint128, TokensForNftSource, SellOrder, SwapParamsForString, QueryMsg, Addr, BondingCurve, Decimal, PairType, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment, ArrayOfNftForTokensQuote, NftForTokensQuote, QuotesResponse, ArrayOfTokensForNftQuote, TokensForNftQuote } from "./InfinityRouter.types";
 export interface InfinityRouterReadOnlyInterface {
   contractAddress: string;
   nftsForTokens: ({
@@ -31,6 +31,20 @@ export interface InfinityRouterReadOnlyInterface {
     filterSources?: TokensForNftSource[];
     limit: number;
   }) => Promise<ArrayOfTokensForNftQuote>;
+  simSellToPairQuotes: ({
+    limit,
+    pair
+  }: {
+    limit: number;
+    pair: Pair;
+  }) => Promise<QuotesResponse>;
+  simBuyFromPairQuotes: ({
+    limit,
+    pair
+  }: {
+    limit: number;
+    pair: Pair;
+  }) => Promise<QuotesResponse>;
 }
 export class InfinityRouterQueryClient implements InfinityRouterReadOnlyInterface {
   client: CosmWasmClient;
@@ -41,6 +55,8 @@ export class InfinityRouterQueryClient implements InfinityRouterReadOnlyInterfac
     this.contractAddress = contractAddress;
     this.nftsForTokens = this.nftsForTokens.bind(this);
     this.tokensForNfts = this.tokensForNfts.bind(this);
+    this.simSellToPairQuotes = this.simSellToPairQuotes.bind(this);
+    this.simBuyFromPairQuotes = this.simBuyFromPairQuotes.bind(this);
   }
 
   nftsForTokens = async ({
@@ -80,6 +96,34 @@ export class InfinityRouterQueryClient implements InfinityRouterReadOnlyInterfac
         denom,
         filter_sources: filterSources,
         limit
+      }
+    });
+  };
+  simSellToPairQuotes = async ({
+    limit,
+    pair
+  }: {
+    limit: number;
+    pair: Pair;
+  }): Promise<QuotesResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_sell_to_pair_quotes: {
+        limit,
+        pair
+      }
+    });
+  };
+  simBuyFromPairQuotes = async ({
+    limit,
+    pair
+  }: {
+    limit: number;
+    pair: Pair;
+  }): Promise<QuotesResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_buy_from_pair_quotes: {
+        limit,
+        pair
       }
     });
   };
