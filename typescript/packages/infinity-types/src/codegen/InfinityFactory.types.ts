@@ -58,19 +58,61 @@ export type QueryMsg = {
     owner: string;
     query_options?: QueryOptionsForUint64 | null;
   };
+} | {
+  sim_sell_to_pair_quotes: {
+    limit: number;
+    pair: Pair;
+  };
+} | {
+  sim_buy_from_pair_quotes: {
+    limit: number;
+    pair: Pair;
+  };
 };
 export type QueryBoundForUint64 = {
   inclusive: number;
 } | {
   exclusive: number;
 };
+export type Addr = string;
 export interface QueryOptionsForUint64 {
   descending?: boolean | null;
   limit?: number | null;
   max?: QueryBoundForUint64 | null;
   min?: QueryBoundForUint64 | null;
 }
-export type Addr = string;
+export interface Pair {
+  config: PairConfigForAddr;
+  immutable: PairImmutableForAddr;
+  internal: PairInternal;
+  total_tokens: Uint128;
+}
+export interface PairConfigForAddr {
+  asset_recipient?: Addr | null;
+  bonding_curve: BondingCurve;
+  is_active: boolean;
+  pair_type: PairType;
+}
+export interface PairImmutableForAddr {
+  collection: Addr;
+  denom: string;
+  owner: Addr;
+}
+export interface PairInternal {
+  buy_from_pair_quote_summary?: QuoteSummary | null;
+  sell_to_pair_quote_summary?: QuoteSummary | null;
+  total_nfts: number;
+}
+export interface QuoteSummary {
+  fair_burn: TokenPayment;
+  royalty?: TokenPayment | null;
+  seller_amount: Uint128;
+  swap?: TokenPayment | null;
+}
+export interface TokenPayment {
+  amount: Uint128;
+  recipient: Addr;
+}
 export type Binary = string;
 export interface NextPairResponse {
   counter: number;
@@ -79,3 +121,7 @@ export interface NextPairResponse {
   sender: Addr;
 }
 export type ArrayOfTupleOfUint64AndAddr = [number, Addr][];
+export interface QuotesResponse {
+  denom: string;
+  quotes: Uint128[];
+}

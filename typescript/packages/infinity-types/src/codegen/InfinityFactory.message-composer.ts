@@ -8,7 +8,7 @@ import { Coin } from "@cosmjs/amino";
 import { MsgExecuteContractEncodeObject } from "@cosmjs/cosmwasm-stargate";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { toUtf8 } from "@cosmjs/encoding";
-import { InstantiateMsg, ExecuteMsg, BondingCurve, Uint128, Decimal, PairType, PairConfigForString, PairImmutableForString, QueryMsg, QueryBoundForUint64, QueryOptionsForUint64, Addr, Binary, NextPairResponse, ArrayOfTupleOfUint64AndAddr } from "./InfinityFactory.types";
+import { InstantiateMsg, ExecuteMsg, BondingCurve, Uint128, Decimal, PairType, PairConfigForString, PairImmutableForString, QueryMsg, QueryBoundForUint64, Addr, QueryOptionsForUint64, Pair, PairConfigForAddr, PairImmutableForAddr, PairInternal, QuoteSummary, TokenPayment, Binary, NextPairResponse, ArrayOfTupleOfUint64AndAddr, QuotesResponse } from "./InfinityFactory.types";
 export interface InfinityFactoryMessage {
   contractAddress: string;
   sender: string;

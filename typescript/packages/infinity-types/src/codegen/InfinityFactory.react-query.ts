@@ -13,12 +13,19 @@ import {
   ExecuteMsg,
   InstantiateMsg,
   NextPairResponse,
+  Pair,
+  PairConfigForAddr,
   PairConfigForString,
+  PairImmutableForAddr,
   PairImmutableForString,
+  PairInternal,
   PairType,
   QueryBoundForUint64,
   QueryMsg,
   QueryOptionsForUint64,
+  QuoteSummary,
+  QuotesResponse,
+  TokenPayment,
   Uint128,
 } from './InfinityFactory.types'
 import { UseQueryOptions, useQuery } from 'react-query'
@@ -35,6 +42,10 @@ export const infinityFactoryQueryKeys = {
     [{ ...infinityFactoryQueryKeys.address(contractAddress)[0], method: 'next_pair', args }] as const,
   pairsByOwner: (contractAddress: string | undefined, args?: Record<string, unknown>) =>
     [{ ...infinityFactoryQueryKeys.address(contractAddress)[0], method: 'pairs_by_owner', args }] as const,
+  simSellToPairQuotes: (contractAddress: string | undefined, args?: Record<string, unknown>) =>
+    [{ ...infinityFactoryQueryKeys.address(contractAddress)[0], method: 'sim_sell_to_pair_quotes', args }] as const,
+  simBuyFromPairQuotes: (contractAddress: string | undefined, args?: Record<string, unknown>) =>
+    [{ ...infinityFactoryQueryKeys.address(contractAddress)[0], method: 'sim_buy_from_pair_quotes', args }] as const,
 }
 export const infinityFactoryQueries = {
   nextPair: <TData = NextPairResponse>({
@@ -68,10 +79,90 @@ export const infinityFactoryQueries = {
     ...options,
     enabled: !!client && (options?.enabled != undefined ? options.enabled : true),
   }),
+  simSellToPairQuotes: <TData = QuotesResponse>({
+    client,
+    args,
+    options,
+  }: InfinityFactorySimSellToPairQuotesQuery<TData>): UseQueryOptions<QuotesResponse, Error, TData> => ({
+    queryKey: infinityFactoryQueryKeys.simSellToPairQuotes(client?.contractAddress, args),
+    queryFn: () =>
+      client
+        ? client.simSellToPairQuotes({
+            limit: args.limit,
+            pair: args.pair,
+          })
+        : Promise.reject(new Error('Invalid client')),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true),
+  }),
+  simBuyFromPairQuotes: <TData = QuotesResponse>({
+    client,
+    args,
+    options,
+  }: InfinityFactorySimBuyFromPairQuotesQuery<TData>): UseQueryOptions<QuotesResponse, Error, TData> => ({
+    queryKey: infinityFactoryQueryKeys.simBuyFromPairQuotes(client?.contractAddress, args),
+    queryFn: () =>
+      client
+        ? client.simBuyFromPairQuotes({
+            limit: args.limit,
+            pair: args.pair,
+          })
+        : Promise.reject(new Error('Invalid client')),
+    ...options,
+    enabled: !!client && (options?.enabled != undefined ? options.enabled : true),
+  }),
 }
 export interface InfinityFactoryReactQuery<TResponse, TData = TResponse> {
   client: InfinityFactoryQueryClient | undefined
   options?: UseQueryOptions<TResponse, Error, TData>
+}
+export interface InfinityFactorySimBuyFromPairQuotesQuery<TData>
+  extends InfinityFactoryReactQuery<QuotesResponse, TData> {
+  args: {
+    limit: number
+    pair: Pair
+  }
+}
+export function useInfinityFactorySimBuyFromPairQuotesQuery<TData = QuotesResponse>({
+  client,
+  args,
+  options,
+}: InfinityFactorySimBuyFromPairQuotesQuery<TData>) {
+  return useQuery<QuotesResponse, Error, TData>(
+    infinityFactoryQueryKeys.simBuyFromPairQuotes(client?.contractAddress, args),
+    () =>
+      client
+        ? client.simBuyFromPairQuotes({
+            limit: args.limit,
+            pair: args.pair,
+          })
+        : Promise.reject(new Error('Invalid client')),
+    { ...options, enabled: !!client && (options?.enabled != undefined ? options.enabled : true) },
+  )
+}
+export interface InfinityFactorySimSellToPairQuotesQuery<TData>
+  extends InfinityFactoryReactQuery<QuotesResponse, TData> {
+  args: {
+    limit: number
+    pair: Pair
+  }
+}
+export function useInfinityFactorySimSellToPairQuotesQuery<TData = QuotesResponse>({
+  client,
+  args,
+  options,
+}: InfinityFactorySimSellToPairQuotesQuery<TData>) {
+  return useQuery<QuotesResponse, Error, TData>(
+    infinityFactoryQueryKeys.simSellToPairQuotes(client?.contractAddress, args),
+    () =>
+      client
+        ? client.simSellToPairQuotes({
+            limit: args.limit,
+            pair: args.pair,
+          })
+        : Promise.reject(new Error('Invalid client')),
+    { ...options, enabled: !!client && (options?.enabled != undefined ? options.enabled : true) },
+  )
 }
 export interface InfinityFactoryPairsByOwnerQuery<TData>
   extends InfinityFactoryReactQuery<ArrayOfTupleOfUint64AndAddr, TData> {
