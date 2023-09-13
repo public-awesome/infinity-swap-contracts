@@ -1,5 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Binary};
+use cosmwasm_std::{Addr, Binary, Uint128};
+use infinity_pair::pair::Pair;
 use infinity_pair::state::{PairConfig, PairImmutable};
 use sg_index_query::QueryOptions;
 
@@ -45,4 +46,20 @@ pub enum QueryMsg {
         owner: String,
         query_options: Option<QueryOptions<u64>>,
     },
+    #[returns(QuotesResponse)]
+    SimSellToPairQuotes {
+        pair: Pair,
+        limit: u32,
+    },
+    #[returns(QuotesResponse)]
+    SimBuyFromPairQuotes {
+        pair: Pair,
+        limit: u32,
+    },
+}
+
+#[cw_serde]
+pub struct QuotesResponse {
+    pub denom: String,
+    pub quotes: Vec<Uint128>,
 }
