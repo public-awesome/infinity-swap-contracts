@@ -14,12 +14,19 @@ import {
   ExecuteMsg,
   InstantiateMsg,
   NextPairResponse,
+  Pair,
+  PairConfigForAddr,
   PairConfigForString,
+  PairImmutableForAddr,
   PairImmutableForString,
+  PairInternal,
   PairType,
   QueryBoundForUint64,
   QueryMsg,
   QueryOptionsForUint64,
+  QuoteSummary,
+  QuotesResponse,
+  TokenPayment,
   Uint128,
 } from './InfinityFactory.types'
 
@@ -33,6 +40,8 @@ export interface InfinityFactoryReadOnlyInterface {
     owner: string
     queryOptions?: QueryOptionsForUint64
   }) => Promise<ArrayOfTupleOfUint64AndAddr>
+  simSellToPairQuotes: ({ limit, pair }: { limit: number; pair: Pair }) => Promise<QuotesResponse>
+  simBuyFromPairQuotes: ({ limit, pair }: { limit: number; pair: Pair }) => Promise<QuotesResponse>
 }
 export class InfinityFactoryQueryClient implements InfinityFactoryReadOnlyInterface {
   client: CosmWasmClient
@@ -43,6 +52,8 @@ export class InfinityFactoryQueryClient implements InfinityFactoryReadOnlyInterf
     this.contractAddress = contractAddress
     this.nextPair = this.nextPair.bind(this)
     this.pairsByOwner = this.pairsByOwner.bind(this)
+    this.simSellToPairQuotes = this.simSellToPairQuotes.bind(this)
+    this.simBuyFromPairQuotes = this.simBuyFromPairQuotes.bind(this)
   }
 
   nextPair = async ({ sender }: { sender: string }): Promise<NextPairResponse> => {
@@ -63,6 +74,22 @@ export class InfinityFactoryQueryClient implements InfinityFactoryReadOnlyInterf
       pairs_by_owner: {
         owner,
         query_options: queryOptions,
+      },
+    })
+  }
+  simSellToPairQuotes = async ({ limit, pair }: { limit: number; pair: Pair }): Promise<QuotesResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_sell_to_pair_quotes: {
+        limit,
+        pair,
+      },
+    })
+  }
+  simBuyFromPairQuotes = async ({ limit, pair }: { limit: number; pair: Pair }): Promise<QuotesResponse> => {
+    return this.client.queryContractSmart(this.contractAddress, {
+      sim_buy_from_pair_quotes: {
+        limit,
+        pair,
       },
     })
   }
