@@ -3,10 +3,10 @@ use crate::setup::setup_accounts::MarketAccounts;
 use crate::setup::templates::{setup_infinity_test, standard_minter_template, InfinityTestSetup};
 
 use cosmwasm_std::{Addr, Decimal, Uint128};
+use infinity_factory::msg::QueryMsg as InfinityFactoryQueryMsg;
 use infinity_global::{GlobalConfig, QueryMsg as InfinityGlobalQueryMsg};
 use infinity_pair::msg::{QueryMsg as InfinityPairQueryMsg, QuotesResponse};
 use infinity_pair::state::{BondingCurve, PairConfig, PairType};
-use infinity_router::msg::QueryMsg as InfinityRouterQueryMsg;
 use test_suite::common_setup::msg::MinterTemplateResponse;
 
 #[test]
@@ -75,8 +75,8 @@ fn try_sim_sell_to_pair_quotes() {
     let sim_sell_to_pair_quotes = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            global_config.infinity_router.clone(),
-            &InfinityRouterQueryMsg::SimSellToPairQuotes {
+            global_config.infinity_factory.clone(),
+            &InfinityFactoryQueryMsg::SimSellToPairQuotes {
                 pair: test_pair.pair,
                 limit: 100,
             },
@@ -152,8 +152,8 @@ fn try_sim_buy_from_pair_quotes() {
     let sim_buy_from_pair_quotes = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
-            global_config.infinity_router.clone(),
-            &InfinityRouterQueryMsg::SimBuyFromPairQuotes {
+            global_config.infinity_factory.clone(),
+            &InfinityFactoryQueryMsg::SimBuyFromPairQuotes {
                 pair: test_pair.pair,
                 limit: 100,
             },
