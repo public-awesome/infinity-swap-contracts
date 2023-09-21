@@ -27,7 +27,7 @@ pub struct PairQuoteOffset {
     /// The address of the infinity pair contract
     pub pair: String,
     /// The amount of tokens in being quoted
-    pub amount: u128,
+    pub amount: Uint128,
 }
 
 #[cw_serde]
