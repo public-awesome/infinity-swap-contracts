@@ -41,7 +41,7 @@ export interface QueryOptionsForPairQuoteOffset {
   min?: QueryBoundForPairQuoteOffset | null;
 }
 export interface PairQuoteOffset {
-  amount: number;
+  amount: Uint128;
   pair: string;
 }
 export type Addr = string;
