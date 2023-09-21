@@ -45,7 +45,7 @@ pub fn query_sell_to_pair_quotes(
         min,
         max,
     } = query_options.unpack(
-        &(|offset| (offset.amount, Addr::unchecked(offset.pair.clone()))),
+        &(|offset| (offset.amount.u128(), Addr::unchecked(offset.pair.clone()))),
         None,
         None,
     );
@@ -74,7 +74,7 @@ pub fn query_buy_from_pair_quotes(
         min,
         max,
     } = query_options.unpack(
-        &(|offset| (offset.amount, Addr::unchecked(offset.pair.clone()))),
+        &(|offset| (offset.amount.u128(), Addr::unchecked(offset.pair.clone()))),
         None,
         None,
     );
