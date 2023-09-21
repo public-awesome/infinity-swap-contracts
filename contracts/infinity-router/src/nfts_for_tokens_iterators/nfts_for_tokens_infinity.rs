@@ -68,7 +68,7 @@ impl<'a> NftsForTokensInfinity<'a> {
         if let Some(pair_quote) = pair_quote_option {
             self.cursor = Some(PairQuoteOffset {
                 pair: pair_quote.address.to_string(),
-                amount: pair_quote.quote.amount.u128(),
+                amount: pair_quote.quote.amount,
             });
 
             let pair = self
