@@ -1,9 +1,9 @@
 use crate::{
     pair::Pair,
-    state::{BondingCurve, PairType},
+    state::{BondingCurve, PairType, QuoteSummary},
 };
 
-use cosmwasm_std::{attr, Event};
+use cosmwasm_std::{attr, Event, Uint128};
 
 const NONE: &str = "None";
 
@@ -14,23 +14,21 @@ pub struct PairEvent<'a> {
 
 impl<'a> From<PairEvent<'a>> for Event {
     fn from(pe: PairEvent) -> Self {
-        let mut event: Event = pe.pair.into();
-        event.ty = pe.ty.to_string();
+        let mut event = Event::new(pe.ty.to_string());
+        event = pe.set_event_attrs(event);
         event
     }
 }
 
-impl From<&Pair> for Event {
-    fn from(pair: &Pair) -> Self {
-        let mut event = Event::new("");
-
+impl<'a> PairEvent<'a> {
+    fn set_event_attrs(&self, mut event: Event) -> Event {
         event = event.add_attributes(vec![
-            attr("collection", pair.immutable.collection.to_string()),
-            attr("denom", pair.immutable.denom.to_string()),
-            attr("owner", pair.immutable.owner.to_string()),
+            attr("collection", self.pair.immutable.collection.to_string()),
+            attr("denom", self.pair.immutable.denom.to_string()),
+            attr("owner", self.pair.immutable.owner.to_string()),
         ]);
 
-        match pair.config.pair_type {
+        match self.pair.config.pair_type {
             PairType::Token => {
                 event = event.add_attribute("pair_type", "token".to_string());
             },
@@ -51,7 +49,7 @@ impl From<&Pair> for Event {
             },
         }
 
-        match pair.config.bonding_curve {
+        match self.pair.config.bonding_curve {
             BondingCurve::Linear {
                 spot_price,
                 delta,
@@ -77,12 +75,41 @@ impl From<&Pair> for Event {
             },
         }
 
-        event = event.add_attribute("is_active", pair.config.is_active.to_string());
+        event = event.add_attribute("is_active", self.pair.config.is_active.to_string());
         event = event.add_attribute(
             "asset_recipient",
-            pair.config.asset_recipient.as_ref().map_or(NONE.to_string(), |ar| ar.to_string()),
+            self.pair.config.asset_recipient.as_ref().map_or(NONE.to_string(), |ar| ar.to_string()),
         );
 
         event
+    }
+}
+
+pub struct SwapEvent<'a> {
+    pub ty: &'a str,
+    pub token_id: &'a str,
+    pub quote_summary: &'a QuoteSummary,
+}
+
+impl<'a> From<SwapEvent<'a>> for Event {
+    fn from(se: SwapEvent) -> Self {
+        let mut event = Event::new(se.ty.to_string()).add_attribute("token_id", se.token_id);
+        event = se.set_event_attrs(event);
+        event
+    }
+}
+
+impl<'a> SwapEvent<'a> {
+    fn set_event_attrs(&self, event: Event) -> Event {
+        event.add_attributes(vec![
+            attr("fair_burn", self.quote_summary.fair_burn.amount),
+            attr(
+                "royalty",
+                self.quote_summary.royalty.as_ref().map_or(Uint128::zero(), |r| r.amount),
+            ),
+            attr("swap", self.quote_summary.swap.as_ref().map_or(Uint128::zero(), |s| s.amount)),
+            attr("seller", self.quote_summary.seller_amount),
+            attr("total", self.quote_summary.total()),
+        ])
     }
 }
