@@ -383,7 +383,7 @@ pub fn execute_swap_nft_for_tokens(
         SwapEvent {
             ty: "swap-nft-for-tokens",
             token_id: &token_id,
-            quote_summary: &quote_summary,
+            quote_summary,
         }
         .into(),
     );
@@ -435,7 +435,7 @@ pub fn execute_swap_tokens_for_specific_nft(
         SwapEvent {
             ty: "swap-tokens-for-nft",
             token_id: &token_id,
-            quote_summary: &quote_summary,
+            quote_summary,
         }
         .into(),
     );
