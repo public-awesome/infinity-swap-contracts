@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::events::PairEvent;
+use crate::events::{PairEvent, SwapEvent};
 use crate::helpers::{load_pair, load_payout_context, only_active, only_pair_owner};
 use crate::msg::ExecuteMsg;
 use crate::pair::Pair;
@@ -373,15 +373,20 @@ pub fn execute_swap_nft_for_tokens(
         .as_ref()
         .ok_or(ContractError::InvalidPair("pair cannot produce quote".to_string()))?;
 
-    let quote_total = quote_summary.total();
-
     let seller_coin = coin(quote_summary.seller_amount.u128(), &pair.immutable.denom);
     ensure!(
         has_coins(&[seller_coin], &min_output),
         ContractError::InvalidPairQuote("seller coin is less than min output".to_string())
     );
 
-    let mut response = Response::new();
+    let mut response = Response::new().add_event(
+        SwapEvent {
+            ty: "swap-nft-for-tokens",
+            token_id: &token_id,
+            quote_summary: &quote_summary,
+        }
+        .into(),
+    );
 
     // Payout token fees
     let seller_recipient = address_or(asset_recipient.as_ref(), &info.sender);
@@ -398,11 +403,6 @@ pub fn execute_swap_nft_for_tokens(
 
     // Update pair state
     pair.swap_nft_for_tokens();
-
-    response = response.add_event(Event::new("swap-nft-for-tokens").add_attributes(vec![
-        attr("token_id", token_id),
-        attr("sale_price", coin(quote_total.u128(), pair.immutable.denom.to_string()).to_string()),
-    ]));
 
     Ok((pair, response))
 }
@@ -431,7 +431,14 @@ pub fn execute_swap_tokens_for_specific_nft(
         InfinityError::InvalidInput("received funds does not equal quote".to_string())
     );
 
-    let mut response = Response::new();
+    let mut response = Response::new().add_event(
+        SwapEvent {
+            ty: "swap-tokens-for-nft",
+            token_id: &token_id,
+            quote_summary: &quote_summary,
+        }
+        .into(),
+    );
 
     // Payout token fees, handle reinvest tokens
     let seller_recipient = if pair.reinvest_tokens() {
@@ -454,11 +461,6 @@ pub fn execute_swap_tokens_for_specific_nft(
     // Update pair state
     pair.total_tokens -= received_amount;
     pair.swap_tokens_for_nft();
-
-    response = response.add_event(Event::new("swap-tokens-for-nft").add_attributes(vec![
-        attr("token_id", token_id),
-        attr("sale_price", coin(quote_total.u128(), pair.immutable.denom.to_string()).to_string()),
-    ]));
 
     Ok((pair, response))
 }
