@@ -328,9 +328,15 @@
           "pairs_by_owner": {
             "type": "object",
             "required": [
+              "code_id",
               "owner"
             ],
             "properties": {
+              "code_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
               "owner": {
                 "type": "string"
               },
@@ -823,12 +829,18 @@
       "title": "NextPairResponse",
       "type": "object",
       "required": [
+        "code_id",
         "counter",
         "pair",
         "salt",
         "sender"
       ],
       "properties": {
+        "code_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
         "counter": {
           "type": "integer",
           "format": "uint64",
