@@ -72,6 +72,7 @@ export const infinityFactoryQueries = {
     queryFn: () =>
       client
         ? client.pairsByOwner({
+            codeId: args.codeId,
             owner: args.owner,
             queryOptions: args.queryOptions,
           })
@@ -167,6 +168,7 @@ export function useInfinityFactorySimSellToPairQuotesQuery<TData = QuotesRespons
 export interface InfinityFactoryPairsByOwnerQuery<TData>
   extends InfinityFactoryReactQuery<ArrayOfTupleOfUint64AndAddr, TData> {
   args: {
+    codeId: number
     owner: string
     queryOptions?: QueryOptionsForUint64
   }
@@ -181,6 +183,7 @@ export function useInfinityFactoryPairsByOwnerQuery<TData = ArrayOfTupleOfUint64
     () =>
       client
         ? client.pairsByOwner({
+            codeId: args.codeId,
             owner: args.owner,
             queryOptions: args.queryOptions,
           })

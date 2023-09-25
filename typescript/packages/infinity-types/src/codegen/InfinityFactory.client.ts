@@ -34,9 +34,11 @@ export interface InfinityFactoryReadOnlyInterface {
   contractAddress: string
   nextPair: ({ sender }: { sender: string }) => Promise<NextPairResponse>
   pairsByOwner: ({
+    codeId,
     owner,
     queryOptions,
   }: {
+    codeId: number
     owner: string
     queryOptions?: QueryOptionsForUint64
   }) => Promise<ArrayOfTupleOfUint64AndAddr>
@@ -64,14 +66,17 @@ export class InfinityFactoryQueryClient implements InfinityFactoryReadOnlyInterf
     })
   }
   pairsByOwner = async ({
+    codeId,
     owner,
     queryOptions,
   }: {
+    codeId: number
     owner: string
     queryOptions?: QueryOptionsForUint64
   }): Promise<ArrayOfTupleOfUint64AndAddr> => {
     return this.client.queryContractSmart(this.contractAddress, {
       pairs_by_owner: {
+        code_id: codeId,
         owner,
         query_options: queryOptions,
       },

@@ -55,6 +55,7 @@ export type QueryMsg = {
   };
 } | {
   pairs_by_owner: {
+    code_id: number;
     owner: string;
     query_options?: QueryOptionsForUint64 | null;
   };
@@ -115,6 +116,7 @@ export interface TokenPayment {
 }
 export type Binary = string;
 export interface NextPairResponse {
+  code_id: number;
   counter: number;
   pair: Addr;
   salt: Binary;
