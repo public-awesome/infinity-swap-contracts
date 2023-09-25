@@ -82,6 +82,8 @@ describe('InfinityFactory', () => {
 
     expect(pairsResponse.length).toEqual(2)
     expect(pairsResponse[0][0]).toEqual(2)
+    expect(pairsResponse[0][1]).toEqual(pairs[2])
     expect(pairsResponse[1][0]).toEqual(1)
+    expect(pairsResponse[1][1]).toEqual(pairs[1])
   })
 })

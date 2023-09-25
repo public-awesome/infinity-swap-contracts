@@ -2093,10 +2093,10 @@
     ts-node "^10.9.1"
     typescript "^5.0.4"
 
-"@stargazezone/infinity-types@0.6.0":
-  version "0.6.0"
-  resolved "https://registry.yarnpkg.com/@stargazezone/infinity-types/-/infinity-types-0.6.0.tgz#3bd028501e782b758ab9d89f13931fc335338128"
-  integrity sha512-bvb8dylCUF6P73TUWwDTXa3CUuJqXfcuOHZ58gnCFbnbIOTZkDjNY8bi9T6zf6qvy2xUWz8gdtWaMp0G2y/Taw==
+"@stargazezone/infinity-types@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@stargazezone/infinity-types/-/infinity-types-0.7.0.tgz#82a231f721f272a00d824b459bc60a370c69c4ed"
+  integrity sha512-JZxrw2A+ZsVhOWmUloPfxAnlVjS4TrPqR9mvlGudkx9eVKrZ4mEELllKZ6ln01Oxqt2zTbRxNuFsiZPLD1zpBQ==
   dependencies:
     "@cosmjs/amino" "^0.31.0"
     "@cosmjs/cosmwasm-stargate" "^0.31.0"
