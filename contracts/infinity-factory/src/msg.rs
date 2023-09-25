@@ -29,6 +29,7 @@ pub enum ExecuteMsg {
 #[cw_serde]
 pub struct NextPairResponse {
     pub sender: Addr,
+    pub code_id: u64,
     pub counter: u64,
     pub salt: Binary,
     pub pair: Addr,
@@ -44,6 +45,7 @@ pub enum QueryMsg {
     #[returns(Vec<(u64, Addr)>)]
     PairsByOwner {
         owner: String,
+        code_id: u64,
         query_options: Option<QueryOptions<u64>>,
     },
     #[returns(QuotesResponse)]

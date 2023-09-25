@@ -24,7 +24,7 @@ describe('InfinityFactory', () => {
     collectionAddress = await createMinter(context)
 
     queryClient = await getQueryClient()
-    let infinityGlobalQueryClient = new InfinityGlobalQueryClient(
+    const infinityGlobalQueryClient = new InfinityGlobalQueryClient(
       queryClient,
       context.getContractAddress(CONTRACT_MAP.INFINITY_GLOBAL),
     )
@@ -34,9 +34,12 @@ describe('InfinityFactory', () => {
   test('query pairs by owner', async () => {
     const liquidityProvider = context.getTestUser(liquidityProviderName)
 
+    const infinityFactoryQueryClient = new InfinityFactoryQueryClient(queryClient, globalConfig.infinity_factory)
+    const { counter: startIndex } = await infinityFactoryQueryClient.nextPair({ sender: liquidityProvider.address })
+
     // Create pairs
     let numPairs = 4
-    let pairs = []
+    let pairs: string[] = []
 
     for (let i = 0; i < numPairs; i++) {
       let pair = await createPair(
@@ -69,21 +72,20 @@ describe('InfinityFactory', () => {
     }
 
     // Query pairs by owner
-    let infinityFactoryQueryClient = new InfinityFactoryQueryClient(queryClient, globalConfig.infinity_factory)
     let pairsResponse = await infinityFactoryQueryClient.pairsByOwner({
       owner: liquidityProvider.address,
       queryOptions: {
         descending: true,
-        limit: 2,
-        max: { inclusive: 2 },
+        limit: 4,
+        max: { inclusive: startIndex + 3 },
         min: null,
       },
     })
 
-    expect(pairsResponse.length).toEqual(2)
-    expect(pairsResponse[0][0]).toEqual(2)
-    expect(pairsResponse[0][1]).toEqual(pairs[2])
-    expect(pairsResponse[1][0]).toEqual(1)
-    expect(pairsResponse[1][1]).toEqual(pairs[1])
+    expect(pairsResponse.length).toEqual(4)
+    pairsResponse.forEach(([counter, address], idx) => {
+      expect(counter).toEqual(startIndex + numPairs - idx - 1)
+      expect(address).toEqual(pairs[numPairs - idx - 1])
+    })
   })
 })

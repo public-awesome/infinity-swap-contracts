@@ -3,7 +3,7 @@ use crate::msg::{NextPairResponse, QueryMsg, QuotesResponse};
 use crate::state::{INFINITY_GLOBAL, SENDER_COUNTER};
 
 use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult, Uint128};
-use infinity_global::load_global_config;
+use infinity_global::{load_global_config, GlobalConfig};
 use infinity_pair::helpers::load_payout_context;
 use infinity_pair::pair::Pair;
 use sg_index_query::QueryOptions;
@@ -19,11 +19,13 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_binary(&query_next_pair(deps, env, deps.api.addr_validate(&sender)?)?),
         QueryMsg::PairsByOwner {
             owner,
+            code_id,
             query_options,
         } => to_binary(&query_pairs_by_owner(
             deps,
             env,
             deps.api.addr_validate(&owner)?,
+            code_id,
             query_options.unwrap_or_default(),
         )?),
         QueryMsg::SimSellToPairQuotes {
@@ -39,20 +41,18 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 
 pub fn query_next_pair(deps: Deps, env: Env, sender: Addr) -> StdResult<NextPairResponse> {
     let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
-    let global_config = load_global_config(&deps.querier, &infinity_global)?;
-    let counter = SENDER_COUNTER.may_load(deps.storage, sender.clone())?.unwrap_or_default();
+    let GlobalConfig {
+        infinity_pair_code_id: code_id,
+        ..
+    } = load_global_config(&deps.querier, &infinity_global)?;
+    let counter_key = (sender.clone(), code_id);
+    let counter = SENDER_COUNTER.may_load(deps.storage, counter_key)?.unwrap_or_default();
 
-    let (pair, salt) = generate_instantiate_2_addr(
-        deps,
-        &env,
-        &sender,
-        counter,
-        global_config.infinity_pair_code_id,
-    )
-    .unwrap();
+    let (pair, salt) = generate_instantiate_2_addr(deps, &env, &sender, counter, code_id).unwrap();
 
     Ok(NextPairResponse {
         sender,
+        code_id,
         counter,
         salt,
         pair,
@@ -63,29 +63,21 @@ pub fn query_pairs_by_owner(
     deps: Deps,
     env: Env,
     owner: Addr,
+    code_id: u64,
     query_options: QueryOptions<u64>,
 ) -> StdResult<Vec<(u64, Addr)>> {
-    let num_pairs_option = SENDER_COUNTER.may_load(deps.storage, owner.clone())?;
+    let counter_key = (owner.clone(), code_id);
+    let num_pairs_option = SENDER_COUNTER.may_load(deps.storage, counter_key)?;
     if num_pairs_option.is_none() {
         return Ok(vec![]);
     }
-
-    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
-    let global_config = load_global_config(&deps.querier, &infinity_global)?;
 
     let range = index_range_from_query_options(num_pairs_option.unwrap(), query_options);
 
     let mut retval: Vec<(u64, Addr)> = vec![];
 
     for idx in range {
-        let (pair, _) = generate_instantiate_2_addr(
-            deps,
-            &env,
-            &owner,
-            idx,
-            global_config.infinity_pair_code_id,
-        )
-        .unwrap();
+        let (pair, _) = generate_instantiate_2_addr(deps, &env, &owner, idx, code_id).unwrap();
         retval.push((idx, pair));
     }
 
