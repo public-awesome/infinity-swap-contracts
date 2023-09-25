@@ -70,14 +70,22 @@ pub fn query_pairs_by_owner(
         return Ok(vec![]);
     }
 
+    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
+    let global_config = load_global_config(&deps.querier, &infinity_global)?;
+
     let range = index_range_from_query_options(num_pairs_option.unwrap(), query_options);
 
     let mut retval: Vec<(u64, Addr)> = vec![];
 
-    let code_id = deps.querier.query_wasm_contract_info(&env.contract.address)?.code_id;
-
     for idx in range {
-        let (pair, _) = generate_instantiate_2_addr(deps, &env, &owner, idx, code_id).unwrap();
+        let (pair, _) = generate_instantiate_2_addr(
+            deps,
+            &env,
+            &owner,
+            idx,
+            global_config.infinity_pair_code_id,
+        )
+        .unwrap();
         retval.push((idx, pair));
     }
 
