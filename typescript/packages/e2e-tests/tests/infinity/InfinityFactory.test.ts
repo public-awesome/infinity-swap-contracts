@@ -74,6 +74,7 @@ describe('InfinityFactory', () => {
     // Query pairs by owner
     let pairsResponse = await infinityFactoryQueryClient.pairsByOwner({
       owner: liquidityProvider.address,
+      codeId: globalConfig.infinity_pair_code_id,
       queryOptions: {
         descending: true,
         limit: 4,
