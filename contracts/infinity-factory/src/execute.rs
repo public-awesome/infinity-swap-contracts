@@ -47,10 +47,11 @@ pub fn execute(
             let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
             let global_config = load_global_config(&deps.querier, &infinity_global)?;
 
+            let counter_key = (info.sender.clone(), global_config.infinity_pair_code_id);
             let counter =
-                SENDER_COUNTER.may_load(deps.storage, info.sender.clone())?.unwrap_or_default();
+                SENDER_COUNTER.may_load(deps.storage, counter_key.clone())?.unwrap_or_default();
             let salt = generate_salt(&info.sender, counter);
-            SENDER_COUNTER.save(deps.storage, info.sender.clone(), &(counter + 1))?;
+            SENDER_COUNTER.save(deps.storage, counter_key, &(counter + 1))?;
 
             let response = Response::new().add_message(WasmMsg::Instantiate2 {
                 admin: Some(env.contract.address.into()),
