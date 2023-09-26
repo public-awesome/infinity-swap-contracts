@@ -13,6 +13,7 @@ use cw2::set_contract_version;
 use cw_utils::must_pay;
 use infinity_global::{load_global_config, load_min_price};
 use infinity_shared::InfinityError;
+use sg_marketplace_common::nft::only_tradable;
 use sg_std::Response;
 use stargaze_fair_burn::append_fair_burn_msg;
 use stargaze_royalty_registry::fetch_or_set_royalties;
@@ -23,7 +24,7 @@ use cosmwasm_std::entry_point;
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
@@ -45,6 +46,8 @@ pub fn instantiate(
 
     let min_price = load_min_price(&deps.querier, &infinity_global, &pair.immutable.denom)?
         .ok_or(InfinityError::InvalidInput("denom not supported".to_string()))?;
+
+    only_tradable(&deps.querier, &env.block, &pair.immutable.collection)?;
 
     let (royalty_entry, mut response) = fetch_or_set_royalties(
         deps.as_ref(),
