@@ -123,10 +123,10 @@ export default class Context {
       royalty_registry: royaltyRegistryAddress,
     }
 
-    let checksumFilePath = path.join(chainConfig.artifacts_path, 'checksums.txt')
+    const checksumFilePath = path.join(chainConfig.artifacts_path, 'checksums.txt')
     const checksum = await readChecksumFile(checksumFilePath, 'infinity_builder.wasm')
     const checksumUint8Array = fromHex(checksum)
-    const salt = fromHex('0')
+    const salt = fromHex('00')
     const address2 = instantiate2Address(checksumUint8Array, sender, salt, 'stars')
 
     const instantiateInfinityBuilderResult = await client.instantiate2(
