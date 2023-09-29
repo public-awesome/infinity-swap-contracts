@@ -370,7 +370,7 @@ pub fn execute_swap_nft_for_tokens(
     let quote_summary = pair
         .internal
         .sell_to_pair_quote_summary
-        .as_ref()
+        .clone()
         .ok_or(ContractError::InvalidPair("pair cannot produce quote".to_string()))?;
 
     let seller_coin = coin(quote_summary.seller_amount.u128(), &pair.immutable.denom);
@@ -379,14 +379,7 @@ pub fn execute_swap_nft_for_tokens(
         ContractError::InvalidPairQuote("seller coin is less than min output".to_string())
     );
 
-    let mut response = Response::new().add_event(
-        SwapEvent {
-            ty: "swap-nft-for-tokens",
-            token_id: &token_id,
-            quote_summary,
-        }
-        .into(),
-    );
+    let mut response = Response::new();
 
     // Payout token fees
     let seller_recipient = address_or(asset_recipient.as_ref(), &info.sender);
@@ -404,6 +397,18 @@ pub fn execute_swap_nft_for_tokens(
     // Update pair state
     pair.swap_nft_for_tokens();
 
+    // Attach swap event
+    response = response.add_event(
+        SwapEvent {
+            ty: "swap-nft-for-tokens",
+            token_id: &token_id,
+            nft_recipient: nft_recipient.as_ref(),
+            seller_recipient: seller_recipient.as_ref(),
+            quote_summary: &quote_summary,
+        }
+        .into(),
+    );
+
     Ok((pair, response))
 }
 
@@ -420,7 +425,7 @@ pub fn execute_swap_tokens_for_specific_nft(
     let quote_summary = pair
         .internal
         .buy_from_pair_quote_summary
-        .as_ref()
+        .clone()
         .ok_or(ContractError::InvalidPair("pair cannot produce quote".to_string()))?;
 
     let quote_total = quote_summary.total();
@@ -431,14 +436,7 @@ pub fn execute_swap_tokens_for_specific_nft(
         InfinityError::InvalidInput("received funds does not equal quote".to_string())
     );
 
-    let mut response = Response::new().add_event(
-        SwapEvent {
-            ty: "swap-tokens-for-nft",
-            token_id: &token_id,
-            quote_summary,
-        }
-        .into(),
-    );
+    let mut response = Response::new();
 
     // Payout token fees, handle reinvest tokens
     let seller_recipient = if pair.reinvest_tokens() {
@@ -461,6 +459,18 @@ pub fn execute_swap_tokens_for_specific_nft(
     // Update pair state
     pair.total_tokens -= received_amount;
     pair.swap_tokens_for_nft();
+
+    // Attach swap event
+    response = response.add_event(
+        SwapEvent {
+            ty: "swap-tokens-for-nft",
+            token_id: &token_id,
+            nft_recipient: nft_recipient.as_ref(),
+            seller_recipient: seller_recipient.as_ref(),
+            quote_summary: &quote_summary,
+        }
+        .into(),
+    );
 
     Ok((pair, response))
 }
