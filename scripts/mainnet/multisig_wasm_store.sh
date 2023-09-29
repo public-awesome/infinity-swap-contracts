@@ -80,6 +80,7 @@ for contract in "${CORE_CONTRACTS[@]}"; do
         --node "$NODE" \
         --keyring-backend os \
         --gas-prices 1ustars \
+        --gas 5000000 \
         --generate-only \
         > ./tmp/unsigned_store_${contract}.json 2>&1
 done
@@ -91,6 +92,7 @@ for contract in "${INFINITY_CONTRACTS[@]}"; do
         --node "$NODE" \
         --keyring-backend os \
         --gas-prices 1ustars \
+        --gas 5000000 \
         --generate-only \
         > ./tmp/unsigned_store_${contract}.json 2>&1
 done
