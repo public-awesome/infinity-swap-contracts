@@ -1,7 +1,9 @@
-import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate'
+import { SigningCosmWasmClient, instantiate2Address } from '@cosmjs/cosmwasm-stargate'
 import chainConfig from '../../configs/chain_config.json'
 import testAccounts from '../../configs/test_accounts.json'
 import { getSigningClient } from '../utils/client'
+import { readChecksumFile } from '../utils/file'
+import { hexStringToUint8Array } from '../utils/string'
 import { InstantiateMsg as RoyaltyRegistryInstantiateMsg } from '@stargazezone/core-types/lib/RoyaltyRegistry.types'
 import { InstantiateMsg as InfinityBuilderInstantiateMsg } from '@stargazezone/infinity-types/lib/codegen/InfinityBuilder.types'
 import { InstantiateMsg as VendingFactoryInstantiateMsg } from '@stargazezone/launchpad/src/VendingFactory.types'
@@ -96,6 +98,62 @@ export default class Context {
     return instantiateResult
   }
 
+  private instantiateInfinityBuilder = async (
+    client: SigningCosmWasmClient,
+    sender: string,
+    fairBurnAddress: string,
+    marketplaceAddress: string,
+    royaltyRegistryAddress: string,
+  ) => {
+    let infinityBuilderInstantiateMsg: InfinityBuilderInstantiateMsg = {
+      code_ids: {
+        infinity_factory: this.codeIds[CONTRACT_MAP.INFINITY_FACTORY],
+        infinity_global: this.codeIds[CONTRACT_MAP.INFINITY_GLOBAL],
+        infinity_index: this.codeIds[CONTRACT_MAP.INFINITY_INDEX],
+        infinity_pair: this.codeIds[CONTRACT_MAP.INFINITY_PAIR],
+        infinity_router: this.codeIds[CONTRACT_MAP.INFINITY_ROUTER],
+      },
+      fair_burn: fairBurnAddress,
+      fair_burn_fee_percent: '0.005',
+      marketplace: marketplaceAddress,
+      max_royalty_fee_percent: '0.05',
+      max_swap_fee_percent: '0.10',
+      min_prices: [{ amount: '1000000', denom: 'ustars' }],
+      pair_creation_fee: { amount: '100000000', denom: 'ustars' },
+      royalty_registry: royaltyRegistryAddress,
+    }
+
+    let checksumFilePath = path.join(chainConfig.artifacts_path, 'checksums.txt')
+    const checksum = await readChecksumFile(checksumFilePath, 'infinity_builder.wasm')
+    const checksumUint8Array = hexStringToUint8Array(checksum)
+    const salt = new Uint8Array()
+    const address2 = instantiate2Address(checksumUint8Array, sender, salt, 'stars')
+
+    const instantiateInfinityBuilderResult = await client.instantiate2(
+      sender,
+      this.codeIds[CONTRACT_MAP.INFINITY_BUILDER],
+      salt,
+      infinityBuilderInstantiateMsg,
+      CONTRACT_MAP.INFINITY_BUILDER,
+      'auto',
+    )
+
+    this.addContractAddress(CONTRACT_MAP.INFINITY_BUILDER, instantiateInfinityBuilderResult.contractAddress)
+    console.log(
+      `Instantiated ${CONTRACT_MAP.INFINITY_BUILDER} contract with address ${instantiateInfinityBuilderResult.contractAddress}`,
+    )
+    assert(address2 === instantiateInfinityBuilderResult.contractAddress, 'address2 does not match')
+
+    _.forEach(instantiateInfinityBuilderResult.events, (event) => {
+      if (event.type === 'instantiate') {
+        let codeId = parseInt(event.attributes[1].value, 10)
+        let contractKey = this.getContractKeyByCodeId(codeId)
+        assert(contractKey, 'contractKey not found in wasm event attributes')
+        this.addContractAddress(contractKey, event.attributes[0].value)
+      }
+    })
+  }
+
   private instantiateContracts = async () => {
     let { client, address: sender } = this.getTestUser('user1')
 
@@ -139,39 +197,13 @@ export default class Context {
     }
     await this.instantiateContract(client, sender, CONTRACT_MAP.VENDING_FACTORY, vendingFactoryInstantiateMsg)
 
-    // Instantiate stargaze_reserve_auction
-    let infinityBuilderInstantiateMsg: InfinityBuilderInstantiateMsg = {
-      code_ids: {
-        infinity_factory: this.codeIds[CONTRACT_MAP.INFINITY_FACTORY],
-        infinity_global: this.codeIds[CONTRACT_MAP.INFINITY_GLOBAL],
-        infinity_index: this.codeIds[CONTRACT_MAP.INFINITY_INDEX],
-        infinity_pair: this.codeIds[CONTRACT_MAP.INFINITY_PAIR],
-        infinity_router: this.codeIds[CONTRACT_MAP.INFINITY_ROUTER],
-      },
-      fair_burn: instantiateFairBurnResult.contractAddress,
-      fair_burn_fee_percent: '0.005',
-      marketplace: instantiateFairBurnResult.contractAddress,
-      max_royalty_fee_percent: '0.05',
-      max_swap_fee_percent: '0.10',
-      min_prices: [{ amount: '1000000', denom: 'ustars' }],
-      pair_creation_fee: { amount: '100000000', denom: 'ustars' },
-      royalty_registry: instantiateRoyaltyRegistryResult.contractAddress,
-    }
-    let instantiateInfinityBuilderResult = await this.instantiateContract(
+    await this.instantiateInfinityBuilder(
       client,
       sender,
-      CONTRACT_MAP.INFINITY_BUILDER,
-      infinityBuilderInstantiateMsg,
+      instantiateFairBurnResult.contractAddress,
+      instantiateFairBurnResult.contractAddress,
+      instantiateRoyaltyRegistryResult.contractAddress,
     )
-
-    _.forEach(instantiateInfinityBuilderResult.events, (event) => {
-      if (event.type === 'instantiate') {
-        let codeId = parseInt(event.attributes[1].value, 10)
-        let contractKey = this.getContractKeyByCodeId(codeId)
-        assert(contractKey, 'contractKey not found in wasm event attributes')
-        this.addContractAddress(contractKey, event.attributes[0].value)
-      }
-    })
   }
 
   private writeContext = () => {
