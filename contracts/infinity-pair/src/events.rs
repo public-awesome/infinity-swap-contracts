@@ -3,7 +3,7 @@ use crate::{
     state::{BondingCurve, PairType, QuoteSummary},
 };
 
-use cosmwasm_std::{attr, Event, Uint128};
+use cosmwasm_std::{attr, Addr, Event, Uint128};
 use std::vec;
 
 const NONE: &str = "None";
@@ -83,8 +83,9 @@ impl<'a> From<PairEvent<'a>> for Event {
 pub struct SwapEvent<'a> {
     pub ty: &'a str,
     pub token_id: &'a str,
-    pub nft_recipient: &'a str,
-    pub seller_recipient: &'a str,
+    pub collection: &'a Addr,
+    pub pair_owner: &'a Addr,
+    pub sender_recipient: &'a Addr,
     pub quote_summary: &'a QuoteSummary,
 }
 
@@ -92,16 +93,17 @@ impl<'a> From<SwapEvent<'a>> for Event {
     fn from(se: SwapEvent) -> Self {
         Event::new(se.ty.to_string()).add_attributes(vec![
             attr("token_id", se.token_id),
-            attr("nft_recipient", se.nft_recipient),
-            attr("seller_recipient", se.seller_recipient),
-            attr("fair_burn", se.quote_summary.fair_burn.amount),
+            attr("collection", se.collection),
+            attr("pair_owner", se.pair_owner),
+            attr("sender_recipient", se.sender_recipient),
+            attr("fair_burn_fee", se.quote_summary.fair_burn.amount),
             attr(
-                "royalty",
+                "royalty_fee",
                 se.quote_summary.royalty.as_ref().map_or(Uint128::zero(), |r| r.amount),
             ),
-            attr("swap", se.quote_summary.swap.as_ref().map_or(Uint128::zero(), |s| s.amount)),
-            attr("seller", se.quote_summary.seller_amount),
-            attr("total", se.quote_summary.total()),
+            attr("swap_fee", se.quote_summary.swap.as_ref().map_or(Uint128::zero(), |s| s.amount)),
+            attr("seller_amount", se.quote_summary.seller_amount),
+            attr("total_price", se.quote_summary.total()),
         ])
     }
 }

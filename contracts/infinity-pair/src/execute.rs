@@ -402,8 +402,9 @@ pub fn execute_swap_nft_for_tokens(
         SwapEvent {
             ty: "swap-nft-for-tokens",
             token_id: &token_id,
-            nft_recipient: nft_recipient.as_ref(),
-            seller_recipient: seller_recipient.as_ref(),
+            collection: &pair.immutable.collection,
+            pair_owner: &pair.immutable.owner,
+            sender_recipient: &seller_recipient,
             quote_summary: &quote_summary,
         }
         .into(),
@@ -465,8 +466,9 @@ pub fn execute_swap_tokens_for_specific_nft(
         SwapEvent {
             ty: "swap-tokens-for-nft",
             token_id: &token_id,
-            nft_recipient: nft_recipient.as_ref(),
-            seller_recipient: seller_recipient.as_ref(),
+            collection: &pair.immutable.collection,
+            pair_owner: &pair.immutable.owner,
+            sender_recipient: &nft_recipient,
             quote_summary: &quote_summary,
         }
         .into(),
