@@ -35,6 +35,8 @@ pub struct GlobalConfig<T: AddressLike> {
     pub pair_creation_fee: Coin,
     /// The percentage amount of a sale that is paid to the FairBurn contract
     pub fair_burn_fee_percent: Decimal,
+    /// The royalty percentage amount to be paid when no royalty is specified for the protocol
+    pub default_royalty_fee_percent: Decimal,
     /// The maximum percentage amount of a sale that can be paid in royalties
     pub max_royalty_fee_percent: Decimal,
     /// The maximum percentage amount of a sale that can be paid to LPs
@@ -53,6 +55,7 @@ impl GlobalConfig<String> {
             infinity_pair_code_id: self.infinity_pair_code_id,
             pair_creation_fee: self.pair_creation_fee,
             fair_burn_fee_percent: self.fair_burn_fee_percent,
+            default_royalty_fee_percent: self.default_royalty_fee_percent,
             max_royalty_fee_percent: self.max_royalty_fee_percent,
             max_swap_fee_percent: self.max_swap_fee_percent,
         })

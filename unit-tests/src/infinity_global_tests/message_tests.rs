@@ -31,7 +31,8 @@ fn try_infinity_global_init() {
         infinity_pair_code_id: 1u64,
         pair_creation_fee: coin(1_000_000u128, NATIVE_DENOM),
         fair_burn_fee_percent: Decimal::percent(1u64),
-        max_royalty_fee_percent: Decimal::percent(10u64),
+        default_royalty_fee_percent: Decimal::percent(10u64),
+        max_royalty_fee_percent: Decimal::percent(15u64),
         max_swap_fee_percent: Decimal::percent(10u64),
     };
 
@@ -96,7 +97,8 @@ fn try_infinity_global_update_config() {
         infinity_pair_code_id: 1u64,
         pair_creation_fee: coin(1_000_000u128, NATIVE_DENOM),
         fair_burn_fee_percent: Decimal::percent(1u64),
-        max_royalty_fee_percent: Decimal::percent(10u64),
+        default_royalty_fee_percent: Decimal::percent(10u64),
+        max_royalty_fee_percent: Decimal::percent(15u64),
         max_swap_fee_percent: Decimal::percent(10u64),
     };
 
@@ -193,7 +195,8 @@ fn try_infinity_global_add_remove_min_prices() {
         infinity_pair_code_id: 1u64,
         pair_creation_fee: coin(1_000_000u128, NATIVE_DENOM),
         fair_burn_fee_percent: Decimal::percent(1u64),
-        max_royalty_fee_percent: Decimal::percent(10u64),
+        default_royalty_fee_percent: Decimal::percent(10u64),
+        max_royalty_fee_percent: Decimal::percent(15u64),
         max_swap_fee_percent: Decimal::percent(10u64),
     };
 

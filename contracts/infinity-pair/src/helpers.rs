@@ -7,7 +7,10 @@ use crate::{
 use cosmwasm_std::{ensure_eq, Addr, Coin, Decimal, Deps, QuerierWrapper, Storage, Uint128};
 use infinity_global::{load_global_config, load_min_price, GlobalConfig};
 use infinity_shared::InfinityError;
-use stargaze_royalty_registry::{fetch_royalty_entry, state::RoyaltyEntry};
+use stargaze_royalty_registry::{
+    msg::{QueryMsg as RoyaltyRegistryQueryMsg, RoyaltyPaymentResponse},
+    state::RoyaltyEntry,
+};
 use std::cmp::min;
 
 pub fn only_pair_owner(sender: &Addr, pair: &Pair) -> Result<(), ContractError> {
@@ -112,12 +115,25 @@ pub fn load_payout_context(
     let min_price = load_min_price(&deps.querier, infinity_global, denom)?
         .ok_or(InfinityError::InternalError("denom not supported".to_string()))?;
 
-    let royalty_entry = fetch_royalty_entry(
-        &deps.querier,
+    let royalty_payment_response = deps.querier.query_wasm_smart::<RoyaltyPaymentResponse>(
         &global_config.royalty_registry,
-        collection,
-        Some(infinity_global),
+        &RoyaltyRegistryQueryMsg::RoyaltyPayment {
+            collection: collection.to_string(),
+            protocol: Some(infinity_global.to_string()),
+        },
     )?;
+
+    let royalty_entry = if let Some(royalty_protocol) = royalty_payment_response.royalty_protocol {
+        Some(royalty_protocol.royalty_entry)
+    } else if let Some(royalty_default) = royalty_payment_response.royalty_default {
+        Some(RoyaltyEntry {
+            recipient: royalty_default.royalty_entry.recipient,
+            share: global_config.default_royalty_fee_percent,
+            updated: None,
+        })
+    } else {
+        None
+    };
 
     Ok(PayoutContext {
         global_config,
