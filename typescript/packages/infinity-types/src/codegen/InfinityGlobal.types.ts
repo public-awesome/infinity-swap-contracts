@@ -11,6 +11,7 @@ export interface InstantiateMsg {
   min_prices: Coin[];
 }
 export interface GlobalConfigForString {
+  default_royalty_fee_percent: Decimal;
   fair_burn: string;
   fair_burn_fee_percent: Decimal;
   infinity_factory: string;
@@ -40,6 +41,7 @@ export type QueryMsg = {
 };
 export type Addr = string;
 export interface GlobalConfigForAddr {
+  default_royalty_fee_percent: Decimal;
   fair_burn: Addr;
   fair_burn_fee_percent: Decimal;
   infinity_factory: Addr;

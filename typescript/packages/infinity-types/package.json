@@ -1,6 +1,6 @@
 {
   "name": "@stargazezone/infinity-types",
-  "version": "0.9.0",
+  "version": "0.11.0",
   "description": "The official types package for the Infinity Swap protocol",
   "author": "Tasio Victoria",
   "homepage": "https://stargaze.zone/",
