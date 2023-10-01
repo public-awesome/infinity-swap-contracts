@@ -9,6 +9,7 @@ export type Uint128 = string;
 export interface InstantiateMsg {
   admin?: string | null;
   code_ids: CodeIds;
+  default_royalty_fee_percent: Decimal;
   fair_burn: string;
   fair_burn_fee_percent: Decimal;
   marketplace: string;

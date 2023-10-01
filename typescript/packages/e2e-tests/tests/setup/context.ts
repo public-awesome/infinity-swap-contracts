@@ -116,6 +116,7 @@ export default class Context {
       fair_burn: fairBurnAddress,
       fair_burn_fee_percent: '0.005',
       marketplace: marketplaceAddress,
+      default_royalty_fee_percent: '0.005',
       max_royalty_fee_percent: '0.05',
       max_swap_fee_percent: '0.10',
       min_prices: [{ amount: '1000000', denom: 'ustars' }],

@@ -1,6 +1,6 @@
 {
   "contract_name": "infinity-global",
-  "contract_version": "0.1.1",
+  "contract_version": "0.1.2",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -45,6 +45,7 @@
       "GlobalConfig_for_String": {
         "type": "object",
         "required": [
+          "default_royalty_fee_percent",
           "fair_burn",
           "fair_burn_fee_percent",
           "infinity_factory",
@@ -58,6 +59,14 @@
           "royalty_registry"
         ],
         "properties": {
+          "default_royalty_fee_percent": {
+            "description": "The royalty percentage amount to be paid when no royalty is specified for the protocol",
+            "allOf": [
+              {
+                "$ref": "#/definitions/Decimal"
+              }
+            ]
+          },
           "fair_burn": {
             "description": "The address of the FairBurn contract",
             "type": "string"
@@ -183,6 +192,7 @@
       "title": "GlobalConfig_for_Addr",
       "type": "object",
       "required": [
+        "default_royalty_fee_percent",
         "fair_burn",
         "fair_burn_fee_percent",
         "infinity_factory",
@@ -196,6 +206,14 @@
         "royalty_registry"
       ],
       "properties": {
+        "default_royalty_fee_percent": {
+          "description": "The royalty percentage amount to be paid when no royalty is specified for the protocol",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Decimal"
+            }
+          ]
+        },
         "fair_burn": {
           "description": "The address of the FairBurn contract",
           "allOf": [
