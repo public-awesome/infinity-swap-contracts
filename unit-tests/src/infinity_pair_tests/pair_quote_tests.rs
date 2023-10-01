@@ -80,7 +80,7 @@ fn try_generate_quotes_token_linear() {
     while spot_price <= remaining_amount && spot_price >= delta {
         let quote = spot_price
             - spot_price.mul_ceil(global_config.fair_burn_fee_percent)
-            - spot_price.mul_ceil(global_config.max_royalty_fee_percent);
+            - spot_price.mul_ceil(global_config.default_royalty_fee_percent);
         expected_quotes.push(quote);
         remaining_amount -= spot_price;
         spot_price -= delta;
@@ -161,7 +161,7 @@ fn try_generate_quotes_token_exponential() {
     while spot_price <= remaining_amount {
         let quote = spot_price
             - spot_price.mul_ceil(global_config.fair_burn_fee_percent)
-            - spot_price.mul_ceil(global_config.max_royalty_fee_percent);
+            - spot_price.mul_ceil(global_config.default_royalty_fee_percent);
         expected_quotes.push(quote);
         remaining_amount -= spot_price;
         spot_price = spot_price.checked_div_floor(Decimal::one() + delta).unwrap();
@@ -389,7 +389,7 @@ fn try_generate_quotes_trade_linear() {
     while spot_price <= remaining_amount && spot_price >= delta {
         let quote = spot_price
             - spot_price.mul_ceil(global_config.fair_burn_fee_percent)
-            - spot_price.mul_ceil(global_config.max_royalty_fee_percent)
+            - spot_price.mul_ceil(global_config.default_royalty_fee_percent)
             - spot_price.mul_ceil(swap_fee_percent);
         expected_quotes.push(quote);
         remaining_amount -= spot_price;
@@ -499,7 +499,7 @@ fn try_generate_quotes_trade_exponential() {
     while spot_price <= remaining_amount {
         let quote = spot_price
             - spot_price.mul_ceil(global_config.fair_burn_fee_percent)
-            - spot_price.mul_ceil(global_config.max_royalty_fee_percent)
+            - spot_price.mul_ceil(global_config.default_royalty_fee_percent)
             - spot_price.mul_ceil(swap_fee_percent);
         expected_quotes.push(quote);
         remaining_amount -= spot_price;
@@ -608,7 +608,7 @@ fn try_generate_quotes_trade_cp() {
     while counter < limit {
         let quote = spot_price
             - spot_price.mul_ceil(global_config.fair_burn_fee_percent)
-            - spot_price.mul_ceil(global_config.max_royalty_fee_percent)
+            - spot_price.mul_ceil(global_config.default_royalty_fee_percent)
             - spot_price.mul_ceil(swap_fee_percent);
         expected_quotes.push(quote);
         remaining_amount -= spot_price;
