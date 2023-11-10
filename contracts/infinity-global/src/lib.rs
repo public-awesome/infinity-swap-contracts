@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{
-    coin, ensure, to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo,
+    attr, coin, ensure, to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, Event, MessageInfo,
     QuerierWrapper, StdError, StdResult, Uint128,
 };
 use cosmwasm_std::{Api, Coin, Decimal};
@@ -235,6 +235,7 @@ pub fn sudo_update_config(
     let mut event = Event::new("update-config");
 
     if let Some(fair_burn) = fair_burn {
+        event = event.add_attribute("fair_burn", &fair_burn);
         config.fair_burn = api.addr_validate(&fair_burn)?;
     }
 
@@ -294,19 +295,26 @@ pub fn sudo_update_config(
 }
 
 pub fn sudo_add_min_prices(deps: DepsMut, min_prices: Vec<Coin>) -> Result<Response, StdError> {
+    let mut event = Event::new("add-min-prices");
     for min_price in min_prices {
-        MIN_PRICES.save(deps.storage, min_price.denom, &min_price.amount)?;
+        MIN_PRICES.save(deps.storage, min_price.denom.clone(), &min_price.amount)?;
+        event = event.add_attributes(vec![
+            attr("denom", min_price.denom.to_string()),
+            attr("amount", min_price.amount.to_string()),
+        ]);
     }
 
-    Ok(Response::new())
+    Ok(Response::new().add_event(event))
 }
 
 pub fn sudo_remove_min_prices(deps: DepsMut, denoms: Vec<String>) -> Result<Response, StdError> {
+    let mut event = Event::new("remove-min-prices");
     for denom in denoms {
         MIN_PRICES.remove(deps.storage, denom.clone());
+        event = event.add_attributes(vec![attr("denom", denom.to_string())]);
     }
 
-    Ok(Response::new())
+    Ok(Response::new().add_event(event))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
