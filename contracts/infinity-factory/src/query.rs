@@ -1,12 +1,12 @@
 use crate::helpers::{generate_instantiate_2_addr, index_range_from_query_options};
 use crate::msg::{NextPairResponse, QueryMsg, QuotesResponse};
-use crate::state::{INFINITY_GLOBAL, SENDER_COUNTER};
+use crate::state::{INFINITY_GLOBAL, SENDER_COUNTER, UNRESTRICTED_MIGRATIONS};
 
 use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult, Uint128};
 use infinity_global::{load_global_config, GlobalConfig};
 use infinity_pair::helpers::load_payout_context;
 use infinity_pair::pair::Pair;
-use sg_index_query::QueryOptions;
+use sg_index_query::{QueryOptions, QueryOptionsInternal};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
@@ -36,6 +36,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             pair,
             limit,
         } => to_binary(&query_sim_buy_from_pair_quotes(deps, pair, limit)?),
+        QueryMsg::UnrestrictedMigrations {
+            query_options,
+        } => to_binary(&query_unrestricted_migrations(deps, query_options.unwrap_or_default())?),
     }
 }
 
@@ -156,4 +159,23 @@ pub fn query_sim_buy_from_pair_quotes(
         denom: pair.immutable.denom,
         quotes,
     })
+}
+
+pub fn query_unrestricted_migrations(
+    deps: Deps,
+    query_options: QueryOptions<u64>,
+) -> StdResult<Vec<(u64, u64)>> {
+    let QueryOptionsInternal {
+        limit,
+        order,
+        min,
+        max,
+    } = query_options.unpack(&(|offset| *offset), None, None);
+
+    let results = UNRESTRICTED_MIGRATIONS
+        .range(deps.storage, min, max, order)
+        .take(limit)
+        .collect::<StdResult<Vec<_>>>()?;
+
+    Ok(results)
 }

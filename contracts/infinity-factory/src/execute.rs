@@ -1,9 +1,9 @@
 use crate::helpers::generate_salt;
 use crate::msg::ExecuteMsg;
-use crate::state::{INFINITY_GLOBAL, SENDER_COUNTER};
+use crate::state::{INFINITY_GLOBAL, SENDER_COUNTER, UNRESTRICTED_MIGRATIONS};
 use crate::ContractError;
 
-use cosmwasm_std::{to_binary, DepsMut, Env, Event, MessageInfo, WasmMsg};
+use cosmwasm_std::{attr, ensure_eq, to_binary, DepsMut, Empty, Env, Event, MessageInfo, WasmMsg};
 use infinity_global::load_global_config;
 use infinity_pair::msg::InstantiateMsg as InfinityPairInstantiateMsg;
 use sg_std::Response;
@@ -78,6 +78,37 @@ pub fn execute(
             // Event used by indexer to track pair creation
             response = response.add_event(
                 Event::new("factory-create-pair2".to_string()).add_attribute("sender", info.sender),
+            );
+
+            Ok(response)
+        },
+        ExecuteMsg::UnrestrictedMigratePair {
+            pair_address,
+            target_code_id,
+        } => {
+            let contract_info_response = deps.querier.query_wasm_contract_info(&pair_address)?;
+
+            let valid_target_code_id =
+                UNRESTRICTED_MIGRATIONS.load(deps.storage, contract_info_response.code_id)?;
+
+            ensure_eq!(
+                target_code_id,
+                valid_target_code_id,
+                ContractError::InvalidMigration("Invalid target code id".to_string())
+            );
+
+            let mut response = Response::new().add_message(WasmMsg::Migrate {
+                contract_addr: pair_address.clone(),
+                new_code_id: target_code_id,
+                msg: to_binary(&Empty {})?,
+            });
+
+            // Event used by indexer to track pair migration
+            response = response.add_event(
+                Event::new("factory-migrate-pair".to_string()).add_attributes(vec![
+                    attr("pair_address", pair_address),
+                    attr("target_code_id", target_code_id.to_string()),
+                ]),
             );
 
             Ok(response)
