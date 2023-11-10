@@ -12,12 +12,12 @@ use crate::tokens_for_nfts_iterators::{
 };
 
 use cosmwasm_std::{
-    coin, ensure, ensure_eq, to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Uint128,
-    WasmMsg,
+    attr, coin, ensure, ensure_eq, to_binary, Addr, CosmosMsg, DepsMut, Env, Event, MessageInfo,
+    Uint128, WasmMsg,
 };
 use cw_utils::{must_pay, nonpayable};
 use infinity_pair::msg::ExecuteMsg as PairExecuteMsg;
-use infinity_shared::InfinityError;
+use infinity_shared::{only_nft_owner, InfinityError};
 use sg_marketplace_common::address::address_or;
 use sg_marketplace_common::coin::transfer_coin;
 use sg_marketplace_common::nft::transfer_nft;
@@ -100,11 +100,13 @@ pub fn execute_swap_nfts_for_tokens(
     let mut response = Response::new();
 
     let mut num_swaps = 0u32;
+    let mut volume = Uint128::zero();
     for (sell_order, quote) in zip(sell_orders, quotes) {
         if quote.amount < sell_order.min_output {
             break;
         }
 
+        only_nft_owner(&deps.querier, &info, &collection, &sell_order.input_token_id)?;
         response =
             transfer_nft(&collection, &sell_order.input_token_id, &env.contract.address, response);
 
@@ -128,6 +130,7 @@ pub fn execute_swap_nfts_for_tokens(
         }
 
         num_swaps += 1;
+        volume += quote.amount;
     }
 
     ensure!(num_swaps > 0, ContractError::SwapError("no swaps were executed".to_string()));
@@ -138,6 +141,14 @@ pub fn execute_swap_nfts_for_tokens(
             requested_swaps, num_swaps
         )));
     }
+
+    response = response.add_event(Event::new("router-swap-nfts-for-tokens").add_attributes(vec![
+        attr("collection", collection),
+        attr("denom", denom),
+        attr("sender", info.sender),
+        attr("num_swaps", num_swaps.to_string()),
+        attr("volume", volume),
+    ]));
 
     Ok(response)
 }
@@ -215,6 +226,14 @@ pub fn execute_swap_tokens_for_nfts(
     if !refund_amount.is_zero() {
         response = transfer_coin(coin(refund_amount.u128(), &denom), &asset_recipient, response);
     }
+
+    response = response.add_event(Event::new("router-swap-tokens-for-nfts").add_attributes(vec![
+        attr("collection", collection),
+        attr("denom", denom),
+        attr("sender", info.sender),
+        attr("num_swaps", num_swaps.to_string()),
+        attr("volume", paid_amount), // volume is the amount of tokens paid
+    ]));
 
     Ok(response)
 }

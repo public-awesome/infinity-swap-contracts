@@ -957,6 +957,8 @@ name = "infinity-shared"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-std",
+ "cw721 0.18.0",
+ "cw721-base 0.18.0",
  "thiserror",
 ]
 

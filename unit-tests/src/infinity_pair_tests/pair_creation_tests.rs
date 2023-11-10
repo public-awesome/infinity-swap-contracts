@@ -81,7 +81,7 @@ fn try_create_pair() {
     );
     assert!(response.is_ok());
 
-    let pair_addr = response.unwrap().events[1].attributes[0].value.clone();
+    let pair_addr = response.unwrap().events[2].attributes[0].value.clone();
 
     let pair =
         router.wrap().query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {}).unwrap();
@@ -118,13 +118,8 @@ fn try_update_pair_config() {
     let _minter = collection_resp.minter.clone().unwrap();
     let collection = collection_resp.collection.clone().unwrap();
 
-    let (pair_addr, _pair) = create_pair(
-        &mut router,
-        &infinity_global,
-        &infinity_factory,
-        &collection,
-        &accts.owner,
-    );
+    let (pair_addr, _pair) =
+        create_pair(&mut router, &infinity_global, &infinity_factory, &collection, &accts.owner);
 
     // Non owner cannot withdraw tokens
     let response = router.execute_contract(
@@ -175,10 +170,8 @@ fn try_update_pair_config() {
     );
     assert!(response.is_ok());
 
-    let pair = router
-        .wrap()
-        .query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {})
-        .unwrap();
+    let pair =
+        router.wrap().query_wasm_smart::<Pair>(pair_addr, &InfinityPairQueryMsg::Pair {}).unwrap();
     assert_eq!(pair.config.is_active, is_active);
     assert_eq!(pair.config.pair_type, pair_type);
     assert_eq!(pair.config.bonding_curve, bonding_curve);

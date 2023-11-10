@@ -161,10 +161,6 @@ fn try_token_pair_invalid_swaps() {
         &[],
     );
     assert!(response.is_err());
-    // assert_error(
-    //     response,
-    //     InfinityError::Unauthorized("contract is not approved".to_string()).to_string(),
-    // );
 
     // Cannot swap using an alt min output denom
     approve(&mut router, &seller, &collection, &test_pair.address, token_id.clone());

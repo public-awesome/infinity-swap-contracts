@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members  = ["contracts/*", "packages/*", "unit-tests"]
+members = ["contracts/*", "packages/*", "unit-tests"]
 
 [workspace.package]
 version     = "0.1.0"
@@ -53,8 +53,8 @@ cw-storage-macro = "1.1.0"
 cw-storage-plus  = "1.1.0"
 cw-controllers   = "1.1.0"
 cw2              = "1.1.0"
-cw721            = "0.18.0"
-cw721-base       = "0.18.0"
+cw721            = { version = "0.18.0" }
+cw721-base       = { version = "0.18.0", features = ["library"] }
 cw-utils         = "0.16.0"
 cw-address-like  = "1.0.4"
 
