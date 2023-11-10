@@ -1,20 +1,19 @@
 use crate::error::ContractError;
-use crate::events::{PairEvent, SwapEvent};
+use crate::events::{NftTransferEvent, SwapEvent, TokenTransferEvent, UpdatePairEvent};
 use crate::helpers::{load_pair, load_payout_context, only_active, only_pair_owner};
 use crate::msg::ExecuteMsg;
 use crate::pair::Pair;
-use crate::state::{BondingCurve, PairType, TokenId, INFINITY_GLOBAL, NFT_DEPOSITS};
+use crate::state::{BondingCurve, PairType, INFINITY_GLOBAL, NFT_DEPOSITS};
 
 use cosmwasm_std::{
-    attr, coin, ensure, ensure_eq, has_coins, Addr, Coin, DepsMut, Env, Event, MessageInfo, Order,
-    StdResult,
+    coin, ensure, ensure_eq, has_coins, Addr, Coin, DepsMut, Env, MessageInfo, Order, StdResult,
 };
 use cw721::{Cw721QueryMsg, TokensResponse};
 use cw_utils::{maybe_addr, must_pay, nonpayable};
-use infinity_shared::InfinityError;
+use infinity_shared::{only_nft_owner, InfinityError};
 use sg_marketplace_common::address::address_or;
 use sg_marketplace_common::coin::transfer_coins;
-use sg_marketplace_common::nft::{only_with_owner_approval, transfer_nft};
+use sg_marketplace_common::nft::transfer_nft;
 use sg_std::Response;
 
 #[cfg(not(feature = "library"))]
@@ -54,10 +53,13 @@ pub fn handle_execute_msg(
     let api = deps.api;
 
     match msg {
-        ExecuteMsg::ReceiveNft(cw721_receive_msg) => {
+        ExecuteMsg::DepositNfts {
+            collection,
+            token_ids,
+        } => {
             nonpayable(&info)?;
-            only_pair_owner(&api.addr_validate(&cw721_receive_msg.sender)?, &pair)?;
-            execute_receive_nft(deps, info, pair, cw721_receive_msg.token_id)
+            only_pair_owner(&info, &pair)?;
+            execute_deposit_nfts(deps, info, env, pair, api.addr_validate(&collection)?, token_ids)
         },
         ExecuteMsg::WithdrawNfts {
             collection,
@@ -65,7 +67,7 @@ pub fn handle_execute_msg(
             asset_recipient,
         } => {
             nonpayable(&info)?;
-            only_pair_owner(&info.sender, &pair)?;
+            only_pair_owner(&info, &pair)?;
             execute_withdraw_nfts(
                 deps,
                 info,
@@ -81,7 +83,7 @@ pub fn handle_execute_msg(
             asset_recipient,
         } => {
             nonpayable(&info)?;
-            only_pair_owner(&info.sender, &pair)?;
+            only_pair_owner(&info, &pair)?;
             execute_withdraw_any_nfts(
                 deps,
                 env,
@@ -93,7 +95,7 @@ pub fn handle_execute_msg(
             )
         },
         ExecuteMsg::DepositTokens {} => {
-            only_pair_owner(&info.sender, &pair)?;
+            only_pair_owner(&info, &pair)?;
             execute_deposit_tokens(deps, info, env, pair)
         },
         ExecuteMsg::WithdrawTokens {
@@ -101,14 +103,14 @@ pub fn handle_execute_msg(
             asset_recipient,
         } => {
             nonpayable(&info)?;
-            only_pair_owner(&info.sender, &pair)?;
+            only_pair_owner(&info, &pair)?;
             execute_withdraw_tokens(deps, info, env, pair, funds, maybe_addr(api, asset_recipient)?)
         },
         ExecuteMsg::WithdrawAllTokens {
             asset_recipient,
         } => {
             nonpayable(&info)?;
-            only_pair_owner(&info.sender, &pair)?;
+            only_pair_owner(&info, &pair)?;
             execute_withdraw_all_tokens(deps, info, env, pair, maybe_addr(api, asset_recipient)?)
         },
         ExecuteMsg::UpdatePairConfig {
@@ -118,7 +120,7 @@ pub fn handle_execute_msg(
             asset_recipient,
         } => {
             nonpayable(&info)?;
-            only_pair_owner(&info.sender, &pair)?;
+            only_pair_owner(&info, &pair)?;
             execute_update_pair_config(
                 deps,
                 info,
@@ -137,13 +139,7 @@ pub fn handle_execute_msg(
         } => {
             nonpayable(&info)?;
             only_active(&pair)?;
-            only_with_owner_approval(
-                &deps.querier,
-                &info,
-                &pair.immutable.collection,
-                &token_id,
-                &env.contract.address,
-            )?;
+            only_nft_owner(&deps.querier, &info, &pair.immutable.collection, &token_id)?;
             execute_swap_nft_for_tokens(
                 deps,
                 info,
@@ -183,26 +179,42 @@ pub fn handle_execute_msg(
     }
 }
 
-pub fn execute_receive_nft(
+pub fn execute_deposit_nfts(
     deps: DepsMut,
     info: MessageInfo,
+    env: Env,
     mut pair: Pair,
-    token_id: TokenId,
+    collection: Addr,
+    token_ids: Vec<String>,
 ) -> Result<(Pair, Response), ContractError> {
-    let collection = info.sender;
     ensure_eq!(
         &collection,
         &pair.immutable.collection,
         InfinityError::InvalidInput("invalid collection".to_string())
     );
+    ensure!(
+        !token_ids.is_empty(),
+        InfinityError::InvalidInput("token_ids should not be empty".to_string())
+    );
 
-    pair.internal.total_nfts += 1u64;
-    NFT_DEPOSITS.save(deps.storage, token_id.clone(), &true)?;
+    let mut response = Response::new();
 
-    let response = Response::new().add_event(Event::new("deposit-nft").add_attributes(vec![
-        attr("collection", collection.to_string()),
-        attr("token_id", token_id),
-    ]));
+    for token_id in &token_ids {
+        only_nft_owner(&deps.querier, &info, &collection, token_id)?;
+        response = transfer_nft(&collection, token_id, &env.contract.address, response);
+        NFT_DEPOSITS.save(deps.storage, token_id.clone(), &true)?;
+    }
+
+    pair.internal.total_nfts += token_ids.len() as u64;
+
+    response = response.add_event(
+        NftTransferEvent {
+            ty: "deposit-nfts",
+            pair: &pair,
+            token_ids: &token_ids,
+        }
+        .into(),
+    );
 
     Ok((pair, response))
 }
@@ -227,17 +239,23 @@ pub fn execute_withdraw_nfts(
     for token_id in &token_ids {
         response = transfer_nft(&collection, token_id, &asset_recipient, response);
 
-        if pair.immutable.collection == collection
+        if collection == pair.immutable.collection
             && NFT_DEPOSITS.has(deps.storage, token_id.to_string())
         {
             pair.internal.total_nfts -= 1u64;
             NFT_DEPOSITS.remove(deps.storage, token_id.to_string());
         }
+    }
 
-        response = response.add_event(Event::new("withdraw-nft").add_attributes(vec![
-            attr("collection", collection.to_string()),
-            attr("token_id", token_id.to_string()),
-        ]));
+    if collection == pair.immutable.collection {
+        response = response.add_event(
+            NftTransferEvent {
+                ty: "withdraw-nfts",
+                pair: &pair,
+                token_ids: &token_ids,
+            }
+            .into(),
+        );
     }
 
     Ok((pair, response))
@@ -273,8 +291,18 @@ pub fn execute_deposit_tokens(
     _env: Env,
     pair: Pair,
 ) -> Result<(Pair, Response), ContractError> {
-    must_pay(&info, &pair.immutable.denom)?;
-    Ok((pair, Response::new()))
+    let received_amount = must_pay(&info, &pair.immutable.denom)?;
+
+    let response = Response::new().add_event(
+        TokenTransferEvent {
+            ty: "deposit-tokens",
+            pair: &pair,
+            funds: &coin(received_amount.u128(), &pair.immutable.denom),
+        }
+        .into(),
+    );
+
+    Ok((pair, response))
 }
 
 pub fn execute_withdraw_tokens(
@@ -285,21 +313,24 @@ pub fn execute_withdraw_tokens(
     funds: Vec<Coin>,
     asset_recipient: Option<Addr>,
 ) -> Result<(Pair, Response), ContractError> {
+    let mut response = Response::new();
+
     for fund in &funds {
         if fund.denom == pair.immutable.denom {
             pair.total_tokens -= fund.amount;
+
+            response = response.add_event(
+                TokenTransferEvent {
+                    ty: "withdraw-tokens",
+                    pair: &pair,
+                    funds: fund,
+                }
+                .into(),
+            );
         }
     }
 
     let asset_recipient = address_or(asset_recipient.as_ref(), &pair.asset_recipient());
-
-    let mut response = Response::new();
-
-    for fund in &funds {
-        response = response.add_event(
-            Event::new("withdraw-tokens").add_attributes(vec![attr("funds", fund.to_string())]),
-        );
-    }
 
     response = transfer_coins(funds, &asset_recipient, response);
 
@@ -347,7 +378,7 @@ pub fn execute_update_pair_config(
     }
 
     let response = Response::new().add_event(
-        PairEvent {
+        UpdatePairEvent {
             ty: "update-pair",
             pair: &pair,
         }
@@ -401,9 +432,8 @@ pub fn execute_swap_nft_for_tokens(
     response = response.add_event(
         SwapEvent {
             ty: "swap-nft-for-tokens",
+            pair: &pair,
             token_id: &token_id,
-            collection: &pair.immutable.collection,
-            pair_owner: &pair.immutable.owner,
             sender_recipient: &seller_recipient,
             quote_summary: &quote_summary,
         }
@@ -465,9 +495,8 @@ pub fn execute_swap_tokens_for_specific_nft(
     response = response.add_event(
         SwapEvent {
             ty: "swap-tokens-for-nft",
+            pair: &pair,
             token_id: &token_id,
-            collection: &pair.immutable.collection,
-            pair_owner: &pair.immutable.owner,
             sender_recipient: &nft_recipient,
             quote_summary: &quote_summary,
         }

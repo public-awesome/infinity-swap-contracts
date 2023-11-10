@@ -1,4 +1,4 @@
-use crate::events::PairEvent;
+use crate::events::CreatePairEvent;
 use crate::helpers::PayoutContext;
 use crate::msg::InstantiateMsg;
 use crate::pair::Pair;
@@ -10,7 +10,7 @@ use crate::{
 
 use cosmwasm_std::{ensure_eq, DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
-use cw_utils::must_pay;
+use cw_utils::may_pay;
 use infinity_global::{load_global_config, load_min_price};
 use infinity_shared::InfinityError;
 use sg_marketplace_common::nft::only_tradable;
@@ -57,15 +57,14 @@ pub fn instantiate(
         response,
     )?;
 
-    // Pay pair creation fee
-    let received_amount = must_pay(&info, &global_config.pair_creation_fee.denom)?;
+    // Pay pair creation fee, handle 0 fee case
+    let received_amount = may_pay(&info, &global_config.pair_creation_fee.denom)?;
     ensure_eq!(
         received_amount,
         global_config.pair_creation_fee.amount,
-        InfinityError::InsufficientFunds {
-            expected: global_config.pair_creation_fee
-        }
+        InfinityError::InvalidInput("incorrect pair creation fee".to_string())
     );
+
     response = append_fair_burn_msg(
         &global_config.fair_burn,
         vec![global_config.pair_creation_fee.clone()],
@@ -89,7 +88,7 @@ pub fn instantiate(
         .add_attribute("contract_version", CONTRACT_VERSION);
 
     response = response.add_event(
-        PairEvent {
+        CreatePairEvent {
             ty: "create-pair",
             pair: &pair,
         }

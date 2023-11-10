@@ -3,7 +3,7 @@ use crate::msg::ExecuteMsg;
 use crate::state::{INFINITY_GLOBAL, SENDER_COUNTER};
 use crate::ContractError;
 
-use cosmwasm_std::{to_binary, DepsMut, Env, MessageInfo, WasmMsg};
+use cosmwasm_std::{to_binary, DepsMut, Env, Event, MessageInfo, WasmMsg};
 use infinity_global::load_global_config;
 use infinity_pair::msg::InstantiateMsg as InfinityPairInstantiateMsg;
 use sg_std::Response;
@@ -26,7 +26,9 @@ pub fn execute(
             let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
             let global_config = load_global_config(&deps.querier, &infinity_global)?;
 
-            let response = Response::new().add_message(WasmMsg::Instantiate {
+            let mut response = Response::new();
+
+            response = response.add_message(WasmMsg::Instantiate {
                 admin: Some(env.contract.address.into()),
                 code_id: global_config.infinity_pair_code_id,
                 label: "Infinity Pair".to_string(),
@@ -37,6 +39,11 @@ pub fn execute(
                 })?,
                 funds: info.funds,
             });
+
+            // Event used by indexer to track pair creation
+            response = response.add_event(
+                Event::new("factory-create-pair".to_string()).add_attribute("sender", info.sender),
+            );
 
             Ok(response)
         },
@@ -53,7 +60,9 @@ pub fn execute(
             let salt = generate_salt(&info.sender, counter);
             SENDER_COUNTER.save(deps.storage, counter_key, &(counter + 1))?;
 
-            let response = Response::new().add_message(WasmMsg::Instantiate2 {
+            let mut response = Response::new();
+
+            response = response.add_message(WasmMsg::Instantiate2 {
                 admin: Some(env.contract.address.into()),
                 code_id: global_config.infinity_pair_code_id,
                 label: "Infinity Pair".to_string(),
@@ -65,6 +74,11 @@ pub fn execute(
                 funds: info.funds,
                 salt,
             });
+
+            // Event used by indexer to track pair creation
+            response = response.add_event(
+                Event::new("factory-create-pair2".to_string()).add_attribute("sender", info.sender),
+            );
 
             Ok(response)
         },

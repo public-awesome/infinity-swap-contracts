@@ -1,109 +1,127 @@
-use crate::{
-    pair::Pair,
-    state::{BondingCurve, PairType, QuoteSummary},
-};
+use crate::{pair::Pair, state::QuoteSummary};
 
-use cosmwasm_std::{attr, Addr, Event, Uint128};
+use cosmwasm_std::{attr, Addr, Coin, Event};
 use std::vec;
 
-const NONE: &str = "None";
-
-pub struct PairEvent<'a> {
+pub struct CreatePairEvent<'a> {
     pub ty: &'a str,
     pub pair: &'a Pair,
 }
 
-impl<'a> From<PairEvent<'a>> for Event {
-    fn from(pe: PairEvent) -> Self {
-        let mut event = Event::new(pe.ty.to_string());
-
-        event = event.add_attributes(vec![
-            attr("collection", pe.pair.immutable.collection.to_string()),
-            attr("denom", pe.pair.immutable.denom.to_string()),
-            attr("owner", pe.pair.immutable.owner.to_string()),
-        ]);
-
-        match pe.pair.config.pair_type {
-            PairType::Token => {
-                event = event.add_attribute("pair_type", "token".to_string());
-            },
-            PairType::Nft => {
-                event = event.add_attribute("pair_type", "nft".to_string());
-            },
-            PairType::Trade {
-                swap_fee_percent,
-                reinvest_tokens,
-                reinvest_nfts,
-            } => {
-                event = event.add_attributes(vec![
-                    attr("pair_type", "trade".to_string()),
-                    attr("swap_fee_percent", swap_fee_percent.to_string()),
-                    attr("reinvest_tokens", reinvest_tokens.to_string()),
-                    attr("reinvest_nfts", reinvest_nfts.to_string()),
-                ]);
-            },
-        }
-
-        match pe.pair.config.bonding_curve {
-            BondingCurve::Linear {
-                spot_price,
-                delta,
-            } => {
-                event = event.add_attributes(vec![
-                    attr("bonding_curve", "linear".to_string()),
-                    attr("spot_price", spot_price.to_string()),
-                    attr("delta", delta.to_string()),
-                ]);
-            },
-            BondingCurve::Exponential {
-                spot_price,
-                delta,
-            } => {
-                event = event.add_attributes(vec![
-                    attr("bonding_curve", "exponential".to_string()),
-                    attr("spot_price", spot_price.to_string()),
-                    attr("delta", delta.to_string()),
-                ]);
-            },
-            BondingCurve::ConstantProduct => {
-                event = event.add_attribute("bonding_curve", "constant_product".to_string());
-            },
-        }
-
-        event = event.add_attribute("is_active", pe.pair.config.is_active.to_string());
-        event = event.add_attribute(
+impl<'a> From<CreatePairEvent<'a>> for Event {
+    fn from(pe: CreatePairEvent) -> Self {
+        Event::new(pe.ty.to_string()).add_attributes(pe.pair.get_event_attrs(vec![
+            "collection",
+            "denom",
+            "owner",
+            "pair_type",
+            "swap_fee_percent",
+            "reinvest_tokens",
+            "reinvest_nfts",
+            "bonding_curve",
+            "spot_price",
+            "delta",
+            "is_active",
             "asset_recipient",
-            pe.pair.config.asset_recipient.as_ref().map_or(NONE.to_string(), |ar| ar.to_string()),
-        );
+        ]))
+    }
+}
 
-        event
+pub struct UpdatePairEvent<'a> {
+    pub ty: &'a str,
+    pub pair: &'a Pair,
+}
+
+impl<'a> From<UpdatePairEvent<'a>> for Event {
+    fn from(pe: UpdatePairEvent) -> Self {
+        Event::new(pe.ty.to_string()).add_attributes(pe.pair.get_event_attrs(vec![
+            "pair_type",
+            "swap_fee_percent",
+            "reinvest_tokens",
+            "reinvest_nfts",
+            "bonding_curve",
+            "spot_price",
+            "delta",
+            "is_active",
+            "asset_recipient",
+            "total_tokens",
+            "total_nfts",
+            "sell_to_pair_quote",
+            "buy_from_pair_quote",
+        ]))
+    }
+}
+
+pub struct NftTransferEvent<'a> {
+    pub ty: &'a str,
+    pub pair: &'a Pair,
+    pub token_ids: &'a Vec<String>,
+}
+
+impl<'a> From<NftTransferEvent<'a>> for Event {
+    fn from(nte: NftTransferEvent) -> Self {
+        Event::new(nte.ty.to_string())
+            .add_attributes(nte.pair.get_event_attrs(vec![
+                "total_tokens",
+                "total_nfts",
+                "sell_to_pair_quote",
+                "buy_from_pair_quote",
+            ]))
+            .add_attributes(nte.token_ids.iter().map(|token_id| ("token_id", token_id)))
+    }
+}
+
+pub struct TokenTransferEvent<'a> {
+    pub ty: &'a str,
+    pub pair: &'a Pair,
+    pub funds: &'a Coin,
+}
+
+impl<'a> From<TokenTransferEvent<'a>> for Event {
+    fn from(tte: TokenTransferEvent) -> Self {
+        Event::new(tte.ty.to_string())
+            .add_attributes(tte.pair.get_event_attrs(vec![
+                "total_tokens",
+                "sell_to_pair_quote",
+                "buy_from_pair_quote",
+            ]))
+            .add_attribute("funds", tte.funds.to_string())
     }
 }
 
 pub struct SwapEvent<'a> {
     pub ty: &'a str,
+    pub pair: &'a Pair,
     pub token_id: &'a str,
-    pub collection: &'a Addr,
-    pub pair_owner: &'a Addr,
     pub sender_recipient: &'a Addr,
     pub quote_summary: &'a QuoteSummary,
 }
 
 impl<'a> From<SwapEvent<'a>> for Event {
     fn from(se: SwapEvent) -> Self {
-        Event::new(se.ty.to_string()).add_attributes(vec![
+        let mut event =
+            Event::new(se.ty.to_string()).add_attributes(se.pair.get_event_attrs(vec![
+                "spot_price",
+                "is_active",
+                "total_tokens",
+                "sell_to_pair_quote",
+                "buy_from_pair_quote",
+            ]));
+
+        event = event.add_attributes(vec![
             attr("token_id", se.token_id),
-            attr("collection", se.collection),
-            attr("pair_owner", se.pair_owner),
             attr("sender_recipient", se.sender_recipient),
             attr("fair_burn_fee", se.quote_summary.fair_burn.amount),
-            attr(
-                "royalty_fee",
-                se.quote_summary.royalty.as_ref().map_or(Uint128::zero(), |r| r.amount),
-            ),
-            attr("swap_fee", se.quote_summary.swap.as_ref().map_or(Uint128::zero(), |s| s.amount)),
             attr("seller_amount", se.quote_summary.seller_amount),
-            attr("total_price", se.quote_summary.total()),
-        ])
+        ]);
+
+        if let Some(royalty) = se.quote_summary.royalty.as_ref() {
+            event = event.add_attribute("royalty_fee", royalty.amount);
+        }
+        if let Some(swap) = se.quote_summary.swap.as_ref() {
+            event = event.add_attribute("swap_fee", swap.amount);
+        }
+
+        event
     }
 }

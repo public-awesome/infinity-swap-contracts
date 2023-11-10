@@ -8,7 +8,7 @@ use crate::state::{
 };
 
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{coin, to_binary, Addr, Decimal, Storage, Uint128, WasmMsg};
+use cosmwasm_std::{attr, coin, to_binary, Addr, Attribute, Decimal, Storage, Uint128, WasmMsg};
 use infinity_index::msg::ExecuteMsg as InfinityIndexExecuteMsg;
 use sg_marketplace_common::address::address_or;
 use sg_marketplace_common::coin::transfer_coins;
@@ -343,5 +343,108 @@ impl Pair {
             .unwrap(),
             funds: vec![],
         })
+    }
+
+    pub fn get_event_attrs(&self, attr_keys: Vec<&str>) -> Vec<Attribute> {
+        let mut attributes = vec![];
+
+        for attr_key in attr_keys {
+            let attr = match attr_key {
+                "collection" => Some(attr("collection", self.immutable.collection.to_string())),
+                "denom" => Some(attr("denom", self.immutable.denom.to_string())),
+                "owner" => Some(attr("owner", self.immutable.owner.to_string())),
+                "pair_type" => match self.config.pair_type {
+                    PairType::Token => Some(attr("pair_type", "token".to_string())),
+                    PairType::Nft => Some(attr("pair_type", "nft".to_string())),
+                    PairType::Trade {
+                        ..
+                    } => Some(attr("pair_type", "trade".to_string())),
+                },
+                "swap_fee_percent" => match self.config.pair_type {
+                    PairType::Token | PairType::Nft => None,
+                    PairType::Trade {
+                        swap_fee_percent,
+                        ..
+                    } => Some(attr("swap_fee_percent", swap_fee_percent.to_string())),
+                },
+                "reinvest_tokens" => match self.config.pair_type {
+                    PairType::Token | PairType::Nft => None,
+                    PairType::Trade {
+                        reinvest_tokens,
+                        ..
+                    } => Some(attr("reinvest_tokens", reinvest_tokens.to_string())),
+                },
+                "reinvest_nfts" => match self.config.pair_type {
+                    PairType::Token | PairType::Nft => None,
+                    PairType::Trade {
+                        reinvest_nfts,
+                        ..
+                    } => Some(attr("reinvest_nfts", reinvest_nfts.to_string())),
+                },
+                "bonding_curve" => match self.config.bonding_curve {
+                    BondingCurve::Linear {
+                        ..
+                    } => Some(attr("bonding_curve", "linear".to_string())),
+                    BondingCurve::Exponential {
+                        ..
+                    } => Some(attr("bonding_curve", "exponential".to_string())),
+                    BondingCurve::ConstantProduct {} => {
+                        Some(attr("bonding_curve", "constant_product".to_string()))
+                    },
+                },
+                "spot_price" => match self.config.bonding_curve {
+                    BondingCurve::Linear {
+                        spot_price,
+                        ..
+                    } => Some(attr("spot_price", spot_price.to_string())),
+                    BondingCurve::Exponential {
+                        spot_price,
+                        ..
+                    } => Some(attr("spot_price", spot_price.to_string())),
+                    BondingCurve::ConstantProduct {
+                        ..
+                    } => None,
+                },
+                "delta" => match self.config.bonding_curve {
+                    BondingCurve::Linear {
+                        delta,
+                        ..
+                    } => Some(attr("delta", delta.to_string())),
+                    BondingCurve::Exponential {
+                        delta,
+                        ..
+                    } => Some(attr("delta", delta.to_string())),
+                    BondingCurve::ConstantProduct {
+                        ..
+                    } => None,
+                },
+                "is_active" => Some(attr("is_active", self.config.is_active.to_string())),
+                "asset_recipient" => self
+                    .config
+                    .asset_recipient
+                    .as_ref()
+                    .map(|asset_recipient| attr("asset_recipient", asset_recipient.to_string())),
+                "total_tokens" => Some(attr("total_tokens", self.total_tokens.to_string())),
+                "total_nfts" => Some(attr("total_nfts", self.internal.total_nfts.to_string())),
+                "sell_to_pair_quote" => {
+                    self.internal.sell_to_pair_quote_summary.as_ref().map(|quote_summary| {
+                        attr("sell_to_pair_quote", quote_summary.seller_amount.to_string())
+                    })
+                },
+                "buy_from_pair_quote" => {
+                    self.internal.buy_from_pair_quote_summary.as_ref().map(|quote_summary| {
+                        attr("buy_from_pair_quote", quote_summary.total().to_string())
+                    })
+                },
+                &_ => {
+                    unreachable!("Invalid attr_key: {}", attr_key)
+                },
+            };
+            if let Some(value) = attr {
+                attributes.push(value);
+            }
+        }
+
+        attributes
     }
 }

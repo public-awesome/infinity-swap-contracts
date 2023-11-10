@@ -58,12 +58,7 @@ pub fn approve(
     assert!(res.is_ok());
 }
 
-pub fn _approve_all(
-    router: &mut StargazeApp,
-    owner: &Addr,
-    collection: &Addr,
-    approve_addr: &Addr,
-) {
+pub fn approve_all(router: &mut StargazeApp, owner: &Addr, collection: &Addr, approve_addr: &Addr) {
     let approve_msg: Sg721ExecuteMsg<CollectionInfoResponse, Empty> = Sg721ExecuteMsg::ApproveAll {
         operator: approve_addr.to_string(),
         expires: None,
@@ -109,7 +104,7 @@ pub fn _mint_and_approve_many(
         let token_id = mint_to(router, creator, owner, minter_addr);
         token_ids.push(token_id);
     }
-    _approve_all(router, owner, collection, approve_addr);
+    approve_all(router, owner, collection, approve_addr);
     token_ids
 }
 

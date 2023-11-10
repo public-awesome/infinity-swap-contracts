@@ -6,7 +6,6 @@ use crate::{
 
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::{Addr, Coin, Uint128};
-use cw721::Cw721ReceiveMsg;
 use sg_index_query::QueryOptions;
 
 /// Defines whether the end user is buying or selling NFTs
@@ -29,7 +28,10 @@ pub struct InstantiateMsg {
 #[cw_serde]
 pub enum ExecuteMsg {
     /// Deposit NFTs into the pair
-    ReceiveNft(Cw721ReceiveMsg),
+    DepositNfts {
+        collection: String,
+        token_ids: Vec<TokenId>,
+    },
     /// Withdraw NFTs from the pair
     WithdrawNfts {
         collection: String,

@@ -1,4 +1,4 @@
-use crate::helpers::nft_functions::{assert_nft_owner, mint_to, transfer};
+use crate::helpers::nft_functions::{approve_all, assert_nft_owner, mint_to, transfer};
 use crate::helpers::pair_functions::{create_pair, create_pair_with_deposits};
 use crate::helpers::utils::assert_error;
 use crate::setup::setup_accounts::MarketAccounts;
@@ -7,8 +7,7 @@ use crate::setup::templates::{
     minter_two_collections, setup_infinity_test, standard_minter_template, InfinityTestSetup,
 };
 
-use cosmwasm_std::{coin, to_binary, Addr, Decimal, Empty, Uint128};
-use cw721::Cw721ExecuteMsg;
+use cosmwasm_std::{coin, Addr, Decimal, Uint128};
 use cw_multi_test::Executor;
 use infinity_pair::msg::{ExecuteMsg as InfinityPairExecuteMsg, QueryMsg as InfinityPairQueryMsg};
 use infinity_pair::pair::Pair;
@@ -41,13 +40,13 @@ fn try_deposit_nft() {
 
     let token_id = mint_to(&mut router, &accts.creator, &accts.owner, &minter);
 
+    approve_all(&mut router, &accts.owner, &collection, &pair_addr);
     let response = router.execute_contract(
         accts.owner,
-        collection.clone(),
-        &Cw721ExecuteMsg::SendNft {
-            contract: pair_addr.to_string(),
-            token_id: token_id.clone(),
-            msg: to_binary(&Empty {}).unwrap(),
+        pair_addr.clone(),
+        &InfinityPairExecuteMsg::DepositNfts {
+            collection: collection.to_string(),
+            token_ids: vec![token_id.clone()],
         },
         &[],
     );
@@ -86,21 +85,20 @@ fn try_withdraw_nfts() {
     let mut token_ids: Vec<String> = vec![];
     for _ in 0..num_nfts {
         let token_id = mint_to(&mut router, &accts.creator.clone(), &accts.owner.clone(), &minter);
-
-        let response = router.execute_contract(
-            accts.owner.clone(),
-            collection.clone(),
-            &Cw721ExecuteMsg::SendNft {
-                contract: pair_addr.to_string(),
-                token_id: token_id.clone(),
-                msg: to_binary(&Empty {}).unwrap(),
-            },
-            &[],
-        );
-        assert!(response.is_ok());
-
-        token_ids.push(token_id)
+        token_ids.push(token_id);
     }
+
+    approve_all(&mut router, &accts.owner.clone(), &collection, &pair_addr);
+    let response = router.execute_contract(
+        accts.owner.clone(),
+        pair_addr.clone(),
+        &InfinityPairExecuteMsg::DepositNfts {
+            collection: collection.to_string(),
+            token_ids: token_ids.clone(),
+        },
+        &[],
+    );
+    assert!(response.is_ok());
 
     let pair = router
         .wrap()
