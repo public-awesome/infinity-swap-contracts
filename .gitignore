@@ -26,5 +26,5 @@ gas_reports/
 
 # typescript
 node_modules/
-tmp/
-lib/
+dist/
+.turbo/

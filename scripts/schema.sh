@@ -1,3 +1,5 @@
+#!/bin/bash
+
 START_DIR=$(pwd)
 
 for d in contracts/*; do
