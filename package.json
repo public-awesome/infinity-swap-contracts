@@ -4,15 +4,17 @@
   "description": "The official types package for the Infinity Swap protocol",
   "author": "Tasio Victoria",
   "license": "BUSL-1.1",
-  "main": "lib/index.js",
   "scripts": {
     "wasm": "cargo build --release --lib --target wasm32-unknown-unknown",
     "schema": "./scripts/schema.sh",
+    "optimize": "./scripts/optimize.sh",
+    "optimize-arm": "./scripts/optimize-arm.sh",
     "build": "bun run wasm && bun run schema",
     "test": "cargo test --lib -- --nocapture"
   },
   "files": [
-    "lib"
+    "schema",
+    "artifacts"
   ],
   "publishConfig": {
     "access": "public"

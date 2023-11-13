@@ -1,12 +1,17 @@
 #!/bin/bash
 
-START_DIR=$(pwd)
+start_dir=$(pwd)
 
-for d in contracts/*; do
-  if [ -d "$d" ]; then
-    cd $d
+rm -rf schema
+
+for contract_path in contracts/*; do
+  if [ -d "$contract_path" ]; then
+    cd $contract_path
+    filename="$(basename $contract_path)"
     cargo schema
     rm -rf schema/raw
-    cd "$START_DIR"
+    mkdir -p $start_dir/schema/$filename
+    mv schema/$filename.json $start_dir/schema/$filename/$filename.json
+    cd "$start_dir"
   fi
 done
