@@ -1,0 +1,5 @@
+{
+  "extends": "@uju-labs/tsconfig/common.json",
+  "compilerOptions": {},
+  "include": ["index.ts"]
+}
