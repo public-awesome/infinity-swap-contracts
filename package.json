@@ -1,28 +1,33 @@
 {
-  "name": "@uju-labs/infinity-swap",
-  "version": "0.0.0",
+  "name": "@uju-labs/infinity-swap-core",
+  "version": "0.1.0",
   "description": "The official types package for the Infinity Swap protocol",
-  "main": "index.ts",
-  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
   "files": [
     "schema",
-    "artifacts"
+    "artifacts",
+    "dist"
   ],
   "scripts": {
+    "build": "bun run dist",
+    "codegen": "./scripts/schema.sh",
+    "dist": "tsup index.ts --format cjs,esm --dts",
     "lint": "eslint --fix .",
-    "wasm": "cargo build --release --lib --target wasm32-unknown-unknown",
-    "gen:schema": "./scripts/schema.sh",
-    "dist": "tsc -p ./tsconfig.json",
-    "build": "bun run wasm && bun run gen:schema && bun run dist",
     "optimize": "./scripts/optimize.sh",
     "optimize-arm": "./scripts/optimize-arm.sh",
-    "test:unit": "cargo test --lib -- --nocapture"
-  },
-  "devDependencies": {
-    "@uju-labs/eslint-config-custom": "workspace:*"
+    "changeset": "changeset add",
+    "test:unit": "cargo test --lib -- --nocapture",
+    "wasm": "cargo build --release --lib --target wasm32-unknown-unknown"
   },
   "dependencies": {
     "lodash": "^4.17.21",
     "typescript": "5.1.6"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.26.2",
+    "@uju-labs/eslint-config-custom": "workspace:*",
+    "tsup": "^7.3.0"
   }
 }
