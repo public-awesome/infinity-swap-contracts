@@ -6,7 +6,7 @@ on:
 
 jobs:
   build_and_upload_x86_64:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: extractions/setup-just@v1
 
@@ -28,12 +28,22 @@ jobs:
           path: artifacts/
 
   build_and_upload_arm64:
-    runs-on: macos-latest
+    runs-on: macos-12
     steps:
       - uses: extractions/setup-just@v1
 
       - name: Checkout code
         uses: actions/checkout@v2
+
+      - name: Install Docker
+        run: |
+          brew install --cask docker
+          open /Applications/Docker.app
+          # Wait for Docker to be ready
+          while ! docker info 2>/dev/null; do
+            echo "Waiting for Docker to start..."
+            sleep 1
+          done
 
       - name: Build ARM64 contracts
         run: just optimize-arm
