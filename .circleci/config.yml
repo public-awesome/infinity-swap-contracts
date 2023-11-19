@@ -90,5 +90,5 @@ jobs:
               -r "$CIRCLE_PROJECT_REPONAME" \
               -c "$CIRCLE_SHA1" \
               -n "$TITLE" \
-              -delete \
+              -replace \
               "$TAG" ./artifacts/
