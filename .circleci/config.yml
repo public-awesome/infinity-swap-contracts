@@ -74,6 +74,7 @@ jobs:
           name: Combine artifacts
           command: |
             mkdir new_directory
+            mkdir ./artifacts/
             cp -r /workspace/x86_64-artifacts/* ./artifacts/
             cp -r /workspace/arm64-artifacts/* ./artifacts/
             rm ./artifacts/checksums_intermediate.txt
