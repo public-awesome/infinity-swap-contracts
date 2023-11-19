@@ -36,7 +36,9 @@ jobs:
           command: ./scripts/optimize.sh
       - run:
           name: copy x86_64 artifacts
-          command: cp artifacts/* x86_64-artifacts/
+          command: |
+            mkdir x86_64-artifacts
+            cp artifacts/* x86_64-artifacts/
       - persist_to_workspace:
           root: .
           paths:
@@ -53,7 +55,9 @@ jobs:
           command: ./scripts/optimize-arm.sh
       - run:
           name: copy arm64 artifacts
-          command: cp artifacts/* arm64-artifacts/
+          command: |
+            mkdir arm64-artifacts
+            cp artifacts/* arm64-artifacts/
       - persist_to_workspace:
           root: .
           paths:
