@@ -15,7 +15,7 @@ workflows:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
             branches:
               ignore: /.*/
-      - publish_artifacts:
+      - upload_artifacts:
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
@@ -61,12 +61,13 @@ jobs:
           path: artifacts
           destination: arm64-artifacts
 
-  publish_artifacts:
+  upload_artifacts:
     docker:
       - image: cibuilds/github:0.13
     steps:
+      - checkout
       - run:
-          name: Publish x86_64-artifacts on GitHub
+          name: Upload x86_64-artifacts
           command: |
             TAG="$CIRCLE_TAG"
             TITLE="$TAG"
@@ -76,7 +77,7 @@ jobs:
               -n "$TITLE" -b "$BODY" \
               "$TAG" ./x86_64-artifacts/
       - run:
-          name: Publish arm64-artifacts on GitHub
+          name: Upload arm64-artifacts
           command: |
             TAG="$CIRCLE_TAG"
             TITLE="$TAG"
@@ -85,3 +86,18 @@ jobs:
               -c "$CIRCLE_SHA1" \
               -n "$TITLE" -b "$BODY" \
               "$TAG" ./arm64-artifacts/
+      - run:
+          name: Concatenate checksums
+          command: |
+            cat x86_64-artifacts/checksums.txt arm64-artifacts/checksums.txt > checksums.txt
+
+      - run:
+          name: Upload checksums
+          command: |
+            TAG="$CIRCLE_TAG"
+            TITLE="$TAG"
+            ghr -t "$GITHUB_TOKEN" \
+              -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
+              -c "$CIRCLE_SHA1" \
+              -n "$TITLE" -b "$BODY" \
+              "$TAG" checksums.txt
