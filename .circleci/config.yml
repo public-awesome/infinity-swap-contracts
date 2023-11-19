@@ -67,37 +67,24 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Upload x86_64-artifacts
+          name: Combine artifacts
           command: |
-            TAG="$CIRCLE_TAG"
-            TITLE="$TAG"
-            ghr -t "$GITHUB_TOKEN" \
-              -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
-              -c "$CIRCLE_SHA1" \
-              -n "$TITLE" -b "$BODY" \
-              "$TAG" ./x86_64-artifacts/
-      - run:
-          name: Upload arm64-artifacts
-          command: |
-            TAG="$CIRCLE_TAG"
-            TITLE="$TAG"
-            ghr -t "$GITHUB_TOKEN" \
-              -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
-              -c "$CIRCLE_SHA1" \
-              -n "$TITLE" -b "$BODY" \
-              "$TAG" ./arm64-artifacts/
-      - run:
-          name: Concatenate checksums
-          command: |
-            cat x86_64-artifacts/checksums.txt arm64-artifacts/checksums.txt > checksums.txt
+            mkdir new_directory
+            cp -r x86_64-artifacts/* artifacts/
+            cp -r arm64-artifacts/* artifacts/
+            rm artifacts/checksums_intermediate.txt
+            cat x86_64-artifacts/checksums.txt arm64-artifacts/checksums.txt > artifacts/checksums.txt
 
       - run:
-          name: Upload checksums
+          name: Upload artifacts
           command: |
             TAG="$CIRCLE_TAG"
             TITLE="$TAG"
             ghr -t "$GITHUB_TOKEN" \
-              -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
+              -u "$CIRCLE_PROJECT_USERNAME" \
+              -r "$CIRCLE_PROJECT_REPONAME" \
               -c "$CIRCLE_SHA1" \
-              -n "$TITLE" -b "$BODY" \
-              "$TAG" checksums.txt
+              -n "$TITLE" \
+              -delete \
+              -generatenotes \
+              "$TAG" ./artifacts/
