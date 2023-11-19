@@ -1,0 +1,82 @@
+version: 2.1
+
+workflows:
+  artifacts:
+    jobs:
+      - build_and_upload_x86_64:
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+            branches:
+              ignore: /.*/
+      - build_and_upload_arm64:
+          filters:
+            tags:
+              only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
+            branches:
+              ignore: /.*/
+      - publish_artifacts:
+          requires:
+            - build_and_upload_x86_64
+            - build_and_upload_arm64
+
+jobs:
+  build_and_upload_x86_64:
+    docker:
+      - image: cimg/base:stable # Base image with Docker
+    steps:
+      - checkout
+      - run:
+          name: Build x86_64 contracts
+          command: ./scripts/optimize.sh
+      - run:
+          name: Show x86_64 data
+          command: |
+            ls -l artifacts
+            cat artifacts/checksums.txt
+      - store_artifacts:
+          path: artifacts
+          destination: x86_64-artifacts
+
+  build_and_upload_arm64:
+    machine:
+      image: ubuntu-2004:202101-01
+    resource_class: arm.medium
+    steps:
+      - checkout
+      - run:
+          name: Build arm64 contracts
+          command: ./scripts/optimize-arm.sh
+      - run:
+          name: Show ARM64 data
+          command: |
+            ls -l artifacts
+            cat artifacts/checksums.txt
+      - store_artifacts:
+          path: artifacts
+          destination: arm64-artifacts
+
+  publish_artifacts:
+    docker:
+      - image: cibuilds/github:0.13
+    steps:
+      - run:
+          name: Publish x86_64-artifacts on GitHub
+          command: |
+            TAG="$CIRCLE_TAG"
+            TITLE="$TAG"
+            ghr -t "$GITHUB_TOKEN" \
+              -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
+              -c "$CIRCLE_SHA1" \
+              -n "$TITLE" -b "$BODY" \
+              "$TAG" ./x86_64-artifacts/
+      - run:
+          name: Publish arm64-artifacts on GitHub
+          command: |
+            TAG="$CIRCLE_TAG"
+            TITLE="$TAG"
+            ghr -t "$GITHUB_TOKEN" \
+              -u "$CIRCLE_PROJECT_USERNAME" -r "$CIRCLE_PROJECT_REPONAME" \
+              -c "$CIRCLE_SHA1" \
+              -n "$TITLE" -b "$BODY" \
+              "$TAG" ./arm64-artifacts/
