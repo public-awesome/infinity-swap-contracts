@@ -83,12 +83,11 @@ jobs:
       - run:
           name: Upload artifacts
           command: |
-            TAG="$CIRCLE_TAG"
-            TITLE="$TAG"
+            TITLE="$CIRCLE_TAG"
             ghr -t "$GITHUB_TOKEN" \
-              -u "$CIRCLE_PROJECT_USERNAME" \
+              -u public-awesome \
               -r "$CIRCLE_PROJECT_REPONAME" \
               -c "$CIRCLE_SHA1" \
               -n "$TITLE" \
               -replace \
-              "$TAG" ./artifacts/
+              "$CIRCLE_TAG" ./artifacts/
