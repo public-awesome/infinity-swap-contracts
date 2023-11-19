@@ -74,10 +74,10 @@ jobs:
           name: Combine artifacts
           command: |
             mkdir new_directory
-            cp -r x86_64-artifacts/* artifacts/
-            cp -r arm64-artifacts/* artifacts/
-            rm artifacts/checksums_intermediate.txt
-            cat x86_64-artifacts/checksums.txt arm64-artifacts/checksums.txt > artifacts/checksums.txt
+            cp -r /workspace/x86_64-artifacts/* ./artifacts/
+            cp -r /workspace/arm64-artifacts/* ./artifacts/
+            rm ./artifacts/checksums_intermediate.txt
+            cat /workspace/x86_64-artifacts/checksums.txt /workspace/arm64-artifacts/checksums.txt > ./artifacts/checksums.txt
 
       - run:
           name: Upload artifacts
