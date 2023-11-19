@@ -35,13 +35,12 @@ jobs:
           name: optimize x86_64 contracts
           command: ./scripts/optimize.sh
       - run:
-          name: Show x86_64 data
-          command: |
-            ls -l artifacts
-            cat artifacts/checksums.txt
-      - store_artifacts:
-          path: artifacts
-          destination: x86_64-artifacts
+          name: copy x86_64 artifacts
+          command: cp artifacts/* x86_64-artifacts/
+      - persist_to_workspace:
+          root: .
+          paths:
+            - x86_64-artifacts/
 
   optimize_arm64:
     machine:
@@ -53,18 +52,19 @@ jobs:
           name: optimize arm64 contracts
           command: ./scripts/optimize-arm.sh
       - run:
-          name: Show ARM64 data
-          command: |
-            ls -l artifacts
-            cat artifacts/checksums.txt
-      - store_artifacts:
-          path: artifacts
-          destination: arm64-artifacts
+          name: copy arm64 artifacts
+          command: cp artifacts/* arm64-artifacts/
+      - persist_to_workspace:
+          root: .
+          paths:
+            - arm64-artifacts/
 
   upload_artifacts:
     docker:
       - image: cibuilds/github:0.13
     steps:
+      - attach_workspace:
+          at: /workspace
       - checkout
       - run:
           name: Combine artifacts
