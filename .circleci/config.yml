@@ -91,5 +91,4 @@ jobs:
               -c "$CIRCLE_SHA1" \
               -n "$TITLE" \
               -delete \
-              -generatenotes \
               "$TAG" ./artifacts/
