@@ -3,13 +3,13 @@ version: 2.1
 workflows:
   artifacts:
     jobs:
-      - build_and_upload_x86_64:
+      - optimize_x86_64:
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
             branches:
               ignore: /.*/
-      - build_and_upload_arm64:
+      - optimize_arm64:
           filters:
             tags:
               only: /^v[0-9]+\.[0-9]+\.[0-9]+.*/
@@ -17,17 +17,17 @@ workflows:
               ignore: /.*/
       - publish_artifacts:
           requires:
-            - build_and_upload_x86_64
-            - build_and_upload_arm64
+            - optimize_x86_64
+            - optimize_arm64
 
 jobs:
-  build_and_upload_x86_64:
-    docker:
-      - image: cimg/base:stable # Base image with Docker
+  optimize_x86_64:
+    machine:
+      image: ubuntu-2004:202101-01
     steps:
       - checkout
       - run:
-          name: Build x86_64 contracts
+          name: optimize x86_64 contracts
           command: ./scripts/optimize.sh
       - run:
           name: Show x86_64 data
@@ -38,14 +38,14 @@ jobs:
           path: artifacts
           destination: x86_64-artifacts
 
-  build_and_upload_arm64:
+  optimize_arm64:
     machine:
       image: ubuntu-2004:202101-01
     resource_class: arm.medium
     steps:
       - checkout
       - run:
-          name: Build arm64 contracts
+          name: optimize arm64 contracts
           command: ./scripts/optimize-arm.sh
       - run:
           name: Show ARM64 data
