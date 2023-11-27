@@ -18,8 +18,9 @@
     "test:unit": "cargo test --lib -- --nocapture"
   },
   "devDependencies": {
-    "typescript": "5.1.6",
-    "bun-types": "^1.0.11"
+    "@types/lodash": "^4.14.202",
+    "bun-types": "^1.0.11",
+    "typescript": "5.1.6"
   },
   "dependencies": {
     "lodash": "^4.17.21"
