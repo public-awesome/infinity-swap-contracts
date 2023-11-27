@@ -21,8 +21,9 @@ jobs:
         with:
           profile: minimal
           toolchain: 1.68.2
-          target: wasm32-unknown-unknown
           override: true
+          target: wasm32-unknown-unknown
+          components: rustfmt, clippy
 
       - name: Cache Cargo dependencies
         uses: actions/cache@v2
