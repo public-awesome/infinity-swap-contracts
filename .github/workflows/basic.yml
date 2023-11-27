@@ -11,10 +11,10 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - name: Use Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '18.x'
+          bun-version: '1.0.12'
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
@@ -33,11 +33,11 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run npm install
-        run: npm install
+      - name: Run bun install
+        run: bun install
 
       - name: Run codegen
-        run: npm run codegen
+        run: bun run codegen
 
       - name: Check schema changes
         run: |
@@ -49,13 +49,13 @@ jobs:
           fi
 
       - name: Run lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Run build
-        run: npm run build
+        run: bun run build
 
       - name: Run unit-tests
-        run: npm run test:unit
+        run: bun run test:unit
 
   coverage:
     name: Coverage
