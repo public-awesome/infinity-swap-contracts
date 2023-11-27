@@ -65,7 +65,7 @@ fn try_unrestricted_migrations() {
     let unrestricted_migrations = router
         .wrap()
         .query_wasm_smart::<UnrestrictedMigrationsResponse>(
-            infinity_factory.clone(),
+            infinity_factory,
             &InfinityFactoryQueryMsg::UnrestrictedMigrations {
                 query_options: None,
             },
