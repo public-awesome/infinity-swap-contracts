@@ -97,19 +97,16 @@ pub fn execute(
                 ContractError::InvalidMigration("Invalid target code id".to_string())
             );
 
-            let mut response = Response::new().add_message(WasmMsg::Migrate {
-                contract_addr: pair_address.clone(),
-                new_code_id: target_code_id,
-                msg: to_binary(&Empty {})?,
-            });
-
-            // Event used by indexer to track pair migration
-            response = response.add_event(
-                Event::new("factory-migrate-pair".to_string()).add_attributes(vec![
+            let response = Response::new()
+                .add_message(WasmMsg::Migrate {
+                    contract_addr: pair_address.clone(),
+                    new_code_id: target_code_id,
+                    msg: to_binary(&Empty {})?,
+                })
+                .add_event(Event::new("factory-migrate-pair".to_string()).add_attributes(vec![
                     attr("pair_address", pair_address),
                     attr("target_code_id", target_code_id.to_string()),
-                ]),
-            );
+                ]));
 
             Ok(response)
         },

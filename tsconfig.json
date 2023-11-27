@@ -1,5 +1,7 @@
 {
   "extends": "@uju-labs/tsconfig/common.json",
-  "compilerOptions": {},
+  "compilerOptions": {
+    "outDir": "dist"
+  },
   "include": ["index.ts"]
 }

@@ -1,6 +1,6 @@
 [package]
 name       = "infinity-pair"
-version    = "0.1.2"
+version    = "0.2.0"
 edition    = { workspace = true }
 repository = { workspace = true }
 license    = { workspace = true }
@@ -41,6 +41,6 @@ cw2                       = { workspace = true }
 thiserror                 = { workspace = true }
 sg721                     = { workspace = true }
 sg-std                    = { workspace = true }
-cw721-base                = { workspace = true }
 cw721                     = { workspace = true }
 cw-address-like           = { workspace = true }
+semver                    = { workspace = true }

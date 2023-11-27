@@ -1,6 +1,5 @@
 # macOS
 .DS_Store
-tmp.txt
 
 # Text file backups
 **/*.rs.bk
@@ -19,6 +18,7 @@ target/
 hash.txt
 contracts.txt
 artifacts/
+schema/
 
 # code coverage
 tarpaulin-report.*

@@ -1,4 +1,4 @@
-use infinity_global::QueryMsg as InfinityGlobalQueryMsg;
+use infinity_global::msg::QueryMsg as InfinityGlobalQueryMsg;
 
 use cosmwasm_std::{coin, Addr, Uint128};
 use cw_multi_test::Executor;

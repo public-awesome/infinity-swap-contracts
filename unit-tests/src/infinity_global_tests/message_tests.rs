@@ -2,7 +2,10 @@ use crate::setup::setup_infinity_contracts::{contract_infinity_global, UOSMO};
 
 use cosmwasm_std::{coin, Addr, Coin, Decimal};
 use cw_multi_test::Executor;
-use infinity_global::{GlobalConfig, InstantiateMsg, QueryMsg, SudoMsg};
+use infinity_global::{
+    msg::{InstantiateMsg, QueryMsg, SudoMsg},
+    GlobalConfig,
+};
 use sg_multi_test::mock_deps;
 use sg_std::NATIVE_DENOM;
 use test_suite::common_setup::contract_boxes::custom_mock_app;
@@ -129,6 +132,7 @@ fn try_infinity_global_update_config() {
         infinity_pair_code_id: Some(2u64),
         pair_creation_fee: Some(coin(2_000_000u128, NATIVE_DENOM)),
         fair_burn_fee_percent: Some(Decimal::percent(2u64)),
+        default_royalty_fee_percent: Some(Decimal::percent(1u64)),
         max_royalty_fee_percent: Some(Decimal::percent(20u64)),
         max_swap_fee_percent: Some(Decimal::percent(20u64)),
     };
@@ -150,6 +154,7 @@ fn try_infinity_global_update_config() {
         infinity_pair_code_id,
         pair_creation_fee,
         fair_burn_fee_percent,
+        default_royalty_fee_percent,
         max_royalty_fee_percent,
         max_swap_fee_percent,
     } = update_config_msg
@@ -163,6 +168,10 @@ fn try_infinity_global_update_config() {
         assert_eq!(infinity_pair_code_id.unwrap(), global_config_response.infinity_pair_code_id);
         assert_eq!(pair_creation_fee.unwrap(), global_config_response.pair_creation_fee);
         assert_eq!(fair_burn_fee_percent.unwrap(), global_config_response.fair_burn_fee_percent);
+        assert_eq!(
+            default_royalty_fee_percent.unwrap(),
+            global_config_response.default_royalty_fee_percent
+        );
         assert_eq!(
             max_royalty_fee_percent.unwrap(),
             global_config_response.max_royalty_fee_percent

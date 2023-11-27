@@ -99,6 +99,8 @@ pub fn execute_swap_nfts_for_tokens(
 
     let mut response = Response::new();
 
+    let asset_recipient = address_or(swap_params.asset_recipient.as_ref(), &info.sender);
+
     let mut num_swaps = 0u32;
     let mut volume = Uint128::zero();
     for (sell_order, quote) in zip(sell_orders, quotes) {
@@ -119,10 +121,7 @@ pub fn execute_swap_nfts_for_tokens(
                     msg: to_binary(&PairExecuteMsg::SwapNftForTokens {
                         token_id: sell_order.input_token_id,
                         min_output: coin(sell_order.min_output.u128(), &denom),
-                        asset_recipient: Some(
-                            address_or(swap_params.asset_recipient.as_ref(), &info.sender)
-                                .to_string(),
-                        ),
+                        asset_recipient: Some(asset_recipient.to_string()),
                     })?,
                     funds: vec![],
                 }))
@@ -145,7 +144,7 @@ pub fn execute_swap_nfts_for_tokens(
     response = response.add_event(Event::new("router-swap-nfts-for-tokens").add_attributes(vec![
         attr("collection", collection),
         attr("denom", denom),
-        attr("sender", info.sender),
+        attr("sender_recipient", asset_recipient),
         attr("num_swaps", num_swaps.to_string()),
         attr("volume", volume),
     ]));
@@ -230,7 +229,7 @@ pub fn execute_swap_tokens_for_nfts(
     response = response.add_event(Event::new("router-swap-tokens-for-nfts").add_attributes(vec![
         attr("collection", collection),
         attr("denom", denom),
-        attr("sender", info.sender),
+        attr("sender_recipient", asset_recipient),
         attr("num_swaps", num_swaps.to_string()),
         attr("volume", paid_amount), // volume is the amount of tokens paid
     ]));

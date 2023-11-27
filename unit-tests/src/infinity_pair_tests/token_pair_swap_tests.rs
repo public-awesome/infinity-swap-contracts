@@ -7,7 +7,7 @@ use crate::setup::templates::{setup_infinity_test, standard_minter_template, Inf
 
 use cosmwasm_std::{coin, Addr, Decimal, Uint128};
 use cw_multi_test::Executor;
-use infinity_global::{GlobalConfig, QueryMsg as InfinityGlobalQueryMsg};
+use infinity_global::{msg::QueryMsg as InfinityGlobalQueryMsg, GlobalConfig};
 use infinity_pair::msg::{ExecuteMsg as InfinityPairExecuteMsg, QueryMsg as InfinityPairQueryMsg};
 use infinity_pair::pair::Pair;
 use infinity_pair::state::{BondingCurve, PairConfig, PairType, QuoteSummary, TokenPayment};

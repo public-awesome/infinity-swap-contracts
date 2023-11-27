@@ -1,6 +1,6 @@
 {
   "contract_name": "infinity-factory",
-  "contract_version": "0.1.2",
+  "contract_version": "0.2.0",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -876,7 +876,64 @@
     }
   },
   "migrate": null,
-  "sudo": null,
+  "sudo": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "SudoMsg",
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "add_unrestricted_migration"
+        ],
+        "properties": {
+          "add_unrestricted_migration": {
+            "type": "object",
+            "required": [
+              "starting_code_id",
+              "target_code_id"
+            ],
+            "properties": {
+              "starting_code_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "target_code_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "required": [
+          "remove_unrestricted_migration"
+        ],
+        "properties": {
+          "remove_unrestricted_migration": {
+            "type": "object",
+            "required": [
+              "starting_code_id"
+            ],
+            "properties": {
+              "starting_code_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ]
+  },
   "responses": {
     "next_pair": {
       "$schema": "http://json-schema.org/draft-07/schema#",

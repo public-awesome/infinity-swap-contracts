@@ -35,11 +35,12 @@ pub fn sudo_add_unrestricted_migration(
 
     UNRESTRICTED_MIGRATIONS.save(deps.storage, starting_code_id, &target_code_id)?;
 
-    let response =
-        Response::new().add_event(Event::new("add-unrestricted-migration").add_attributes(vec![
+    let response = Response::new().add_event(
+        Event::new("sudo-add-unrestricted-migration").add_attributes(vec![
             attr("starting_code_id", starting_code_id.to_string()),
             attr("target_code_id", target_code_id.to_string()),
-        ]));
+        ]),
+    );
 
     Ok(response)
 }
@@ -54,8 +55,10 @@ pub fn sudo_remove_unrestricted_migration(
         InfinityError::InvalidInput("Migration does not exist".to_string())
     );
 
+    UNRESTRICTED_MIGRATIONS.remove(deps.storage, starting_code_id);
+
     let response = Response::new().add_event(
-        Event::new("remove-unrestricted-migration")
+        Event::new("sudo-remove-unrestricted-migration")
             .add_attributes(vec![attr("starting_code_id", starting_code_id.to_string())]),
     );
 

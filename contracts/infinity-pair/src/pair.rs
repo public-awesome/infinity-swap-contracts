@@ -396,8 +396,8 @@ impl Pair {
                     BondingCurve::Linear {
                         spot_price,
                         ..
-                    } => Some(attr("spot_price", spot_price.to_string())),
-                    BondingCurve::Exponential {
+                    }
+                    | BondingCurve::Exponential {
                         spot_price,
                         ..
                     } => Some(attr("spot_price", spot_price.to_string())),
