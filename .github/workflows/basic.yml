@@ -33,9 +33,6 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run bun install
-        run: bun install
-
       - name: Run codegen
         run: bun run codegen
 
