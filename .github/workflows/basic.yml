@@ -11,48 +11,18 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
+      - name: Use Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: '1.0.12'
+
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: 1.68.2
+          override: true
           target: wasm32-unknown-unknown
-          override: true
-
-      - name: Cache Cargo dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Compile WASM contract
-        uses: actions-rs/cargo@v1
-        with:
-          command: wasm
-
-      - name: Unit Tests
-        run: cargo unit-test
-
-      - name: Install check_contract
-        run: cargo install --debug --version 1.0.0 --features iterator --example check_contract -- cosmwasm-vm
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: extractions/setup-just@v1
-
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.68.2
-          override: true
           components: rustfmt, clippy
 
       - name: Cache Cargo dependencies
@@ -63,27 +33,29 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run cargo doc
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: -F library --no-deps
+      - name: Run bun install
+        run: bun install
 
-      - name: Run cargo clippy
-        run: just lint
+      - name: Run codegen
+        run: bun run codegen
 
-      - name: Generate Schema
-        run: just schema
-
-      - name: Schema Changes
-        # fails if any changes not committed
+      - name: Check schema changes
         run: |
-          CHANGES_IN_REPO=$(git status --porcelain)
-          if [[ -n "$CHANGES_IN_REPO" ]]; then
-            echo "Repository is dirty. Showing 'git status' and 'git --no-pager diff' for debugging now:"
+          CHANGES_IN_SCHEMA_DIR=$(git status --porcelain schema/)
+          if [[ -n "$CHANGES_IN_SCHEMA_DIR" ]]; then
+            echo "Schema is dirty. Showing 'git status --porcelain schema/' for debugging now:"
             git status && git --no-pager diff
             exit 1
           fi
+
+      - name: Run lint
+        run: bun run lint
+
+      - name: Run build
+        run: bun run build
+
+      - name: Run unit-tests
+        run: bun run test:unit
 
   coverage:
     name: Coverage

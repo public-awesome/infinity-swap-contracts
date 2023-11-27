@@ -1,14 +1,13 @@
-use crate::helpers::nft_functions::{approve, assert_nft_owner, mint_to};
+use crate::helpers::nft_functions::{approve, approve_all, assert_nft_owner, mint_to};
 use crate::helpers::pair_functions::create_pair_with_deposits;
 use crate::helpers::utils::assert_error;
 use crate::setup::setup_accounts::{setup_addtl_account, MarketAccounts, INITIAL_BALANCE};
 use crate::setup::setup_infinity_contracts::UOSMO;
 use crate::setup::templates::{setup_infinity_test, standard_minter_template, InfinityTestSetup};
 
-use cosmwasm_std::{coin, to_binary, Addr, Decimal, Empty, Uint128};
-use cw721::Cw721ExecuteMsg;
+use cosmwasm_std::{coin, Addr, Decimal, Uint128};
 use cw_multi_test::Executor;
-use infinity_global::{GlobalConfig, QueryMsg as InfinityGlobalQueryMsg};
+use infinity_global::{msg::QueryMsg as InfinityGlobalQueryMsg, GlobalConfig};
 use infinity_pair::msg::{ExecuteMsg as InfinityPairExecuteMsg, QueryMsg as InfinityPairQueryMsg};
 use infinity_pair::pair::Pair;
 use infinity_pair::state::{BondingCurve, PairConfig, PairType, QuoteSummary, TokenPayment};
@@ -158,21 +157,20 @@ fn try_trade_pair_invalid_swaps() {
     let num_nfts = 10u64;
     for _ in 0..num_nfts {
         let token_id = mint_to(&mut router, &creator.clone(), &owner.clone(), &minter);
-
-        let response = router.execute_contract(
-            owner.clone(),
-            collection.clone(),
-            &Cw721ExecuteMsg::SendNft {
-                contract: test_pair.address.to_string(),
-                token_id: token_id.clone(),
-                msg: to_binary(&Empty {}).unwrap(),
-            },
-            &[],
-        );
-        assert!(response.is_ok());
-
-        test_pair.token_ids.push(token_id)
+        test_pair.token_ids.push(token_id);
     }
+
+    approve_all(&mut router, &owner, &collection, &test_pair.address);
+    let response = router.execute_contract(
+        owner.clone(),
+        test_pair.address.clone(),
+        &InfinityPairExecuteMsg::DepositNfts {
+            collection: collection.to_string(),
+            token_ids: test_pair.token_ids.clone(),
+        },
+        &[],
+    );
+    assert!(response.is_ok());
 
     test_pair.pair = router
         .wrap()

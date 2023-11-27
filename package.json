@@ -1,0 +1,28 @@
+{
+  "name": "@uju-labs/infinity-swap",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "files": [
+    "schema",
+    "artifacts",
+    "dist"
+  ],
+  "scripts": {
+    "codegen": "./scripts/schema.sh",
+    "lint": "cargo clippy --all-targets -- -D warnings",
+    "wasm": "cargo build --release --lib --target wasm32-unknown-unknown",
+    "build": "bun run wasm && tsc -p ./tsconfig.json",
+    "optimize": "./scripts/optimize.sh",
+    "optimize-arm": "./scripts/optimize-arm.sh",
+    "test:unit": "cargo test --lib -- --nocapture"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.202",
+    "bun-types": "^1.0.11",
+    "typescript": "5.1.6"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+}

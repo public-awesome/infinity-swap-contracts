@@ -24,6 +24,12 @@ pub enum ExecuteMsg {
         /// The user configurable parameters of the pair
         pair_config: PairConfig<String>,
     },
+    UnrestrictedMigratePair {
+        /// The address of the pair to migrate
+        pair_address: String,
+        /// The new code id to migrate to
+        target_code_id: u64,
+    },
 }
 
 #[cw_serde]
@@ -58,10 +64,27 @@ pub enum QueryMsg {
         pair: Pair,
         limit: u32,
     },
+    #[returns(UnrestrictedMigrationsResponse)]
+    UnrestrictedMigrations {
+        query_options: Option<QueryOptions<u64>>,
+    },
 }
 
 #[cw_serde]
 pub struct QuotesResponse {
     pub denom: String,
     pub quotes: Vec<Uint128>,
+}
+
+pub type UnrestrictedMigrationsResponse = Vec<(u64, u64)>;
+
+#[cw_serde]
+pub enum SudoMsg {
+    AddUnrestrictedMigration {
+        starting_code_id: u64,
+        target_code_id: u64,
+    },
+    RemoveUnrestrictedMigration {
+        starting_code_id: u64,
+    },
 }

@@ -3,7 +3,7 @@ use crate::setup::setup_accounts::MarketAccounts;
 use crate::setup::templates::{setup_infinity_test, standard_minter_template, InfinityTestSetup};
 
 use cosmwasm_std::{Addr, Decimal, Uint128};
-use infinity_global::{GlobalConfig, QueryMsg as InfinityGlobalQueryMsg};
+use infinity_global::{msg::QueryMsg as InfinityGlobalQueryMsg, GlobalConfig};
 use infinity_pair::msg::{QueryMsg as InfinityPairQueryMsg, QuotesResponse};
 use infinity_pair::state::{BondingCurve, PairConfig, PairType};
 use sg_std::NATIVE_DENOM;

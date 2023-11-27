@@ -1,9 +1,0 @@
-{
-  "denom": "ustars",
-  "prefix": "stars",
-  "chain_id": "testing",
-  "grpc_endpoint": "http://localhost:26657",
-  "gas_prices": 0.8,
-  "gas_adjustment": 1.8,
-  "artifacts_path": "../../../artifacts"
-}

@@ -1,7 +1,6 @@
-use cw721::Cw721ExecuteMsg;
-use infinity_global::QueryMsg as InfinityGlobalQueryMsg;
+use infinity_global::msg::QueryMsg as InfinityGlobalQueryMsg;
 
-use cosmwasm_std::{coin, to_binary, Addr, Empty, Uint128};
+use cosmwasm_std::{coin, Addr, Uint128};
 use cw_multi_test::Executor;
 use infinity_factory::msg::ExecuteMsg as InfinityFactoryExecuteMsg;
 use infinity_global::GlobalConfig;
@@ -13,7 +12,7 @@ use infinity_pair::{
 use sg_multi_test::StargazeApp;
 use sg_std::NATIVE_DENOM;
 
-use crate::helpers::nft_functions::mint_to;
+use crate::helpers::nft_functions::{approve_all, mint_to};
 
 pub fn create_pair(
     router: &mut StargazeApp,
@@ -55,7 +54,7 @@ pub fn create_pair(
         },
         &[global_config.pair_creation_fee],
     );
-    let pair_addr = response.unwrap().events[1].attributes[0].value.clone();
+    let pair_addr = response.unwrap().events[2].attributes[0].value.clone();
 
     let pair = router
         .wrap()
@@ -102,22 +101,23 @@ pub fn create_pair_with_deposits(
     assert!(response.is_ok());
 
     let mut token_ids: Vec<String> = vec![];
-    for _ in 0..num_nfts {
-        let token_id = mint_to(router, &creator.clone(), &owner.clone(), minter);
 
+    if num_nfts > 0 {
+        for _ in 0..num_nfts {
+            token_ids.push(mint_to(router, &creator.clone(), &owner.clone(), minter));
+        }
+
+        approve_all(router, &owner.clone(), collection, &pair_addr);
         let response = router.execute_contract(
             owner.clone(),
-            collection.clone(),
-            &Cw721ExecuteMsg::SendNft {
-                contract: pair_addr.to_string(),
-                token_id: token_id.clone(),
-                msg: to_binary(&Empty {}).unwrap(),
+            pair_addr.clone(),
+            &InfinityPairExecuteMsg::DepositNfts {
+                collection: collection.to_string(),
+                token_ids: token_ids.clone(),
             },
             &[],
         );
         assert!(response.is_ok());
-
-        token_ids.push(token_id)
     }
 
     if !num_tokens.is_zero() {

@@ -4,8 +4,10 @@ use crate::{
     ContractError,
 };
 
-use cosmwasm_std::{ensure_eq, Addr, Coin, Decimal, Deps, QuerierWrapper, Storage, Uint128};
-use infinity_global::{load_global_config, load_min_price, GlobalConfig};
+use cosmwasm_std::{
+    ensure_eq, Addr, Coin, Decimal, Deps, MessageInfo, QuerierWrapper, Storage, Uint128,
+};
+use infinity_global::{load_global_config, load_min_price, state::GlobalConfig};
 use infinity_shared::InfinityError;
 use stargaze_royalty_registry::{
     msg::{QueryMsg as RoyaltyRegistryQueryMsg, RoyaltyPaymentResponse},
@@ -13,9 +15,9 @@ use stargaze_royalty_registry::{
 };
 use std::cmp::min;
 
-pub fn only_pair_owner(sender: &Addr, pair: &Pair) -> Result<(), ContractError> {
+pub fn only_pair_owner(info: &MessageInfo, pair: &Pair) -> Result<(), ContractError> {
     ensure_eq!(
-        sender,
+        info.sender,
         &pair.immutable.owner,
         InfinityError::Unauthorized("sender is not the owner of the pair".to_string())
     );

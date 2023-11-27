@@ -4,6 +4,7 @@ use crate::{
 };
 
 use cosmwasm_std::{ensure, DepsMut, Empty, Env, Event, StdError};
+use semver::Version;
 use sg_std::Response;
 
 #[cfg(not(feature = "library"))]
@@ -21,7 +22,8 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: Empty) -> Result<Response, Contra
     );
 
     ensure!(
-        prev_contract_version.version < CONTRACT_VERSION.to_string(),
+        Version::parse(&prev_contract_version.version).unwrap()
+            < Version::parse(CONTRACT_VERSION).unwrap(),
         StdError::generic_err("Must upgrade contract version")
     );
 

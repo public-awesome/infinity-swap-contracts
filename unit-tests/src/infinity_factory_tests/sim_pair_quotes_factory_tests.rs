@@ -4,7 +4,7 @@ use crate::setup::templates::{setup_infinity_test, standard_minter_template, Inf
 
 use cosmwasm_std::{Addr, Decimal, Uint128};
 use infinity_factory::msg::QueryMsg as InfinityFactoryQueryMsg;
-use infinity_global::{GlobalConfig, QueryMsg as InfinityGlobalQueryMsg};
+use infinity_global::{msg::QueryMsg as InfinityGlobalQueryMsg, GlobalConfig};
 use infinity_pair::msg::{QueryMsg as InfinityPairQueryMsg, QuotesResponse};
 use infinity_pair::state::{BondingCurve, PairConfig, PairType};
 use test_suite::common_setup::msg::MinterTemplateResponse;
