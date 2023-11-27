@@ -1,6 +1,6 @@
 [package]
 name       = "infinity-factory"
-version    = "0.1.2"
+version    = "0.2.0"
 edition    = { workspace = true }
 repository = { workspace = true }
 license    = { workspace = true }
@@ -39,3 +39,4 @@ thiserror        = { workspace = true }
 sg-std           = { workspace = true }
 sha2             = { workspace = true }
 sg-index-query   = { workspace = true }
+semver           = { workspace = true }

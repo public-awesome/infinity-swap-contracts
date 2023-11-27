@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use infinity_factory::msg::InstantiateMsg as InfinityFactoryInstantiateMsg;
-use infinity_global::{GlobalConfig, InstantiateMsg as InfinityGlobalInstantiateMsg};
+use infinity_global::{msg::InstantiateMsg as InfinityGlobalInstantiateMsg, GlobalConfig};
 use infinity_index::msg::InstantiateMsg as InfinityIndexInstantiateMsg;
 use infinity_router::msg::InstantiateMsg as InfinityRouterInstantiateMsg;
 use sg_std::Response;

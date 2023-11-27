@@ -1,5 +1,7 @@
 use crate::error::ContractError;
-use crate::events::{NftTransferEvent, SwapEvent, TokenTransferEvent, UpdatePairEvent};
+use crate::events::{
+    NftTransferEvent, PairInternalEvent, SwapEvent, TokenTransferEvent, UpdatePairEvent,
+};
 use crate::helpers::{load_pair, load_payout_context, only_active, only_pair_owner};
 use crate::msg::ExecuteMsg;
 use crate::pair::Pair;
@@ -39,6 +41,13 @@ pub fn execute(
     )?;
 
     response = pair.save_and_update_indices(deps.storage, &payout_context, response)?;
+
+    response = response.add_event(
+        PairInternalEvent {
+            pair: &pair,
+        }
+        .into(),
+    );
 
     Ok(response)
 }
@@ -296,7 +305,6 @@ pub fn execute_deposit_tokens(
     let response = Response::new().add_event(
         TokenTransferEvent {
             ty: "deposit-tokens",
-            pair: &pair,
             funds: &coin(received_amount.u128(), &pair.immutable.denom),
         }
         .into(),
@@ -322,7 +330,6 @@ pub fn execute_withdraw_tokens(
             response = response.add_event(
                 TokenTransferEvent {
                     ty: "withdraw-tokens",
-                    pair: &pair,
                     funds: fund,
                 }
                 .into(),

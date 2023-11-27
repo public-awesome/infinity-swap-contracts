@@ -64,7 +64,7 @@ pub enum QueryMsg {
         pair: Pair,
         limit: u32,
     },
-    #[returns(Vec<(u64, u64)>)]
+    #[returns(UnrestrictedMigrationsResponse)]
     UnrestrictedMigrations {
         query_options: Option<QueryOptions<u64>>,
     },
@@ -75,6 +75,8 @@ pub struct QuotesResponse {
     pub denom: String,
     pub quotes: Vec<Uint128>,
 }
+
+pub type UnrestrictedMigrationsResponse = Vec<(u64, u64)>;
 
 #[cw_serde]
 pub enum SudoMsg {

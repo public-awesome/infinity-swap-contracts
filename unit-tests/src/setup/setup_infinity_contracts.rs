@@ -8,11 +8,11 @@ pub const UOSMO: &str = "uosmo";
 
 pub fn contract_infinity_global() -> Box<dyn Contract<StargazeMsgWrapper>> {
     let contract = ContractWrapper::new(
-        infinity_global::execute,
-        infinity_global::instantiate,
-        infinity_global::query,
+        infinity_global::execute::execute,
+        infinity_global::instantiate::instantiate,
+        infinity_global::query::query,
     )
-    .with_sudo(infinity_global::sudo);
+    .with_sudo(infinity_global::sudo::sudo);
     Box::new(contract)
 }
 
@@ -29,7 +29,7 @@ pub fn setup_infinity_global(
     infinity_pair_code_id: u64,
 ) -> Addr {
     let infinity_global_code_id = router.store_code(contract_infinity_global());
-    let msg = infinity_global::InstantiateMsg {
+    let msg = infinity_global::msg::InstantiateMsg {
         global_config: GlobalConfig {
             fair_burn,
             royalty_registry,
@@ -63,7 +63,8 @@ pub fn contract_infinity_factory() -> Box<dyn Contract<StargazeMsgWrapper>> {
         infinity_factory::execute::execute,
         infinity_factory::instantiate::instantiate,
         infinity_factory::query::query,
-    );
+    )
+    .with_sudo(infinity_factory::sudo::sudo);
     Box::new(contract)
 }
 

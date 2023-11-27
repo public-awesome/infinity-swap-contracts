@@ -1,11 +1,12 @@
 use crate::{
     constants::{CONTRACT_NAME, CONTRACT_VERSION},
     error::ContractError,
-    events::UpdatePairEvent,
+    events::{PairInternalEvent, UpdatePairEvent},
     helpers::load_pair,
 };
 
 use cosmwasm_std::{ensure, DepsMut, Empty, Env, Event, StdError};
+use semver::Version;
 use sg_std::Response;
 
 #[cfg(not(feature = "library"))]
@@ -23,29 +24,36 @@ pub fn migrate(deps: DepsMut, env: Env, _msg: Empty) -> Result<Response, Contrac
     );
 
     ensure!(
-        prev_contract_version.version < CONTRACT_VERSION.to_string(),
+        Version::parse(&prev_contract_version.version).unwrap()
+            < Version::parse(CONTRACT_VERSION).unwrap(),
         StdError::generic_err("Must upgrade contract version")
     );
 
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let mut response = Response::new().add_event(
-        Event::new("migrate")
-            .add_attribute("from_name", prev_contract_version.contract)
-            .add_attribute("from_version", prev_contract_version.version)
-            .add_attribute("to_name", CONTRACT_NAME)
-            .add_attribute("to_version", CONTRACT_VERSION),
-    );
-
     let pair = load_pair(&env.contract.address, deps.storage, &deps.querier)?;
 
-    response = response.add_event(
-        UpdatePairEvent {
-            ty: "migrate-pair",
-            pair: &pair,
-        }
-        .into(),
-    );
+    let response = Response::new()
+        .add_event(
+            Event::new("migrate")
+                .add_attribute("from_name", prev_contract_version.contract)
+                .add_attribute("from_version", prev_contract_version.version)
+                .add_attribute("to_name", CONTRACT_NAME)
+                .add_attribute("to_version", CONTRACT_VERSION),
+        )
+        .add_event(
+            UpdatePairEvent {
+                ty: "migrate-pair",
+                pair: &pair,
+            }
+            .into(),
+        )
+        .add_event(
+            PairInternalEvent {
+                pair: &pair,
+            }
+            .into(),
+        );
 
     Ok(response)
 }

@@ -7,7 +7,7 @@ use crate::{
 use cosmwasm_std::{
     ensure_eq, Addr, Coin, Decimal, Deps, MessageInfo, QuerierWrapper, Storage, Uint128,
 };
-use infinity_global::{load_global_config, load_min_price, GlobalConfig};
+use infinity_global::{load_global_config, load_min_price, state::GlobalConfig};
 use infinity_shared::InfinityError;
 use stargaze_royalty_registry::{
     msg::{QueryMsg as RoyaltyRegistryQueryMsg, RoyaltyPaymentResponse},

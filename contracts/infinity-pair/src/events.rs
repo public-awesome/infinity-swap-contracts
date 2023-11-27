@@ -4,13 +4,12 @@ use cosmwasm_std::{attr, Addr, Coin, Event};
 use std::vec;
 
 pub struct CreatePairEvent<'a> {
-    pub ty: &'a str,
     pub pair: &'a Pair,
 }
 
 impl<'a> From<CreatePairEvent<'a>> for Event {
     fn from(pe: CreatePairEvent) -> Self {
-        Event::new(pe.ty.to_string()).add_attributes(pe.pair.get_event_attrs(vec![
+        Event::new("create-pair".to_string()).add_attributes(pe.pair.get_event_attrs(vec![
             "collection",
             "denom",
             "owner",
@@ -44,10 +43,6 @@ impl<'a> From<UpdatePairEvent<'a>> for Event {
             "delta",
             "is_active",
             "asset_recipient",
-            "total_tokens",
-            "total_nfts",
-            "sell_to_pair_quote",
-            "buy_from_pair_quote",
         ]))
     }
 }
@@ -61,31 +56,19 @@ pub struct NftTransferEvent<'a> {
 impl<'a> From<NftTransferEvent<'a>> for Event {
     fn from(nte: NftTransferEvent) -> Self {
         Event::new(nte.ty.to_string())
-            .add_attributes(nte.pair.get_event_attrs(vec![
-                "total_tokens",
-                "total_nfts",
-                "sell_to_pair_quote",
-                "buy_from_pair_quote",
-            ]))
+            .add_attributes(nte.pair.get_event_attrs(vec!["total_nfts"]))
             .add_attributes(nte.token_ids.iter().map(|token_id| ("token_id", token_id)))
     }
 }
 
 pub struct TokenTransferEvent<'a> {
     pub ty: &'a str,
-    pub pair: &'a Pair,
     pub funds: &'a Coin,
 }
 
 impl<'a> From<TokenTransferEvent<'a>> for Event {
     fn from(tte: TokenTransferEvent) -> Self {
-        Event::new(tte.ty.to_string())
-            .add_attributes(tte.pair.get_event_attrs(vec![
-                "total_tokens",
-                "sell_to_pair_quote",
-                "buy_from_pair_quote",
-            ]))
-            .add_attribute("funds", tte.funds.to_string())
+        Event::new(tte.ty.to_string()).add_attribute("funds", tte.funds.to_string())
     }
 }
 
@@ -99,14 +82,8 @@ pub struct SwapEvent<'a> {
 
 impl<'a> From<SwapEvent<'a>> for Event {
     fn from(se: SwapEvent) -> Self {
-        let mut event =
-            Event::new(se.ty.to_string()).add_attributes(se.pair.get_event_attrs(vec![
-                "spot_price",
-                "is_active",
-                "total_tokens",
-                "sell_to_pair_quote",
-                "buy_from_pair_quote",
-            ]));
+        let mut event = Event::new(se.ty.to_string())
+            .add_attributes(se.pair.get_event_attrs(vec!["spot_price", "is_active"]));
 
         event = event.add_attributes(vec![
             attr("token_id", se.token_id),
@@ -123,5 +100,19 @@ impl<'a> From<SwapEvent<'a>> for Event {
         }
 
         event
+    }
+}
+
+pub struct PairInternalEvent<'a> {
+    pub pair: &'a Pair,
+}
+
+impl<'a> From<PairInternalEvent<'a>> for Event {
+    fn from(pie: PairInternalEvent) -> Self {
+        Event::new("pair-internal".to_string()).add_attributes(pie.pair.get_event_attrs(vec![
+            "total_tokens",
+            "sell_to_pair_quote",
+            "buy_from_pair_quote",
+        ]))
     }
 }

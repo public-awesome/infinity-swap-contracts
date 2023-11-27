@@ -8,7 +8,7 @@ use crate::{
     error::ContractError,
 };
 
-use cosmwasm_std::{ensure_eq, DepsMut, Env, MessageInfo};
+use cosmwasm_std::{ensure_eq, DepsMut, Env, MessageInfo, Uint128};
 use cw2::set_contract_version;
 use cw_utils::may_pay;
 use infinity_global::{load_global_config, load_min_price};
@@ -64,13 +64,14 @@ pub fn instantiate(
         global_config.pair_creation_fee.amount,
         InfinityError::InvalidInput("incorrect pair creation fee".to_string())
     );
-
-    response = append_fair_burn_msg(
-        &global_config.fair_burn,
-        vec![global_config.pair_creation_fee.clone()],
-        None,
-        response,
-    );
+    if received_amount > Uint128::zero() {
+        response = append_fair_burn_msg(
+            &global_config.fair_burn,
+            vec![global_config.pair_creation_fee.clone()],
+            None,
+            response,
+        );
+    }
 
     let payout_context = PayoutContext {
         global_config,
@@ -89,7 +90,6 @@ pub fn instantiate(
 
     response = response.add_event(
         CreatePairEvent {
-            ty: "create-pair",
             pair: &pair,
         }
         .into(),
