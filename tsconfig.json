@@ -1,7 +1,27 @@
 {
-  "extends": "@uju-labs/tsconfig/common.json",
+  "$schema": "https://json.schemastore.org/tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "types": ["bun-types"],
+    "lib": ["ESNext"],
+    "target": "ESNext",
+    "composite": false,
+    "declaration": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "noEmit": false
   },
-  "include": ["index.ts"]
+  "include": ["index.ts"],
+  "exclude": ["node_modules"]
 }
