@@ -33,6 +33,9 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Run npm install
+        run: npm install
+
       - name: Run codegen
         run: npm run codegen
 
