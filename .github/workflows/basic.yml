@@ -11,6 +11,11 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v2
 
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -27,56 +32,10 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Compile WASM contract
-        uses: actions-rs/cargo@v1
-        with:
-          command: wasm
+      - name: Run codegen
+        run: npm run codegen
 
-      - name: Unit Tests
-        run: cargo unit-test
-
-      - name: Install check_contract
-        run: cargo install --debug --version 1.0.0 --features iterator --example check_contract -- cosmwasm-vm
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: extractions/setup-just@v1
-
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.68.2
-          override: true
-          components: rustfmt, clippy
-
-      - name: Cache Cargo dependencies
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Run cargo doc
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: -F library --no-deps
-
-      - name: Run cargo clippy
-        run: just lint
-
-      - name: Generate Schema
-        run: just schema
-
-      - name: Schema Changes
-        # fails if any changes not committed
+      - name: Check schema changes
         run: |
           CHANGES_IN_REPO=$(git status --porcelain)
           if [[ -n "$CHANGES_IN_REPO" ]]; then
@@ -84,6 +43,15 @@ jobs:
             git status && git --no-pager diff
             exit 1
           fi
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run build
+        run: npm run build
+
+      - name: Run unit-tests
+        run: npm run test:unit
 
   coverage:
     name: Coverage
