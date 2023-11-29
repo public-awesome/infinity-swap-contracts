@@ -3,13 +3,13 @@
 # This script is used to download infinity wasm files from github
 # and store them on Stargaze testnet.
 
-VERSION=v0.1.6
+VERSION=v0.2.0
 
 CONTRACTS=(
-    "infinity_builder"
+    # "infinity_builder"
     "infinity_factory"
     "infinity_global"
-    "infinity_index"
+    # "infinity_index"
     "infinity_pair"
     "infinity_router"
 )

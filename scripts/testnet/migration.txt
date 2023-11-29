@@ -1,0 +1,23 @@
+26662f04fb3e532c5d5ed523609c6e9d9910e27910105a843d4f3a965246fe68  infinity_factory.wasm
+- key: code_checksum
+  value: 26662f04fb3e532c5d5ed523609c6e9d9910e27910105a843d4f3a965246fe68
+- key: code_id
+  value: "3355"
+
+248a57cd90d1481ae0b421ddfd2de1492a06d5e0f625954b82b2f69409277607  infinity_global.wasm
+- key: code_checksum
+  value: 248a57cd90d1481ae0b421ddfd2de1492a06d5e0f625954b82b2f69409277607
+- key: code_id
+  value: "3356"
+
+216b11bfb705129249947e515ff205b441d60fdb8b535bb73f4ebf547a3167cf  infinity_pair.wasm
+- key: code_checksum
+  value: 216b11bfb705129249947e515ff205b441d60fdb8b535bb73f4ebf547a3167cf
+- key: code_id
+  value: "3357"
+
+713399571ac9f0d2ec1be248104858b1440e65cb6009a8586abcb484837617d3  infinity_router.wasm
+- key: code_checksum
+  value: 713399571ac9f0d2ec1be248104858b1440e65cb6009a8586abcb484837617d3
+- key: code_id
+  value: "3358"
