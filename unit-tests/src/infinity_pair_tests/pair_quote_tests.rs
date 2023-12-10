@@ -70,7 +70,7 @@ fn try_generate_quotes_token_linear() {
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address,
-            &InfinityPairQueryMsg::SellToPairQuotes {
+            &InfinityPairQueryMsg::SimSellToPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -87,7 +87,7 @@ fn try_generate_quotes_token_linear() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.sell_to_pair_quotes, expected_quotes);
 }
 
 #[test]
@@ -151,7 +151,7 @@ fn try_generate_quotes_token_exponential() {
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address,
-            &InfinityPairQueryMsg::SellToPairQuotes {
+            &InfinityPairQueryMsg::SimSellToPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -168,7 +168,7 @@ fn try_generate_quotes_token_exponential() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.sell_to_pair_quotes, expected_quotes);
 }
 
 #[test]
@@ -224,7 +224,7 @@ fn try_generate_quotes_nft_linear() {
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address,
-            &InfinityPairQueryMsg::BuyFromPairQuotes {
+            &InfinityPairQueryMsg::SimBuyFromPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -238,7 +238,7 @@ fn try_generate_quotes_nft_linear() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.buy_from_pair_quotes, expected_quotes);
 }
 
 #[test]
@@ -294,7 +294,7 @@ fn try_generate_quotes_nft_exponential() {
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address,
-            &InfinityPairQueryMsg::BuyFromPairQuotes {
+            &InfinityPairQueryMsg::SimBuyFromPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -308,7 +308,7 @@ fn try_generate_quotes_nft_exponential() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.buy_from_pair_quotes, expected_quotes);
 }
 
 #[test]
@@ -378,7 +378,7 @@ fn try_generate_quotes_trade_linear() {
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address.clone(),
-            &InfinityPairQueryMsg::SellToPairQuotes {
+            &InfinityPairQueryMsg::SimSellToPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -397,13 +397,13 @@ fn try_generate_quotes_trade_linear() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.sell_to_pair_quotes, expected_quotes);
 
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address,
-            &InfinityPairQueryMsg::BuyFromPairQuotes {
+            &InfinityPairQueryMsg::SimBuyFromPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -418,7 +418,7 @@ fn try_generate_quotes_trade_linear() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.buy_from_pair_quotes, expected_quotes);
 }
 
 #[test]
@@ -488,7 +488,7 @@ fn try_generate_quotes_trade_exponential() {
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address.clone(),
-            &InfinityPairQueryMsg::SellToPairQuotes {
+            &InfinityPairQueryMsg::SimSellToPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -507,13 +507,13 @@ fn try_generate_quotes_trade_exponential() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.sell_to_pair_quotes, expected_quotes);
 
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address,
-            &InfinityPairQueryMsg::BuyFromPairQuotes {
+            &InfinityPairQueryMsg::SimBuyFromPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -528,7 +528,7 @@ fn try_generate_quotes_trade_exponential() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.buy_from_pair_quotes, expected_quotes);
 }
 
 #[test]
@@ -594,7 +594,7 @@ fn try_generate_quotes_trade_cp() {
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address.clone(),
-            &InfinityPairQueryMsg::SellToPairQuotes {
+            &InfinityPairQueryMsg::SimSellToPairSwaps {
                 limit,
             },
         )
@@ -618,13 +618,13 @@ fn try_generate_quotes_trade_cp() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.sell_to_pair_quotes, expected_quotes);
 
     let quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address,
-            &InfinityPairQueryMsg::BuyFromPairQuotes {
+            &InfinityPairQueryMsg::SimBuyFromPairSwaps {
                 limit: u32::MAX,
             },
         )
@@ -641,5 +641,5 @@ fn try_generate_quotes_trade_cp() {
     }
 
     assert_eq!(quotes_response.denom, NATIVE_DENOM.to_string());
-    assert_eq!(quotes_response.quotes, expected_quotes);
+    assert_eq!(quotes_response.buy_from_pair_quotes, expected_quotes);
 }

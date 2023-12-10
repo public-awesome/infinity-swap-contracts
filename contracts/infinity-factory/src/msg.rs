@@ -55,12 +55,12 @@ pub enum QueryMsg {
         query_options: Option<QueryOptions<u64>>,
     },
     #[returns(QuotesResponse)]
-    SimSellToPairQuotes {
+    SimSellToPairSwaps {
         pair: Pair,
         limit: u32,
     },
     #[returns(QuotesResponse)]
-    SimBuyFromPairQuotes {
+    SimBuyFromPairSwaps {
         pair: Pair,
         limit: u32,
     },
@@ -73,7 +73,8 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct QuotesResponse {
     pub denom: String,
-    pub quotes: Vec<Uint128>,
+    pub sell_to_pair_quotes: Vec<Uint128>,
+    pub buy_from_pair_quotes: Vec<Uint128>,
 }
 
 pub type UnrestrictedMigrationsResponse = Vec<(u64, u64)>;
