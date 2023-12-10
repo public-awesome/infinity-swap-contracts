@@ -856,7 +856,7 @@ dependencies = [
 
 [[package]]
 name = "infinity-factory"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
@@ -908,7 +908,7 @@ dependencies = [
 
 [[package]]
 name = "infinity-pair"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",

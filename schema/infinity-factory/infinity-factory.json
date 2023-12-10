@@ -1,6 +1,6 @@
 {
   "contract_name": "infinity-factory",
-  "contract_version": "0.2.0",
+  "contract_version": "0.2.1",
   "idl_version": "1.0.0",
   "instantiate": {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -388,10 +388,10 @@
       {
         "type": "object",
         "required": [
-          "sim_sell_to_pair_quotes"
+          "sim_sell_to_pair_swaps"
         ],
         "properties": {
-          "sim_sell_to_pair_quotes": {
+          "sim_sell_to_pair_swaps": {
             "type": "object",
             "required": [
               "limit",
@@ -415,10 +415,10 @@
       {
         "type": "object",
         "required": [
-          "sim_buy_from_pair_quotes"
+          "sim_buy_from_pair_swaps"
         ],
         "properties": {
-          "sim_buy_from_pair_quotes": {
+          "sim_buy_from_pair_swaps": {
             "type": "object",
             "required": [
               "limit",
@@ -1005,19 +1005,26 @@
         }
       }
     },
-    "sim_buy_from_pair_quotes": {
+    "sim_buy_from_pair_swaps": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "QuotesResponse",
       "type": "object",
       "required": [
+        "buy_from_pair_quotes",
         "denom",
-        "quotes"
+        "sell_to_pair_quotes"
       ],
       "properties": {
+        "buy_from_pair_quotes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Uint128"
+          }
+        },
         "denom": {
           "type": "string"
         },
-        "quotes": {
+        "sell_to_pair_quotes": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Uint128"
@@ -1032,19 +1039,26 @@
         }
       }
     },
-    "sim_sell_to_pair_quotes": {
+    "sim_sell_to_pair_swaps": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "QuotesResponse",
       "type": "object",
       "required": [
+        "buy_from_pair_quotes",
         "denom",
-        "quotes"
+        "sell_to_pair_quotes"
       ],
       "properties": {
+        "buy_from_pair_quotes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Uint128"
+          }
+        },
         "denom": {
           "type": "string"
         },
-        "quotes": {
+        "sell_to_pair_quotes": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/Uint128"
