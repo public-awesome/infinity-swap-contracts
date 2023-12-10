@@ -89,11 +89,11 @@ pub enum QueryMsg {
         query_options: Option<QueryOptions<String>>,
     },
     #[returns(QuotesResponse)]
-    SellToPairQuotes {
+    SimSellToPairSwaps {
         limit: u32,
     },
     #[returns(QuotesResponse)]
-    BuyFromPairQuotes {
+    SimBuyFromPairSwaps {
         limit: u32,
     },
 }
@@ -107,5 +107,6 @@ pub struct NftDepositsResponse {
 #[cw_serde]
 pub struct QuotesResponse {
     pub denom: String,
-    pub quotes: Vec<Uint128>,
+    pub sell_to_pair_quotes: Vec<Uint128>,
+    pub buy_from_pair_quotes: Vec<Uint128>,
 }

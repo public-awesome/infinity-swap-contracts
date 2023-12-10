@@ -28,14 +28,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             code_id,
             query_options.unwrap_or_default(),
         )?),
-        QueryMsg::SimSellToPairQuotes {
+        QueryMsg::SimSellToPairSwaps {
             pair,
             limit,
-        } => to_binary(&query_sim_sell_to_pair_quotes(deps, pair, limit)?),
-        QueryMsg::SimBuyFromPairQuotes {
+        } => to_binary(&query_sim_sell_to_pair_swaps(deps, pair, limit)?),
+        QueryMsg::SimBuyFromPairSwaps {
             pair,
             limit,
-        } => to_binary(&query_sim_buy_from_pair_quotes(deps, pair, limit)?),
+        } => to_binary(&query_sim_buy_from_pair_swaps(deps, pair, limit)?),
         QueryMsg::UnrestrictedMigrations {
             query_options,
         } => to_binary(&query_unrestricted_migrations(deps, query_options.unwrap_or_default())?),
@@ -87,7 +87,7 @@ pub fn query_pairs_by_owner(
     Ok(retval)
 }
 
-pub fn query_sim_sell_to_pair_quotes(
+pub fn query_sim_sell_to_pair_swaps(
     deps: Deps,
     mut pair: Pair,
     limit: u32,
@@ -101,14 +101,21 @@ pub fn query_sim_sell_to_pair_quotes(
     )
     .map_err(|_| StdError::generic_err("failed to load payout context".to_string()))?;
 
-    let mut quotes: Vec<Uint128> = vec![];
+    pair.update_sell_to_pair_quote_summary(&payout_context);
+    pair.update_buy_from_pair_quote_summary(&payout_context);
+
+    let mut sell_to_pair_quotes: Vec<Uint128> = vec![];
+    let mut buy_from_pair_quotes: Vec<Uint128> = vec![];
 
     let mut idx = 0u32;
 
-    pair.update_sell_to_pair_quote_summary(&payout_context);
     while idx < limit {
+        if let Some(quote_summary) = &pair.internal.buy_from_pair_quote_summary {
+            buy_from_pair_quotes.push(quote_summary.total());
+        }
+
         if let Some(quote_summary) = &pair.internal.sell_to_pair_quote_summary {
-            quotes.push(quote_summary.seller_amount);
+            sell_to_pair_quotes.push(quote_summary.seller_amount);
         } else {
             break;
         }
@@ -120,11 +127,12 @@ pub fn query_sim_sell_to_pair_quotes(
 
     Ok(QuotesResponse {
         denom: pair.immutable.denom,
-        quotes,
+        sell_to_pair_quotes,
+        buy_from_pair_quotes,
     })
 }
 
-pub fn query_sim_buy_from_pair_quotes(
+pub fn query_sim_buy_from_pair_swaps(
     deps: Deps,
     mut pair: Pair,
     limit: u32,
@@ -138,14 +146,21 @@ pub fn query_sim_buy_from_pair_quotes(
     )
     .map_err(|_| StdError::generic_err("failed to load payout context".to_string()))?;
 
-    let mut quotes: Vec<Uint128> = vec![];
+    pair.update_sell_to_pair_quote_summary(&payout_context);
+    pair.update_buy_from_pair_quote_summary(&payout_context);
+
+    let mut sell_to_pair_quotes: Vec<Uint128> = vec![];
+    let mut buy_from_pair_quotes: Vec<Uint128> = vec![];
 
     let mut idx = 0u32;
 
-    pair.update_buy_from_pair_quote_summary(&payout_context);
     while idx < limit {
+        if let Some(quote_summary) = &pair.internal.sell_to_pair_quote_summary {
+            sell_to_pair_quotes.push(quote_summary.seller_amount);
+        }
+
         if let Some(quote_summary) = &pair.internal.buy_from_pair_quote_summary {
-            quotes.push(quote_summary.total());
+            buy_from_pair_quotes.push(quote_summary.total());
         } else {
             break;
         }
@@ -157,7 +172,8 @@ pub fn query_sim_buy_from_pair_quotes(
 
     Ok(QuotesResponse {
         denom: pair.immutable.denom,
-        quotes,
+        sell_to_pair_quotes,
+        buy_from_pair_quotes,
     })
 }
 

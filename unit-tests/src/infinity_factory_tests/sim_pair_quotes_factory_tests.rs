@@ -62,28 +62,28 @@ fn try_sim_sell_to_pair_quotes() {
         Uint128::from(100_000_000u128),
     );
 
-    let sell_to_pair_quotes = router
+    let pair_quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address.clone(),
-            &InfinityPairQueryMsg::SellToPairQuotes {
+            &InfinityPairQueryMsg::SimSellToPairSwaps {
                 limit: 100,
             },
         )
         .unwrap();
 
-    let sim_sell_to_pair_quotes = router
+    let factory_quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             global_config.infinity_factory.clone(),
-            &InfinityFactoryQueryMsg::SimSellToPairQuotes {
+            &InfinityFactoryQueryMsg::SimSellToPairSwaps {
                 pair: test_pair.pair,
                 limit: 100,
             },
         )
         .unwrap();
 
-    assert_eq!(sell_to_pair_quotes, sim_sell_to_pair_quotes);
+    assert_eq!(pair_quotes_response, factory_quotes_response);
 }
 
 #[test]
@@ -139,26 +139,26 @@ fn try_sim_buy_from_pair_quotes() {
         Uint128::from(100_000_000u128),
     );
 
-    let buy_from_pair_quotes = router
+    let pair_quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             test_pair.address.clone(),
-            &InfinityPairQueryMsg::BuyFromPairQuotes {
+            &InfinityPairQueryMsg::SimBuyFromPairSwaps {
                 limit: 100,
             },
         )
         .unwrap();
 
-    let sim_buy_from_pair_quotes = router
+    let factory_quotes_response = router
         .wrap()
         .query_wasm_smart::<QuotesResponse>(
             global_config.infinity_factory.clone(),
-            &InfinityFactoryQueryMsg::SimBuyFromPairQuotes {
+            &InfinityFactoryQueryMsg::SimBuyFromPairSwaps {
                 pair: test_pair.pair,
                 limit: 100,
             },
         )
         .unwrap();
 
-    assert_eq!(buy_from_pair_quotes, sim_buy_from_pair_quotes);
+    assert_eq!(pair_quotes_response, factory_quotes_response);
 }
