@@ -1,11 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["contracts/*", "packages/*", "unit-tests"]
+members  = ["contracts/*", "packages/*", "unit-tests"]
 
 [workspace.package]
 version     = "0.1.0"
 edition     = "2021"
-repository  = "https://github.com/tasiov/infinity-swap"
+repository  = "https://github.com/public-awesome/infinity-swap-contracts"
 description = "A set of contracts and libraries for the Infinity Swap project."
 authors     = ["Tasio tasiovictoria@ujulabs.com"]
 license     = "BUSL-1.1"

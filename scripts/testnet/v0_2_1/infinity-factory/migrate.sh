@@ -1,8 +1,8 @@
 MSG=$(cat <<EOF
 {
     "add_unrestricted_migration": {
-        "starting_code_id": 3126,
-        "target_code_id": 3357
+        "starting_code_id": 3357,
+        "target_code_id": 3433
     }
 }
 EOF
@@ -10,7 +10,7 @@ EOF
 
 INFINITY_FACTORY_ADDRESS="stars10r4s0uddkuc9r9x5v8ysyhrew223947659jv6gkmvsy29cqv2tuqz3een0"
 
-NEW_CODE_ID=3355
+NEW_CODE_ID=3432
 
 FROM="hot-wallet"
 CHAIN_ID="elgafar-1"

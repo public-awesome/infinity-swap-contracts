@@ -1,11 +1,9 @@
 #!/bin/bash
 
 # Fetch the list of addresses
-ADDRESSES=$(starsd q wasm list-contract-by-code 3126 --limit 10 --output json | jq -r '.contracts[]')
+ADDRESSES=$(starsd q wasm list-contract-by-code 3357 --limit 10 --output json | jq -r '.contracts[]')
 
 INFINITY_FACTORY_ADDRESS="stars10r4s0uddkuc9r9x5v8ysyhrew223947659jv6gkmvsy29cqv2tuqz3een0"
-
-NEW_CODE_ID=3357
     
 FROM="hot-wallet"
 CHAIN_ID="elgafar-1"
@@ -19,10 +17,9 @@ for ADDRESS in $ADDRESSES; do
     {
         "unrestricted_migrate_pair": {
             "pair_address": "$ADDRESS",
-            "target_code_id": 3357
+            "target_code_id": 3433
         }
-    }
-    )
+    })
 
     echo "$MSG"
 
