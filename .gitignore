@@ -28,3 +28,4 @@ gas_reports/
 node_modules/
 dist/
 .turbo/
+tmp/
