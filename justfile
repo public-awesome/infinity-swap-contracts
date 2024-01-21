@@ -55,7 +55,7 @@ deploy-local-arm:
 		-p 9090:9090 \
 		--mount type=volume,source=stargaze_data,target=/root \
 		--platform linux/amd64 \
-		publicawesome/stargaze:12.0.0-alpha.1 /data/entry-point.sh $TEST_ADDRS
+		publicawesome/stargaze:12.0.0-arm.1 /data/entry-point.sh $TEST_ADDRS
 
 e2e-test:
 	#!/usr/bin/env bash
