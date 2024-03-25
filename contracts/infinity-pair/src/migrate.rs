@@ -2,7 +2,8 @@ use crate::{
     constants::{CONTRACT_NAME, CONTRACT_VERSION},
     error::ContractError,
     events::{PairInternalEvent, UpdatePairEvent},
-    helpers::load_pair,
+    helpers::{load_pair, load_payout_context},
+    state::INFINITY_GLOBAL,
 };
 
 use cosmwasm_std::{ensure, DepsMut, Empty, Env, Event, StdError};
@@ -31,9 +32,21 @@ pub fn migrate(deps: DepsMut, env: Env, _msg: Empty) -> Result<Response, Contrac
 
     cw2::set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let pair = load_pair(&env.contract.address, deps.storage, &deps.querier)?;
+    let mut pair = load_pair(&env.contract.address, deps.storage, &deps.querier)?;
 
-    let response = Response::new()
+    let infinity_global = INFINITY_GLOBAL.load(deps.storage)?;
+
+    let payout_context = load_payout_context(
+        deps.as_ref(),
+        &infinity_global,
+        &pair.immutable.collection,
+        &pair.immutable.denom,
+    )?;
+
+    let mut response =
+        pair.save_and_update_indices(deps.storage, &payout_context, Response::new())?;
+
+    response = response
         .add_event(
             Event::new("migrate")
                 .add_attribute("from_name", prev_contract_version.contract)

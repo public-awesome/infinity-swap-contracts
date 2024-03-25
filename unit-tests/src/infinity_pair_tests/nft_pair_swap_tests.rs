@@ -129,7 +129,7 @@ fn try_nft_pair_invalid_swaps() {
                 amount: Uint128::from(500_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(9_400_000u128),
+            seller_amount: Uint128::from(10_000_000u128),
         })
     );
 
@@ -175,7 +175,7 @@ fn try_nft_pair_invalid_swaps() {
             token_id,
             asset_recipient: None,
         },
-        &[coin(10_000_000u128, UOSMO)],
+        &[coin(10_600_000u128, UOSMO)],
     );
     assert_error(response, "Must send reserve token 'ustars'".to_string());
 
@@ -187,7 +187,7 @@ fn try_nft_pair_invalid_swaps() {
             token_id: "99999".to_string(),
             asset_recipient: None,
         },
-        &[coin(10_000_000u128, NATIVE_DENOM)],
+        &[coin(10_600_000u128, NATIVE_DENOM)],
     );
     assert_error(
         response,
@@ -271,7 +271,7 @@ fn try_nft_pair_linear_user_submits_tokens_swap() {
                 amount: Uint128::from(500_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(9_400_000u128),
+            seller_amount: Uint128::from(10_000_000u128),
         })
     );
 
@@ -285,7 +285,7 @@ fn try_nft_pair_linear_user_submits_tokens_swap() {
             token_id: token_id.clone(),
             asset_recipient: None,
         },
-        &[coin(10_000_000u128, NATIVE_DENOM)],
+        &[coin(10_600_000u128, NATIVE_DENOM)],
     );
     assert!(response.is_ok());
 
@@ -309,7 +309,7 @@ fn try_nft_pair_linear_user_submits_tokens_swap() {
                 amount: Uint128::from(550_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(10_340_000u128),
+            seller_amount: Uint128::from(11_000_000u128),
         })
     );
 }
@@ -390,7 +390,7 @@ fn try_nft_pair_exponential_user_submits_tokens_swap() {
                 amount: Uint128::from(500_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(9_400_000u128),
+            seller_amount: Uint128::from(10_000_000u128),
         })
     );
 
@@ -404,7 +404,7 @@ fn try_nft_pair_exponential_user_submits_tokens_swap() {
             token_id: token_id.clone(),
             asset_recipient: None,
         },
-        &[coin(10_000_000u128, NATIVE_DENOM)],
+        &[coin(10_600_000u128, NATIVE_DENOM)],
     );
     assert!(response.is_ok());
 
@@ -428,7 +428,7 @@ fn try_nft_pair_exponential_user_submits_tokens_swap() {
                 amount: Uint128::from(560_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(10_528_000u128),
+            seller_amount: Uint128::from(11_200_000u128),
         })
     );
 }

@@ -195,6 +195,14 @@ fn try_generate_quotes_nft_linear() {
     let minter = collection_resp.minter.clone().unwrap();
     let collection = collection_resp.collection.clone().unwrap();
 
+    let global_config = router
+        .wrap()
+        .query_wasm_smart::<GlobalConfig<Addr>>(
+            infinity_global.clone(),
+            &InfinityGlobalQueryMsg::GlobalConfig {},
+        )
+        .unwrap();
+
     let mut spot_price = Uint128::from(10_000_000u128);
     let delta = Uint128::from(1_000_000u128);
     let mut num_nfts = 100u64;
@@ -231,8 +239,14 @@ fn try_generate_quotes_nft_linear() {
         .unwrap();
 
     let mut expected_quotes = vec![];
+
     while num_nfts > 0 {
-        expected_quotes.push(spot_price);
+        let quote = spot_price
+            + spot_price.mul_ceil(global_config.fair_burn_fee_percent)
+            + spot_price.mul_ceil(global_config.default_royalty_fee_percent);
+
+        expected_quotes.push(quote);
+
         spot_price += delta;
         num_nfts -= 1;
     }
@@ -264,6 +278,14 @@ fn try_generate_quotes_nft_exponential() {
     let collection_resp = &collection_response_vec[0];
     let minter = collection_resp.minter.clone().unwrap();
     let collection = collection_resp.collection.clone().unwrap();
+
+    let global_config = router
+        .wrap()
+        .query_wasm_smart::<GlobalConfig<Addr>>(
+            infinity_global.clone(),
+            &InfinityGlobalQueryMsg::GlobalConfig {},
+        )
+        .unwrap();
 
     let mut spot_price = Uint128::from(10_000_000u128);
     let delta = Decimal::percent(5);
@@ -302,7 +324,12 @@ fn try_generate_quotes_nft_exponential() {
 
     let mut expected_quotes = vec![];
     while num_nfts > 0 {
-        expected_quotes.push(spot_price);
+        let quote = spot_price
+            + spot_price.mul_ceil(global_config.fair_burn_fee_percent)
+            + spot_price.mul_ceil(global_config.default_royalty_fee_percent);
+
+        expected_quotes.push(quote);
+
         spot_price = spot_price.mul_ceil(Decimal::one() + delta);
         num_nfts -= 1;
     }
@@ -410,10 +437,17 @@ fn try_generate_quotes_trade_linear() {
         .unwrap();
 
     let mut expected_quotes = vec![];
-    let mut spot_price = original_spot_price + delta;
+    let mut spot_price = original_spot_price;
+
     while num_nfts > 0 {
-        expected_quotes.push(spot_price);
         spot_price += delta;
+
+        let quote = spot_price
+            + spot_price.mul_ceil(global_config.fair_burn_fee_percent)
+            + spot_price.mul_ceil(global_config.default_royalty_fee_percent)
+            + spot_price.mul_ceil(swap_fee_percent);
+
+        expected_quotes.push(quote);
         num_nfts -= 1;
     }
 
@@ -520,10 +554,16 @@ fn try_generate_quotes_trade_exponential() {
         .unwrap();
 
     let mut expected_quotes = vec![];
-    let mut spot_price = original_spot_price.mul_ceil(Decimal::one() + delta);
+    let mut spot_price = original_spot_price;
     while num_nfts > 0 {
-        expected_quotes.push(spot_price);
         spot_price = spot_price.mul_ceil(Decimal::one() + delta);
+
+        let quote = spot_price
+            + spot_price.mul_ceil(global_config.fair_burn_fee_percent)
+            + spot_price.mul_ceil(global_config.default_royalty_fee_percent)
+            + spot_price.mul_ceil(swap_fee_percent);
+
+        expected_quotes.push(quote);
         num_nfts -= 1;
     }
 
@@ -632,11 +672,17 @@ fn try_generate_quotes_trade_cp() {
 
     let mut expected_quotes = vec![];
     let mut num_nfts = original_num_nfts;
-    let mut spot_price: Uint128;
+
     while num_nfts > 1 {
-        spot_price =
+        let spot_price =
             original_remaining_amount.div_ceil((Uint128::from(num_nfts - 1), Uint128::one()));
-        expected_quotes.push(spot_price);
+
+        let quote = spot_price
+            + spot_price.mul_ceil(global_config.fair_burn_fee_percent)
+            + spot_price.mul_ceil(global_config.default_royalty_fee_percent)
+            + spot_price.mul_ceil(swap_fee_percent);
+
+        expected_quotes.push(quote);
         num_nfts -= 1;
     }
 

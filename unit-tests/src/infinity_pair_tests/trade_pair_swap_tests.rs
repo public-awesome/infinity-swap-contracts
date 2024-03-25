@@ -208,7 +208,7 @@ fn try_trade_pair_invalid_swaps() {
                 amount: Uint128::from(550_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(10_340_000u128),
+            seller_amount: Uint128::from(11_000_000u128),
         })
     );
 
@@ -247,7 +247,7 @@ fn try_trade_pair_invalid_swaps() {
             token_id: "99999".to_string(),
             asset_recipient: None,
         },
-        &[coin(11_000_000u128, NATIVE_DENOM)],
+        &[coin(11_660_000u128, NATIVE_DENOM)],
     );
     assert_error(
         response,
@@ -351,7 +351,7 @@ fn try_trade_pair_linear_swaps() {
                 amount: Uint128::from(550_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(10_340_000u128),
+            seller_amount: Uint128::from(11_000_000u128),
         })
     );
 
@@ -365,7 +365,7 @@ fn try_trade_pair_linear_swaps() {
             token_id: token_id.clone(),
             asset_recipient: None,
         },
-        &[coin(11_000_000u128, NATIVE_DENOM)],
+        &[coin(11_660_000, NATIVE_DENOM)],
     );
     assert!(response.is_ok());
     assert_nft_owner(&router, &collection, token_id.clone(), &bidder);
@@ -406,7 +406,7 @@ fn try_trade_pair_linear_swaps() {
                 amount: Uint128::from(600_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(11_280_000u128),
+            seller_amount: Uint128::from(12_000_000u128),
         })
     );
 
@@ -461,7 +461,7 @@ fn try_trade_pair_linear_swaps() {
                 amount: Uint128::from(550_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(10_340_000u128),
+            seller_amount: Uint128::from(11_000_000u128),
         })
     );
 }
@@ -562,7 +562,7 @@ fn try_trade_pair_exponential_swaps() {
                 amount: Uint128::from(530_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(9_964_000u128),
+            seller_amount: Uint128::from(10_600_000u128),
         })
     );
 
@@ -576,7 +576,7 @@ fn try_trade_pair_exponential_swaps() {
             token_id: token_id.clone(),
             asset_recipient: None,
         },
-        &[coin(10_600_000u128, NATIVE_DENOM)],
+        &[coin(11_236_000u128, NATIVE_DENOM)],
     );
     assert!(response.is_ok());
     assert_nft_owner(&router, &collection, token_id.clone(), &bidder);
@@ -617,7 +617,7 @@ fn try_trade_pair_exponential_swaps() {
                 amount: Uint128::from(561_800u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(10_561_840u128),
+            seller_amount: Uint128::from(11_236_000u128),
         })
     );
 
@@ -672,7 +672,7 @@ fn try_trade_pair_exponential_swaps() {
                 amount: Uint128::from(530_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(9_964_000u128),
+            seller_amount: Uint128::from(10_600_000u128),
         })
     );
 }
@@ -770,7 +770,7 @@ fn try_trade_pair_constant_product_swaps() {
                 amount: Uint128::from(555_556u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(10_444_444u128),
+            seller_amount: Uint128::from(11_111_112u128),
         })
     );
 
@@ -784,7 +784,7 @@ fn try_trade_pair_constant_product_swaps() {
             token_id: token_id.clone(),
             asset_recipient: None,
         },
-        &[coin(11_111_112u128, NATIVE_DENOM)],
+        &[coin(11_777_780u128, NATIVE_DENOM)],
     );
     assert!(response.is_ok());
     assert_nft_owner(&router, &collection, token_id.clone(), &bidder);
@@ -825,7 +825,7 @@ fn try_trade_pair_constant_product_swaps() {
                 amount: Uint128::from(625_000u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(11_750_000u128),
+            seller_amount: Uint128::from(12_500_000u128),
         })
     );
 
@@ -880,7 +880,7 @@ fn try_trade_pair_constant_product_swaps() {
                 amount: Uint128::from(562_500u128),
             }),
             swap: None,
-            seller_amount: Uint128::from(10_575_000u128),
+            seller_amount: Uint128::from(11_250_000u128),
         })
     );
 }
