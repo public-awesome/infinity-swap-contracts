@@ -54,11 +54,11 @@ pub struct PayoutContext {
 }
 
 impl PayoutContext {
-    pub fn build_quote_summary(&self, pair: &Pair, sale_ammount: Uint128) -> Option<QuoteSummary> {
-        if sale_ammount < self.min_price.amount {
-            return None;
-        }
-
+    fn _derive_quote_summary_parts(
+        &self,
+        pair: &Pair,
+        sale_ammount: Uint128,
+    ) -> (TokenPayment, Option<TokenPayment>, Option<TokenPayment>) {
         let fair_burn = TokenPayment {
             recipient: self.global_config.fair_burn.clone(),
             amount: sale_ammount.mul_ceil(self.global_config.fair_burn_fee_percent),
@@ -92,6 +92,44 @@ impl PayoutContext {
             None
         };
 
+        (fair_burn, royalty, swap)
+    }
+
+    pub fn build_buy_from_pair_quote_summary(
+        &self,
+        pair: &Pair,
+        sale_ammount: Uint128,
+    ) -> Option<QuoteSummary> {
+        if sale_ammount < self.min_price.amount {
+            return None;
+        }
+
+        let (fair_burn, royalty, swap) = self._derive_quote_summary_parts(pair, sale_ammount);
+
+        // The seller (pair owner) receives the full sale amount when buying a user buys an NFT from the pair.
+        // Fees are added on top of the sale amount, and are paid by the buyer.
+        let seller_amount = sale_ammount;
+
+        Some(QuoteSummary {
+            fair_burn,
+            royalty,
+            swap,
+            seller_amount,
+        })
+    }
+
+    pub fn build_sell_to_pair_quote_summary(
+        &self,
+        pair: &Pair,
+        sale_ammount: Uint128,
+    ) -> Option<QuoteSummary> {
+        if sale_ammount < self.min_price.amount {
+            return None;
+        }
+
+        let (fair_burn, royalty, swap) = self._derive_quote_summary_parts(pair, sale_ammount);
+
+        // The seller (user) receives the the sale amount minus the fees, when selling an NFT to the pair.
         let seller_amount = sale_ammount
             - fair_burn.amount
             - royalty.as_ref().map_or(Uint128::zero(), |r| r.amount)
